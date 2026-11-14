@@ -5,39 +5,59 @@ Autenticación: `Authorization: Bearer <access_token>` salvo en login y refresh.
 
 > Datos de demo sintéticos. La app es apoyo a la decisión, no un diagnóstico médico.
 
+> **Contrato normativo: `docs/openapi.yaml` (v1).** Este documento explica el modelo de datos y los flujos; si algo difiere, manda el YAML. Diferencias conocidas con el texto de abajo:
+> - `POST /auth/login` con `must_change_password` responde **428** `PASSWORD_CHANGE_REQUIRED` y el token de cambio va en `error.details.password_change_token` (abajo se describe un 200).
+> - Las respuestas del triaje se guardan con `PUT /emergency/assessments/:id/answers` (abajo, `POST`).
+> - Altas: `POST /admin/users` cubre astronautas (con el bloque `astronaut`) y personal de Tierra; no hay `POST /admin/astronauts`.
+> - Tripulación: `GET /missions/:id/crew` (abajo, `/admin/missions/:id/crew`). Bandeja: `GET /admin/inbox` (abajo, `/admin/escalations/inbox`).
+> - En el resultado de `complete`, cada escalamiento trae `escalation_id` (abajo, `id`), y además vienen `priority` y `path`.
+
 ## Diagrama ER
 
 ```mermaid
 erDiagram
   USERS ||--o| ASTRONAUTS : "perfil (rol astronaut)"
   USERS ||--o{ REFRESH_TOKENS : "sesiones por dispositivo"
+  REFRESH_TOKENS |o--o| REFRESH_TOKENS : "replaced_by (rotación)"
   USERS ||--o{ AUTH_EVENTS : "bitácora"
+  USERS |o--o{ USERS : "created_by"
   USERS ||--o{ MISSION_GROUND_TEAM : "equipo en Tierra"
   ENVIRONMENTS ||--o{ MISSIONS : "gravedad y retraso"
+  USERS |o--o{ MISSIONS : "created_by"
   MISSIONS ||--o{ CREW_ASSIGNMENTS : "tripulación"
   ASTRONAUTS ||--o{ CREW_ASSIGNMENTS : "historial de misiones"
+  USERS |o--o{ CREW_ASSIGNMENTS : "created_by"
   MISSIONS ||--o{ MISSION_GROUND_TEAM : ""
+  MISSIONS ||--o{ MISSION_COMM_OUTAGES : "cortes de enlace"
   MISSIONS ||--o{ EMERGENCY_SESSIONS : "incidentes"
   TRIAGE_PROTOCOLS ||--o{ EMERGENCY_SESSIONS : "versión usada"
+  USERS |o--o{ TRIAGE_PROTOCOLS : "created_by"
+  USERS |o--o{ EMERGENCY_SESSIONS : "started_by"
   EMERGENCY_SESSIONS ||--o{ EMERGENCY_ASSESSMENTS : "una por tripulante"
   ASTRONAUTS ||--o{ EMERGENCY_ASSESSMENTS : "evaluado"
+  USERS |o--o{ EMERGENCY_ASSESSMENTS : "assessed_by"
   EMERGENCY_ASSESSMENTS ||--o{ EMERGENCY_ANSWERS : "respuestas"
   MISSIONS ||--o{ ESCALATIONS : ""
+  ASTRONAUTS |o--o{ ESCALATIONS : "astronaut_id"
+  USERS |o--o{ ESCALATIONS : "acknowledged_by"
   ESCALATIONS ||--o{ ESCALATION_MESSAGES : "hilo con retraso"
+  USERS |o--o{ ESCALATION_MESSAGES : "author_id"
 
   USERS {
     uuid id PK
-    text username UK
+    text username UK "único sin distinguir mayúsculas"
+    text email UK "único sin distinguir mayúsculas (si no es NULL)"
     text password_hash "bcrypt"
     user_role role "admin|flight_surgeon|astronaut"
     bool must_change_password
     smallint failed_login_attempts
     timestamptz locked_until
+    uuid created_by FK
   }
   ASTRONAUTS {
     uuid id PK
     uuid user_id FK,UK
-    text call_sign UK
+    text call_sign UK "único sin distinguir mayúsculas"
     bool synthetic
   }
   ENVIRONMENTS {
@@ -51,6 +71,7 @@ erDiagram
     text code UK
     text environment_code FK
     mission_status status
+    uuid created_by FK
   }
   CREW_ASSIGNMENTS {
     uuid id PK
@@ -59,10 +80,18 @@ erDiagram
     crew_role crew_role "commander|crew_medical_officer|..."
     timestamptz assigned_from
     timestamptz assigned_to "NULL = vigente"
+    uuid created_by FK
   }
   MISSION_GROUND_TEAM {
     uuid mission_id PK,FK
     uuid user_id PK,FK
+  }
+  MISSION_COMM_OUTAGES {
+    uuid id PK
+    uuid mission_id FK
+    timestamptz starts_at
+    timestamptz ends_at "NULL = corte en curso"
+    text reason
   }
   REFRESH_TOKENS {
     uuid id PK
@@ -71,6 +100,7 @@ erDiagram
     text device_id
     timestamptz expires_at
     timestamptz revoked_at
+    uuid replaced_by FK "token que lo reemplazó"
   }
   AUTH_EVENTS {
     bigint id PK
@@ -79,11 +109,12 @@ erDiagram
   }
   TRIAGE_PROTOCOLS {
     int id PK
-    text code
-    int version
+    text code UK "UNIQUE(code, version)"
+    int version UK
     jsonb definition
     jsonb sources
-    bool is_active
+    bool is_active "un solo activo por code"
+    uuid created_by FK
   }
   EMERGENCY_SESSIONS {
     uuid id PK
@@ -91,8 +122,12 @@ erDiagram
     uuid mission_id FK
     int protocol_id FK
     emergency_trigger trigger_type
+    uuid started_by FK "NULL si la activó el sistema"
     emergency_status status
     jsonb context
+    timestamptz started_at "hora del dispositivo"
+    timestamptz closed_at
+    timestamptz received_at "hora del servidor"
   }
   EMERGENCY_ASSESSMENTS {
     uuid id PK
@@ -101,41 +136,65 @@ erDiagram
     uuid astronaut_id FK
     uuid assessed_by FK
     smallint sequence_no
+    assessment_status status "in_progress|completed|unreachable"
     triage_category triage_category "green|yellow|red|black"
-    text radiation_flag
+    text radiation_flag "none|possible|probable"
+    text computed_by "device|server"
+    int rules_version
   }
   EMERGENCY_ANSWERS {
     bigint id PK
     uuid client_uuid UK
     uuid assessment_id FK
     text question_code
-    jsonb answer
+    jsonb answer "value o choice"
     answer_source source "tap|voice|prefill|auto"
+    uuid source_reading_id "sin FK hasta la 004 (readings)"
   }
   ESCALATIONS {
     uuid id PK
+    uuid client_uuid UK
     uuid mission_id FK
+    uuid astronaut_id FK
     text source_type
-    uuid source_id
+    uuid source_id "polimórfico"
     escalation_level level
     escalation_priority priority
-    timestamptz deliver_at
+    escalation_status status "queued|delivered|acknowledged|responded|closed"
+    text reason
+    timestamptz deliver_at "NULL = en cola esperando enlace"
+    timestamptz acknowledged_at
+    uuid acknowledged_by FK
   }
   ESCALATION_MESSAGES {
     uuid id PK
     uuid escalation_id FK
     message_direction direction
-    timestamptz deliver_at
+    uuid author_id FK
+    timestamptz deliver_at "NULL = en cola esperando enlace"
   }
 ```
 
-Restricciones clave (probadas):
+Restricciones clave (probadas manualmente con `db:reset`; todavía no hay pruebas automáticas de la base de datos en el repo):
 - Un astronauta no puede tener dos asignaciones solapadas (`EXCLUDE` con `tstzrange`), pero sí un historial de misiones.
-- Un solo comandante y un solo oficial médico (CMO) vigentes por misión.
+- Un solo comandante y un solo oficial médico (CMO) vigentes por misión (vigente = `assigned_to IS NULL`).
 - Solo usuarios con rol `astronaut` tienen perfil de astronauta, y un astronauta no puede estar en el equipo de Tierra (triggers).
 - `password_hash` debe tener formato bcrypt (`CHECK`).
+- `username` y `call_sign` son únicos sin distinguir mayúsculas (índices sobre `lower(...)`); `email` también, cuando no es NULL.
+- Protocolos de triaje: `UNIQUE (code, version)` y un solo protocolo activo por `code`.
 - Una sola sesión de emergencia activa por misión.
 - Una evaluación `completed` exige categoría de triaje.
+- Los cortes de comunicación de una misión no se solapan (`EXCLUDE`).
+
+### Retraso y cortes de comunicación (`compute_deliver_at`)
+
+Todo lo que cruza el enlace (escalamientos y sus mensajes) lleva `deliver_at`, calculado con `compute_deliver_at(mission_id, enviado_en)` (migración 003):
+
+1. Si el envío cae dentro de un corte de `mission_comm_outages`, el mensaje sale cuando termina el corte; si no, sale en el momento del envío.
+2. A esa salida se le suma `comm_delay_seconds` del entorno de la misión.
+3. Si el corte sigue abierto (`ends_at` NULL), devuelve **NULL**: `deliver_at = NULL` significa **en cola esperando enlace**. Por eso, desde la 003, `escalations.deliver_at` y `escalation_messages.deliver_at` admiten NULL. Al cerrar el corte, el servicio debe recalcular el `deliver_at` de lo que quedó en cola (pendiente de implementar).
+
+El panel solo ve lo que ya llegó: `v_ground_inbox` filtra `deliver_at <= now()`, así que lo que está en cola (NULL) todavía no aparece.
 
 ---
 
@@ -226,8 +285,9 @@ Restricciones clave (probadas):
 
 ### `PATCH /admin/assignments/:id` — termina una asignación (habilita reasignar a otra misión)
 ```json
-{ "assigned_to": "2026-11-30T00:00:00Z" }
+{ "assigned_to": "2026-11-14T15:00:00Z" }
 ```
+`assigned_to` debe ser **ahora o una fecha pasada**. `v_current_crew` y los índices de "un comandante / un CMO vigente" consideran vigente solo `assigned_to IS NULL`: con una fecha futura, el astronauta saldría de la tripulación vigente en ese mismo momento. El servicio rechaza fechas futuras con `400 VALIDATION_ERROR`.
 
 ### `POST /admin/users/:id/reset-password` → **200** `{ "temporary_password": "..." }` (activa `must_change_password` y revoca sus refresh tokens)
 
@@ -236,6 +296,8 @@ Restricciones clave (probadas):
 ## 3. Modo emergencia (cualquier tripulante de la misión)
 
 Todos los `POST` llevan `client_uuid`: si la app los envía dos veces (reintento offline), el servidor responde **200** con el registro existente en vez de duplicarlo. Sin conexión, los mismos payloads viajan en `POST /sync/push` con `entity: "emergency_session" | "emergency_assessment" | "emergency_answer"` y `priority: "emergency"` (se sincronizan primero).
+
+> ⏳ **Pendiente (migración 004):** `/sync` y `source_reading_id` (prellenado a partir de una lectura) dependen de las tablas de lecturas y de sincronización, que llegan en la 004. Hoy `emergency_answers.source_reading_id` no tiene FK.
 
 ### `GET /emergency/protocol` → **200** protocolo activo (`code`, `version`, `definition`, `sources`). La app lo guarda en caché para funcionar offline.
 
@@ -313,7 +375,7 @@ Todos los `POST` llevan `client_uuid`: si la app los envía dos veces (reintento
 
 ## 4. Panel: emergencias y bandeja (`flight_surgeon`, `admin`)
 
-- `GET /admin/emergencies?mission_id=&status=active` → sesiones con sus evaluaciones y respuestas. **Solo las que ya "llegaron" a Tierra** (`deliver_at <= now()`).
+- `GET /admin/emergencies?mission_id=&status=active` → sesiones con sus evaluaciones y respuestas. **Solo las que ya "llegaron" a Tierra.** `emergency_sessions` no tiene `deliver_at`: una sesión aparece cuando al menos uno de sus escalamientos (`source_type = 'emergency_session'` con `source_id` = la sesión, o `'emergency_assessment'` con `source_id` = una de sus evaluaciones) tiene `deliver_at <= now()`.
 - `GET /admin/escalations/inbox?mission_id=` → `v_ground_inbox` ordenada por prioridad y luego por `deliver_at`.
 - `POST /admin/escalations/:id/ack` → **200** `{ "status": "acknowledged", "acknowledged_at": "..." }`
 - `POST /admin/escalations/:id/messages`
