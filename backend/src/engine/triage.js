@@ -12,7 +12,7 @@
  *   triage_category, radiation_flag, path, escalations
  * }
  *
- * answers: { [question_code]: valor }  (la respuesta más reciente por pregunta)
+ * answers: { [question_code]: valor | { value } | { choice } }  (la respuesta más reciente por pregunta)
  * context: { solar_event_active, environment_alarm, ... }
  */
 
@@ -44,6 +44,16 @@ function testCondition(cond, scope) {
   });
 }
 
+// La API guarda cada respuesta como { value } (o { choice } en preguntas de opción);
+// el dispositivo puede mandarla suelta. El motor trabaja siempre con el valor suelto.
+function unwrapAnswer(answer) {
+  if (answer && typeof answer === 'object' && !Array.isArray(answer)) {
+    if ('value' in answer) return answer.value;
+    if ('choice' in answer) return answer.choice;
+  }
+  return answer;
+}
+
 function nextFor(question, value) {
   const next = question.next || {};
   if (question.type === 'boolean') return next[String(value)];
@@ -52,11 +62,14 @@ function nextFor(question, value) {
 
 function evaluateAssessment(definition, answers = {}, context = {}) {
   const byCode = Object.fromEntries(definition.questions.map((q) => [q.code, q]));
-  const start = definition.questions.find((q) => q.scope === 'assessment');
-  const scope = { answers, context, fields: {} };
+  const start =
+    definition.start_question || definition.questions.find((q) => q.scope === 'assessment')?.code;
+  // Solo cuentan las respuestas de preguntas por las que pasó el recorrido: si un módulo
+  // se omite (p. ej. radiación sin evento solar), sus respuestas no disparan reglas.
+  const scope = { answers: {}, context, fields: {} };
   const path = [];
   let category = null;
-  let current = start.code;
+  let current = start;
   let guard = 0;
 
   while (current && current !== 'END_ASSESSMENT') {
@@ -84,11 +97,12 @@ function evaluateAssessment(definition, answers = {}, context = {}) {
       break;
     }
 
-    const value = answers[current];
-    if (value === undefined) {
+    const value = unwrapAnswer(answers[current]);
+    if (value === undefined || value === null) {
       return { status: 'incomplete', pending: current, triage_category: category, path };
     }
 
+    scope.answers[current] = value;
     path.push(`${current}=${JSON.stringify(value)}`);
     current = nextFor(question, value);
     if (!current) throw new Error(`Respuesta sin rama definida en ${question.code}: ${JSON.stringify(value)}`);

@@ -206,3 +206,150 @@ test('formato del resultado sin cambios (contrato con A)', () => {
   const pending = run(SAFE);
   assert.deepEqual(Object.keys(pending).sort(), ['path', 'pending', 'status', 'triage_category']);
 });
+
+// ---------------------------------------------------------------------------
+// Caso 7 · respuestas como { value } (así las guarda la API) o sueltas
+// ---------------------------------------------------------------------------
+
+test('caso 7 · todas las respuestas envueltas en { value }', () => {
+  const r = run({
+    responder_safe: { value: true },
+    responsive_and_mobile: { value: false },
+    breathing: { value: true },
+    resp_rate_over_30: { value: false },
+    perfusion_ok: { value: true },
+    follows_commands: { value: true },
+  });
+  assert.equal(r.status, 'completed');
+  assert.equal(r.triage_category, 'yellow');
+  assert.deepEqual(actions(r), URGENT);
+});
+
+test('caso 7 · formas mezcladas, prellenado con metadatos y multi_choice envuelta', () => {
+  const r = run(
+    {
+      responder_safe: true,
+      responsive_and_mobile: { value: false },
+      breathing: true,
+      resp_rate_over_30: {
+        value: false,
+        source_reading_id: 'r-1',
+        measured_at: '2026-11-14T07:55:00Z',
+      },
+      perfusion_ok: { value: true },
+      follows_commands: true,
+      vomiting: { value: false },
+      prodromal_symptoms: { value: ['fever'] },
+    },
+    SOLAR,
+  );
+  assert.equal(r.triage_category, 'yellow');
+  assert.equal(r.radiation_flag, 'possible');
+  assert.deepEqual(actions(r), URGENT);
+});
+
+test('caso 7 · { value: true } en vomiting dispara "probable"; { choice } también se acepta', () => {
+  const r = run(
+    {
+      ...SAFE,
+      responsive_and_mobile: { value: true },
+      vomiting: { value: true },
+      time_to_vomiting: { choice: '1_2h' },
+      prodromal_symptoms: { value: ['none'] },
+    },
+    SOLAR,
+  );
+  assert.equal(r.radiation_flag, 'probable');
+  assert.ok(r.path.includes('time_to_vomiting="1_2h"'));
+  assert.deepEqual(actions(r), EMERGENCY);
+});
+
+test('caso 7 · { value: null } cuenta como respuesta pendiente', () => {
+  const r = run({ ...SAFE, responsive_and_mobile: { value: null } });
+  assert.equal(r.status, 'incomplete');
+  assert.equal(r.pending, 'responsive_and_mobile');
+});
+
+// ---------------------------------------------------------------------------
+// Caso 8 · respetar definition.start_question (responder_safe / STOP_SECURE_SELF)
+// ---------------------------------------------------------------------------
+
+test('caso 8 · sin respuestas, la primera pendiente es responder_safe', () => {
+  const r = run({});
+  assert.equal(r.status, 'incomplete');
+  assert.equal(r.pending, 'responder_safe');
+});
+
+test('caso 8 · el recorrido empieza en responder_safe', () => {
+  const r = run({ ...SAFE, responsive_and_mobile: true }, NO_SOLAR);
+  assert.equal(r.status, 'completed');
+  assert.equal(r.path[0], 'responder_safe=true');
+});
+
+test('caso 8 · responder_safe = false detiene la evaluación (STOP_SECURE_SELF)', () => {
+  const r = run({ responder_safe: false, responsive_and_mobile: false, breathing: false });
+  assert.equal(r.status, 'stopped');
+  assert.equal(r.reason, 'STOP_SECURE_SELF');
+  assert.deepEqual(r.path, ['responder_safe=false']);
+
+  const wrapped = run({ responder_safe: { value: false } });
+  assert.equal(wrapped.status, 'stopped');
+  assert.equal(wrapped.reason, 'STOP_SECURE_SELF');
+});
+
+test('caso 8 · sin start_question se usa la primera pregunta de la evaluación', () => {
+  const legacy = { ...PROTOCOL };
+  delete legacy.start_question;
+  const r = evaluateAssessment(legacy, {}, {});
+  assert.equal(r.status, 'incomplete');
+  assert.equal(r.pending, 'responsive_and_mobile');
+});
+
+// ---------------------------------------------------------------------------
+// Caso 9 · módulo de radiación omitido: sus reglas no se evalúan
+// ---------------------------------------------------------------------------
+
+test('caso 9 · verde + vomiting: true sin evento solar => sin "probable" ni emergencia', () => {
+  for (const context of [{}, NO_SOLAR]) {
+    const r = run(
+      { ...SAFE, responsive_and_mobile: true, vomiting: true, prodromal_symptoms: ['nausea'] },
+      context,
+    );
+    assert.equal(r.status, 'completed');
+    assert.equal(r.triage_category, 'green');
+    assert.ok(r.path.includes('vomiting:omitida'));
+    assert.equal(r.radiation_flag, 'none');
+    assert.deepEqual(actions(r), ROUTINE);
+  }
+});
+
+test('caso 9 · negro: el módulo de radiación no se alcanza y no marca radiación', () => {
+  const r = run(
+    {
+      ...SAFE,
+      responsive_and_mobile: false,
+      breathing: false,
+      breathing_after_airway: false,
+      vomiting: true,
+    },
+    SOLAR,
+  );
+  assert.equal(r.triage_category, 'black');
+  assert.equal(r.radiation_flag, 'none');
+  assert.deepEqual(actions(r), EMERGENCY);
+});
+
+test('caso 9 · control: con evento solar, vomiting: true sí da "probable"', () => {
+  const r = run(
+    {
+      ...SAFE,
+      responsive_and_mobile: true,
+      vomiting: true,
+      time_to_vomiting: 'lt_1h',
+      prodromal_symptoms: ['none'],
+    },
+    SOLAR,
+  );
+  assert.equal(r.radiation_flag, 'probable');
+  assert.deepEqual(actions(r), EMERGENCY);
+});
