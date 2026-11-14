@@ -11,7 +11,7 @@ INSERT INTO environments (code, name, type, gravity_g, comm_delay_seconds, descr
   ('lunar_base',   'Base lunar',              'lunar_base',    0.16,   5, 'Retraso corto; demo acelerada'),
   ('mars_transit', 'Tránsito a Marte',        'spacecraft',    0.00,  90, 'Retraso de minutos; demo acelerada'),
   ('mars_base',    'Base marciana',           'mars_base',     0.38,  90, 'Retraso de minutos; demo acelerada'),
-  ('mars_rover',   'Rover presurizado',       'rover',         0.38,  90, 'Hábitat pequeño y cerrado');
+  ('mars_rover',   'Rover presurizado',       'rover',         0.38,  90, 'Hábitat pequeño y cerrado') ON CONFLICT DO NOTHING;
 
 -- ---------- Usuarios ----------
 INSERT INTO users (id, username, email, full_name, password_hash, role, must_change_password, password_changed_at) VALUES
@@ -27,28 +27,28 @@ INSERT INTO users (id, username, email, full_name, password_hash, role, must_cha
    '$2a$10$qWUas2xzbAY8b45XyEZnCuFCs2w6bdgkViGcpFKgcKcgj605Pa7vi', 'astronaut', false, now()),
   -- Este usuario demuestra el flujo de "cambiar contraseña en el primer inicio"
   ('00000000-0000-4000-8000-000000000014', 'm.silva', NULL, 'Marco Silva (sintético)',
-   '$2a$10$qWUas2xzbAY8b45XyEZnCuFCs2w6bdgkViGcpFKgcKcgj605Pa7vi', 'astronaut', true, NULL);
+   '$2a$10$qWUas2xzbAY8b45XyEZnCuFCs2w6bdgkViGcpFKgcKcgj605Pa7vi', 'astronaut', true, NULL) ON CONFLICT DO NOTHING;
 
 INSERT INTO astronauts (id, user_id, call_sign, agency, synthetic) VALUES
   ('10000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000011', 'ORION', 'Demo Agency', true),
   ('10000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000012', 'VEGA',  'Demo Agency', true),
   ('10000000-0000-4000-8000-000000000013', '00000000-0000-4000-8000-000000000013', 'LYRA',  'Demo Agency', true),
-  ('10000000-0000-4000-8000-000000000014', '00000000-0000-4000-8000-000000000014', 'ATLAS', 'Demo Agency', true);
+  ('10000000-0000-4000-8000-000000000014', '00000000-0000-4000-8000-000000000014', 'ATLAS', 'Demo Agency', true) ON CONFLICT DO NOTHING;
 
 -- ---------- Misión y tripulación ----------
 INSERT INTO missions (id, code, name, environment_code, status, starts_at, created_by) VALUES
   ('20000000-0000-4000-8000-000000000001', 'ARES-1', 'Ares 1 · Tránsito a Marte (demo)', 'mars_transit', 'active',
-   now() - interval '45 days', '00000000-0000-4000-8000-000000000001');
+   now() - interval '45 days', '00000000-0000-4000-8000-000000000001') ON CONFLICT DO NOTHING;
 
 INSERT INTO crew_assignments (mission_id, astronaut_id, crew_role, assigned_from, created_by) VALUES
   ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000011', 'commander',            now() - interval '45 days', '00000000-0000-4000-8000-000000000001'),
   ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000012', 'crew_medical_officer', now() - interval '45 days', '00000000-0000-4000-8000-000000000001'),
   ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000013', 'flight_engineer',      now() - interval '45 days', '00000000-0000-4000-8000-000000000001'),
-  ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000014', 'mission_specialist',   now() - interval '45 days', '00000000-0000-4000-8000-000000000001');
+  ('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000014', 'mission_specialist',   now() - interval '45 days', '00000000-0000-4000-8000-000000000001') ON CONFLICT DO NOTHING;
 
 INSERT INTO mission_ground_team (mission_id, user_id) VALUES
   ('20000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001'),
-  ('20000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002');
+  ('20000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002') ON CONFLICT DO NOTHING;
 
 -- ---------- Protocolo de triaje v1 (START adaptado + módulo de radiación) ----------
 INSERT INTO triage_protocols (code, version, name, is_active, created_by, sources, definition) VALUES
@@ -134,4 +134,4 @@ INSERT INTO triage_protocols (code, version, name, is_active, created_by, source
    ],
    "roster_order": "Primero quien tenga lecturas críticas recientes o check-ins perdidos; luego el resto.",
    "dead_man_switch_seconds": 120
- }$json$::jsonb);
+ }$json$::jsonb) ON CONFLICT DO NOTHING;
