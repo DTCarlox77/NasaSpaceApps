@@ -20,7 +20,7 @@ const app = express();
 app.use(helmet());
 app.use(cors({ origin: env.corsOrigin }));
 app.use(express.json({ limit: '5mb' }));
-app.use(morgan('dev'));
+app.use(morgan('dev', { skip: () => env.nodeEnv === 'test' }));
 
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openapiDocument));
 app.use('/api/v1', routes);

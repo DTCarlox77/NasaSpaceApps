@@ -1,6 +1,6 @@
 # Guía de la API para los frontends (app móvil y panel web)
 
-Contrato completo: [`docs/openapi.yaml`](openapi.yaml) (OpenAPI 3.0.3, v1). Si esta guía y el YAML difieren, manda el YAML.
+Contrato completo: [`docs/openapi.yaml`](openapi.yaml) (OpenAPI 3.0.3, v1.1). Si esta guía y el YAML difieren, manda el YAML. Los cambios desde v1 están en la [sección 8](#8-cambios-del-contrato-v11).
 
 > Datos sintéticos. La app es apoyo a la decisión, no un diagnóstico médico.
 
@@ -33,7 +33,7 @@ curl -s http://localhost:4010/api/v1/me/body-status -H 'Authorization: Bearer de
 ## 2. Login, cambio obligatorio y refresh
 
 1. `POST /api/v1/auth/login` con `{ username, password, device_id }`.
-   - **200**: guarda `access_token` (1 h) y `refresh_token`. `context` trae la misión y el rol de tripulación; el astronauta nunca elige misión.
+   - **200**: guarda `access_token` (15 min, `JWT_ACCESS_TTL`) y `refresh_token` (7 días, `JWT_REFRESH_TTL`). `context` trae la misión y el rol de tripulación; el astronauta nunca elige misión.
    - **428 `PASSWORD_CHANGE_REQUIRED`**: llama a `POST /auth/change-password` con `Authorization: Bearer <error.details.password_change_token>`. Responde como un login completo.
    - **423 `ACCOUNT_LOCKED`**: muestra `error.details.locked_until`. Tras 5 intentos fallidos; lo desbloquea admin o el comandante.
    - **401 `INVALID_CREDENTIALS`**: mismo mensaje exista o no el usuario.
@@ -96,6 +96,7 @@ Cada operación del YAML trae `x-roles` (quién puede llamarla), `x-crew-role` (
 | `behavioral_health` | Panel | Detalle confidencial de bienestar (`/admin/behavioral/...`). Cada acceso queda auditado. |
 | `admin` | Panel | Cuentas, dispositivos, misiones y entornos; de bienestar, solo cumplimiento y aptitud `fit` / `not_confirmed`. |
 | Tableta sin sesión | App móvil | Solo emergencia, con `X-Device-Credential`. |
+| `service` | Sensores y simulador | Solo `POST /api/v1/habitat/readings`. Cualquier otra ruta responde 403. |
 
 La tripulación no ve nada del bienestar de los demás.
 
@@ -107,3 +108,34 @@ La tripulación no ve nada del bienestar de los demás.
 - `POST /crew/users/{id}/unlock`, `POST /crew/users/{id}/reset-pin`, `POST /crew/devices`
 - `GET /me/routines`, `GET /me/gamification`
 - `PUT /admin/indicators/{code}/rules`
+
+## 8. Cambios del contrato (v1.1)
+
+- **Rol `service`**: cuenta de servicio de los sensores y del simulador del hábitat. Solo puede llamar `POST /api/v1/habitat/readings` (`x-roles: [astronaut, service]`); cualquier otra ruta le responde 403. El simulador ya no usa una cuenta `admin`.
+- **`trigger_type: crew_event`**: nueva forma de activar el modo emergencia (un tripulante avisa, p. ej. por voz), además de `manual_button`, `missed_checkin`, `critical_reading` y `environment_alarm`. Si la app muestra el motivo de la emergencia, agrega este valor.
+- **`PATCH /api/v1/admin/assignments/{id}`**: `assigned_to` ya puede ser una fecha futura; la asignación sigue vigente hasta esa fecha. Antes respondía 400. Un periodo de comandante o de CMO que se solape con otro del mismo rol responde 409.
+
+## 9. Qué ya es real (tramo 1) y cómo pasar del mock a la API
+
+En el YAML, las operaciones que **todavía** son solo mock llevan `x-status-impl: pending`. Las que no la llevan ya responden en la API local:
+
+| Módulo | Endpoints reales |
+|---|---|
+| Sistema | `GET /health` |
+| Auth | `POST /auth/login`, `/auth/change-password`, `/auth/refresh`, `/auth/logout`, `GET /me` |
+| Cuentas (admin) | `POST /admin/users`, `/admin/users/{id}/reset-password`, `/admin/users/{id}/unlock` |
+| Catálogo | `GET /indicators`, `/indicators/{code}`, `/rules`, `/body-zones`, `/symptoms` |
+| Lecturas | `POST /readings`, `GET /me/readings`, `GET /me/body-status` |
+| Hábitat | `POST /habitat/readings`, `GET /habitat/status` |
+
+Para pasar del mock a la API local:
+
+1. Levanta la API: `npm run db:reset` (una vez) y `npm run dev` → `http://localhost:3000`.
+2. Cambia la URL base de `http://localhost:4010` a `http://localhost:3000`. Las rutas son las mismas (`/api/v1/...`).
+3. Ya no sirve "Bearer cualquier cosa": haz login con un usuario del seed (por ejemplo `a.ortega` / `Demo2026!`) y usa su `access_token`. El access token dura 15 minutos: implementa el refresh (sección 2).
+4. Lo que siga `pending` déjalo apuntando al mock (`:4010`) hasta que se implemente.
+
+Comportamientos reales que el mock no muestra:
+- `POST /readings` evalúa con las reglas activas y calcula los campos derivados con tu historial: el mismo valor puede dar otro nivel según las lecturas anteriores (p. ej. noches seguidas de poco sueño).
+- `values` se valida contra el catálogo (requeridos, tipos y unidades): un 98.6 en `BODY_TEMP` (°F) responde 400.
+- `GET /me/body-status` trae `checkin_completed` en la zona `brain` y la tarjeta `environment` del módulo.

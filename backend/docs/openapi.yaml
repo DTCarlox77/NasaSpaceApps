@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Astro Health API
-  version: 1.0.0
+  version: 1.1.0
   description: |
     API de apoyo a la decisión para el monitoreo de salud de astronautas.
 
@@ -16,13 +16,20 @@ info:
       emergencia aceptan además `X-Device-Credential` (tableta registrada sin sesión).
     - Extensiones en cada operación:
       - `x-roles`: roles que pueden llamarla (`astronaut`, `flight_surgeon`,
-        `behavioral_health`, `admin`). `public` = no requiere sesión.
+        `behavioral_health`, `admin`, `service`). `public` = no requiere sesión.
+        `service` = cuenta de servicio de los sensores del hábitat: **solo** puede llamar
+        `POST /habitat/readings`; cualquier otra ruta le responde 403.
       - `x-crew-role`: rol de tripulación exigido además del rol (`commander`,
         `crew_medical_officer`).
       - `x-status`: `mvp` o `extra`.
+      - `x-status-impl: pending`: todavía no está implementada en la API local (`:3000`);
+        sigue siendo solo mock (`:4010`). Sin esa marca, la operación ya es real.
       - `x-hazards`: peligros RIDGE que atiende (`space_radiation`, `isolation_confinement`,
         `distance_from_earth`, `gravity_fields`, `hostile_closed_env`).
       - `x-sensitivity: confidential`: datos de bienestar (ver "Quién ve qué").
+    - Si la cuenta debe cambiar la contraseña (`must_change_password`), cualquier ruta salvo
+      `POST /auth/change-password` y `POST /auth/logout` responde **428** con un
+      `password_change_token` en `error.details`.
     - Idempotencia: lo que crea un dispositivo lleva `client_uuid`. La primera vez responde
       **201**; un duplicado responde **200** con el registro existente.
     - Lecturas: `measured_at` lo pone el dispositivo y `received_at` el servidor.
@@ -166,7 +173,7 @@ paths:
                   value:
                     access_token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDIifQ.demo
                     token_type: Bearer
-                    expires_in: 3600
+                    expires_in: 900
                     refresh_token: rt_51d0a7e3c2b94f18
                     must_change_password: false
                     offline_unlock_until: null
@@ -200,7 +207,7 @@ paths:
                     error:
                       code: INVALID_CREDENTIALS
                       message: Usuario o contraseña incorrectos.
-                      details: { attempts_left: 3 }
+                      details: null
         '403':
           description: Astronauta sin asignación vigente
           content:
@@ -260,7 +267,7 @@ paths:
                   value:
                     access_token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMTQifQ.demo
                     token_type: Bearer
-                    expires_in: 3600
+                    expires_in: 900
                     refresh_token: rt_c93e7d21a04b5f66
                     must_change_password: false
                     offline_unlock_until: '2026-11-21T09:00:00Z'
@@ -300,7 +307,26 @@ paths:
                       message: La contraseña debe tener al menos 10 caracteres y ser distinta de la actual.
                       details: { min_length: 10 }
         '401':
-          $ref: '#/components/responses/Unauthenticated'
+          description: La contraseña actual no coincide o la sesión no es válida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                wrongCurrent:
+                  summary: Contraseña actual incorrecta
+                  value:
+                    error:
+                      code: INVALID_CREDENTIALS
+                      message: Usuario o contraseña incorrectos.
+                      details: null
+                expired:
+                  summary: Token vencido o ya usado
+                  value:
+                    error:
+                      code: UNAUTHENTICATED
+                      message: La sesión ya no es válida. Inicia sesión de nuevo.
+                      details: null
 
   /api/v1/auth/refresh:
     post:
@@ -338,7 +364,7 @@ paths:
                   value:
                     access_token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMTEifQ.rotated
                     token_type: Bearer
-                    expires_in: 3600
+                    expires_in: 900
                     refresh_token: rt_0b7d4e2f9c1a8e53
         '400':
           $ref: '#/components/responses/ValidationError'
@@ -447,6 +473,7 @@ paths:
         último login en línea). El PIN se guarda con hash; nunca viaja de vuelta.
       operationId: setOfflinePin
       x-status: extra
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -563,7 +590,7 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
         '409':
-          description: Usuario o call sign ya existen, rol de tripulación ocupado o asignación solapada
+          description: Usuario, correo o call sign ya existen (sin distinguir mayúsculas), rol de tripulación ocupado o asignación solapada
           content:
             application/json:
               schema:
@@ -583,6 +610,13 @@ paths:
                       code: CREW_ROLE_TAKEN
                       message: ARES-1 ya tiene un comandante vigente.
                       details: { crew_role: commander }
+                callSignTaken:
+                  summary: Call sign repetido (sin distinguir mayúsculas)
+                  value:
+                    error:
+                      code: CALL_SIGN_TAKEN
+                      message: El call sign NOVA ya existe.
+                      details: { field: astronaut.call_sign }
 
   /api/v1/admin/users/{id}/reset-password:
     post:
@@ -610,6 +644,8 @@ paths:
                     temporary_password: Temp-7730-qp
                     must_change_password: true
                     revoked_refresh_tokens: 2
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -637,6 +673,8 @@ paths:
               examples:
                 unlocked:
                   $ref: '#/components/examples/UserAdminLyra'
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -653,6 +691,7 @@ paths:
         tableta la envía en `X-Device-Credential` para usar los endpoints de emergencia sin sesión.
       operationId: registerDevice
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -708,6 +747,7 @@ paths:
       summary: Revoca la credencial de un dispositivo
       operationId: revokeDevice
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: []
       parameters:
@@ -747,6 +787,7 @@ paths:
       description: Permiso delegado para cuando Tierra no responde a tiempo. Queda auditado y se reporta a Tierra con el retraso del enlace.
       operationId: crewUnlockUser
       x-status: extra
+      x-status-impl: pending
       x-roles: [astronaut]
       x-crew-role: [commander]
       x-hazards: [distance_from_earth, isolation_confinement]
@@ -783,6 +824,7 @@ paths:
       summary: El comandante restablece el PIN offline de un tripulante
       operationId: crewResetPin
       x-status: extra
+      x-status-impl: pending
       x-roles: [astronaut]
       x-crew-role: [commander]
       x-hazards: [distance_from_earth, isolation_confinement]
@@ -819,6 +861,7 @@ paths:
       summary: El comandante registra una tableta de reemplazo
       operationId: crewRegisterDevice
       x-status: extra
+      x-status-impl: pending
       x-roles: [astronaut]
       x-crew-role: [commander]
       x-hazards: [distance_from_earth]
@@ -876,6 +919,7 @@ paths:
         `mission_id` o la primera activa de su equipo. `comm.link: down` si hay un corte en curso.
       operationId: getCurrentMission
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut, flight_surgeon, behavioral_health, admin]
       x-hazards: [distance_from_earth, gravity_fields]
       parameters:
@@ -931,6 +975,7 @@ paths:
       summary: Tripulación vigente de una misión
       operationId: getMissionCrew
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut, flight_surgeon, behavioral_health, admin]
       x-hazards: [isolation_confinement]
       parameters:
@@ -995,6 +1040,7 @@ paths:
       summary: Lista misiones
       operationId: listMissions
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -1034,6 +1080,7 @@ paths:
       summary: Crea una misión
       operationId: createMission
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth, gravity_fields]
       requestBody:
@@ -1075,6 +1122,7 @@ paths:
       summary: Actualiza una misión
       operationId: updateMission
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -1114,6 +1162,7 @@ paths:
       summary: Lista entornos
       operationId: listEnvironments
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [gravity_fields, distance_from_earth]
       parameters:
@@ -1186,6 +1235,7 @@ paths:
       summary: Crea un entorno
       operationId: createEnvironment
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [gravity_fields, distance_from_earth]
       requestBody:
@@ -1241,6 +1291,7 @@ paths:
       summary: Actualiza un entorno (p. ej. el retraso de comunicación)
       operationId: updateEnvironment
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [gravity_fields, distance_from_earth]
       parameters:
@@ -1284,6 +1335,7 @@ paths:
       summary: Lista asignaciones de tripulación (historial incluido)
       operationId: listAssignments
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [isolation_confinement]
       parameters:
@@ -1334,6 +1386,7 @@ paths:
       summary: Asigna un astronauta a una misión
       operationId: createAssignment
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [isolation_confinement]
       requestBody:
@@ -1386,12 +1439,12 @@ paths:
       tags: [Misión]
       summary: Termina una asignación o cambia el rol
       description: |
-        `assigned_to` debe ser **ahora o una fecha pasada**: `v_current_crew` y los índices de
-        "un comandante / un CMO vigente" consideran vigente solo `assigned_to IS NULL`, así que
-        una fecha futura sacaría al astronauta de la tripulación antes de tiempo. Una fecha
-        futura responde **400** `VALIDATION_ERROR`.
+        `assigned_to` puede ser una fecha pasada, actual o futura: la asignación es vigente
+        mientras `assigned_from <= now() < assigned_to` (`v_current_crew`). Un comandante o un
+        CMO no puede tener un periodo que se solape con otro del mismo rol en la misión (**409**).
       operationId: updateAssignment
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [isolation_confinement]
       parameters:
@@ -1444,6 +1497,7 @@ paths:
       summary: Lista cortes de comunicación de una misión
       operationId: listCommOutages
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -1479,6 +1533,7 @@ paths:
       description: Sin `ends_at` el corte queda abierto y `compute_deliver_at` devuelve null (los mensajes esperan en cola).
       operationId: createCommOutage
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -1532,6 +1587,7 @@ paths:
       summary: Cierra o corrige un corte de comunicación
       operationId: updateCommOutage
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -3088,7 +3144,11 @@ paths:
         Guarda la lectura, calcula los campos derivados, la evalúa con `evaluateIndicator` y, si
         la regla escala a `crew` o `flight_surgeon`, crea un escalamiento (`escalation_id`).
         Idempotente por `client_uuid` (201 la primera vez, 200 si es duplicado).
-        Los indicadores confidenciales no entran por aquí: usa `/wellbeing/...`.
+        `values` se valida contra los `components` del catálogo: requeridos, tipos, valores
+        admitidos, códigos de síntomas y un rango plausible por unidad (detecta °F en vez de °C
+        o lb en vez de kg). `input_method` debe estar en `input_methods` del indicador.
+        **400** para los indicadores confidenciales (entran solo por `/wellbeing/*`) y para los
+        del hábitat (`POST /habitat/readings`).
       operationId: createReading
       x-status: mvp
       x-roles: [astronaut]
@@ -3134,7 +3194,19 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          description: Sin rol astronauta o sin asignación de misión vigente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                noAssignment:
+                  summary: Sin misión vigente
+                  value:
+                    error:
+                      code: NO_ACTIVE_ASSIGNMENT
+                      message: No tienes una asignación de misión vigente.
+                      details: null
         '409':
           description: supersedes_uuid no existe o ya fue reemplazada
           content:
@@ -3218,11 +3290,20 @@ paths:
         Para la figura humana: por zona, el peor nivel (`critical` > `caution` > `normal` >
         `unrated`) y cada indicador con su último valor. Los indicadores confidenciales
         (bienestar) **no** aparecen aquí. Los síntomas (`SYMPTOM`) se muestran en la zona de cada
-        síntoma. El entorno del módulo está en `GET /habitat/status`.
+        síntoma. En la zona `brain` solo colorea `SLEEP_HOURS`; del bienestar se informa
+        `checkin_completed` (check-in de hoy: sí/no, nunca el resultado). Incluye la tarjeta
+        `environment` del módulo `module_id` o, si se omite, del módulo con la lectura del
+        hábitat más reciente de la misión (se omite si no hay lecturas del hábitat).
       operationId: getMyBodyStatus
       x-status: mvp
       x-roles: [astronaut]
       x-hazards: [gravity_fields, space_radiation, hostile_closed_env]
+      parameters:
+        - name: module_id
+          in: query
+          description: Módulo de la tarjeta environment.
+          schema: { type: string }
+          example: HAB-1
       responses:
         '200':
           description: Estado por zona
@@ -3282,6 +3363,7 @@ paths:
                       - zone: brain
                         name: Cerebro, sueño y ánimo
                         worst_level: caution
+                        checkin_completed: true
                         indicators:
                           - code: SLEEP_HOURS
                             name: Horas de sueño
@@ -3305,6 +3387,19 @@ paths:
                               escalation: self_care,
                               recommendation: null,
                             }
+                    environment:
+                      module_id: HAB-1
+                      worst_level: caution
+                      indicators:
+                        - {
+                            code: HAB_CO2,
+                            level: caution,
+                            value: 2.8,
+                            avg_7d: 2.6,
+                            measured_at: '2026-11-14T08:00:00Z',
+                            escalation: crew,
+                            recommendation: El CO₂ promedio de la semana está alto; aumenta el riesgo de dolor de cabeza.,
+                          }
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -3317,6 +3412,7 @@ paths:
       description: Respaldo de una lectura manual (p. ej. la pantalla del tensiómetro). Devuelve `attachment_id` para `POST /readings`. Máximo 5 MB, JPEG o PNG.
       operationId: uploadAttachment
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -3372,6 +3468,7 @@ paths:
       summary: Mis rutinas del día
       operationId: listMyRoutines
       x-status: extra
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [gravity_fields, isolation_confinement]
       responses:
@@ -3412,6 +3509,7 @@ paths:
       description: La racha premia completar el check-in, nunca el resultado.
       operationId: getMyGamification
       x-status: extra
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [isolation_confinement]
       responses:
@@ -3445,11 +3543,11 @@ paths:
       description: |
         Para el simulador y los sensores (`HAB_CO2`, `HAB_TEMP`, `HAB_HUMIDITY`, `HAB_NOISE`).
         Cada lectura se evalúa como en `POST /readings`. Idempotente por `client_uuid`. El
-        simulador usa una cuenta de servicio con rol `admin`; un astronauta puede registrar una
-        lectura manual.
+        simulador y los sensores usan una cuenta de servicio con rol `service` (vinculada a su
+        misión; no puede llamar ninguna otra ruta). Un astronauta puede registrar una lectura manual.
       operationId: createHabitatReadings
       x-status: mvp
-      x-roles: [astronaut, admin]
+      x-roles: [astronaut, service]
       x-hazards: [hostile_closed_env]
       requestBody:
         required: true
@@ -3614,6 +3712,7 @@ paths:
         - `rejected`: inválido (`error` con el formato de errores); no reintentar sin corregir.
       operationId: syncPush
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -3760,6 +3859,7 @@ paths:
         y envíalo en la próxima llamada; si `has_more`, vuelve a llamar enseguida.
       operationId: syncPull
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
       parameters:
@@ -3808,6 +3908,7 @@ paths:
       description: La app lo guarda en caché para evaluar sin conexión con `evaluateAssessment`. El ejemplo es el protocolo real del seed.
       operationId: getEmergencyProtocol
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut, flight_surgeon, admin]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4055,6 +4156,7 @@ paths:
         la misión → **409** `SESSION_ALREADY_ACTIVE` con su id para unirse.
       operationId: createEmergencySession
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4120,6 +4222,7 @@ paths:
       description: Primero quien tenga lecturas críticas recientes o check-ins perdidos; luego el resto.
       operationId: getEmergencySession
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut, flight_surgeon, admin]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4149,6 +4252,7 @@ paths:
       description: Una evaluación por tripulante y sesión. Idempotente por `client_uuid`.
       operationId: createAssessment
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4223,6 +4327,7 @@ paths:
         La respuesta de sesión `responder_safe` se copia automáticamente en cada evaluación.
       operationId: putAssessmentAnswers
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4344,6 +4449,7 @@ paths:
         - `stopped`: `reason` (p. ej. `STOP_SECURE_SELF`).
       operationId: completeAssessment
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4421,6 +4527,7 @@ paths:
         automáticamente a la tripulación y al flight surgeon.
       operationId: emergencyHeartbeat
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, isolation_confinement]
       security:
@@ -4469,6 +4576,7 @@ paths:
       summary: Cierra o cancela la sesión de emergencia
       operationId: closeEmergencySession
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-crew-role: [commander, crew_medical_officer]
       x-hazards: [distance_from_earth]
@@ -4563,6 +4671,7 @@ paths:
         "Quiero hablar con alguien".
       operationId: createWellbeingCheckin
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -4614,65 +4723,189 @@ paths:
     get:
       tags: [Bienestar]
       summary: Cuestionarios breves (PHQ-2 y GAD-2)
+      description: |
+        Texto oficial de Pfizer Inc. (phqscreeners.com) en el idioma pedido, con su licencia y
+        fuentes: español = Spanish for Mexico (PHQ-9 y GAD-7, ítems 1 y 2), inglés = PHQ-4.
+        `official` indica si el texto es la traducción oficial. Solo los 2 ítems de cada
+        cuestionario breve (nunca el PHQ-9 ni el GAD-7 completos). Puntaje = item_1 + item_2
+        (0–6), corte en 3.
       operationId: listWellbeingInstruments
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut, behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
+      parameters:
+        - name: lang
+          in: query
+          description: Idioma del texto (por defecto es).
+          schema: { type: string, enum: [es, en], default: es }
       responses:
         '200':
-          description: Instrumentos (catálogo completo)
+          description: Instrumentos (catálogo completo) en el idioma pedido
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/InstrumentList'
               examples:
-                instruments:
-                  summary: PHQ-2 y GAD-2
+                es:
+                  summary: Español (por defecto)
                   value:
                     items:
-                      - code: PHQ2
-                        name: PHQ-2
-                        indicator_code: PHQ2_SCORE
-                        prompt: Durante las últimas 2 semanas, ¿con qué frecuencia te han molestado estos problemas?
+                      - code: 'PHQ2'
+                        name: 'PHQ-2'
+                        indicator_code: 'PHQ2_SCORE'
+                        lang: 'es'
+                        official: true
+                        language_version: 'Spanish for Mexico'
+                        prompt: 'Durante las últimas 2 semanas, ¿qué tan seguido le han afectado cualquiera de los siguientes problemas?'
                         items:
-                          - { code: item_1, text: Poco interés o placer en hacer cosas }
-                          - { code: item_2, text: 'Sentirte decaído, deprimido o sin esperanza' }
+                          - code: 'item_1'
+                            text: 'Poco interés o placer en hacer las cosas'
+                          - code: 'item_2'
+                            text: 'Se ha sentido decaído(a), deprimido(a), o sin esperanzas'
                         options:
-                          - { value: 0, label: Ningún día }
-                          - { value: 1, label: Varios días }
-                          - { value: 2, label: Más de la mitad de los días }
-                          - { value: 3, label: Casi todos los días }
+                          - label: 'Para nada'
+                            value: 0
+                          - label: 'Varios días'
+                            value: 1
+                          - label: 'Más de la mitad de los días'
+                            value: 2
+                          - label: 'Casi todos los días'
+                            value: 3
+                        license: 'Pfizer Inc. · phqscreeners.com · Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission required to reproduce, translate, display or distribute. Versiones: English (PHQ-4, ítems 3 y 4; https://www.phqscreeners.com/select-screener) y Spanish for Mexico (PHQ-9, ítems 1 y 2; https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/PHQ9_Spanish%20for%20Mexico.pdf).'
                         sources:
-                          - {
-                              id: phq2_nida,
-                              title: NIDA CDE – Patient Health Questionnaire-2 (PHQ-2),
-                              url: 'https://cde.nida.nih.gov/node/22',
-                            }
-                      - code: GAD2
-                        name: GAD-2
-                        indicator_code: GAD2_SCORE
-                        prompt: Durante las últimas 2 semanas, ¿con qué frecuencia te han molestado estos problemas?
+                          - id: 'pfizer_phq9_es_mx'
+                            url: 'https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/PHQ9_Spanish%20for%20Mexico.pdf'
+                            title: 'Pfizer Inc. · phqscreeners.com · PHQ-9 (Spanish for Mexico), ítems 1 y 2'
+                            language_version: 'Spanish for Mexico'
+                          - id: 'pfizer_phq4_en'
+                            url: 'https://www.phqscreeners.com/select-screener'
+                            title: 'Pfizer Inc. · phqscreeners.com · PHQ-4 (English), ítems 3 y 4'
+                            language_version: 'English'
+                          - id: 'phq2_nida'
+                            url: 'https://cde.nida.nih.gov/node/22'
+                            title: 'NIDA CDE – Patient Health Questionnaire-2 (PHQ-2)'
+                          - id: 'nasa_bhp_ops'
+                            url: 'https://ntrs.nasa.gov/api/citations/20170003866/downloads/20170003866.pdf'
+                            title: 'NASA NTRS – BHP Operations at JSC (conferencias psicológicas privadas)'
+                      - code: 'GAD2'
+                        name: 'GAD-2'
+                        indicator_code: 'GAD2_SCORE'
+                        lang: 'es'
+                        official: true
+                        language_version: 'Spanish for Mexico'
+                        prompt: 'Durante las últimas 2 semanas, ¿con qué frecuencia ha sentido molestias por los siguientes problemas?'
                         items:
-                          - {
-                              code: item_1,
-                              text: 'Sentirte nervioso, ansioso o con los nervios de punta',
-                            }
-                          - {
-                              code: item_2,
-                              text: No poder dejar de preocuparte o no poder controlar la preocupación,
-                            }
+                          - code: 'item_1'
+                            text: 'Sentirse nervioso/a, intranquilo/a o con los nervios de punta'
+                          - code: 'item_2'
+                            text: 'No poder dejar de preocuparse o no poder controlar la preocupación'
                         options:
-                          - { value: 0, label: Ningún día }
-                          - { value: 1, label: Varios días }
-                          - { value: 2, label: Más de la mitad de los días }
-                          - { value: 3, label: Casi todos los días }
+                          - label: 'Nunca'
+                            value: 0
+                          - label: 'Varios días'
+                            value: 1
+                          - label: 'Más de la mitad de los días'
+                            value: 2
+                          - label: 'Casi todos los días'
+                            value: 3
+                        license: 'Pfizer Inc. · phqscreeners.com · Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission required to reproduce, translate, display or distribute. Versiones: English (PHQ-4, ítems 1 y 2; https://www.phqscreeners.com/select-screener) y Spanish for Mexico (GAD-7, ítems 1 y 2; https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/GAD7_Spanish%20for%20Mexico.pdf).'
                         sources:
-                          - {
-                              id: gad2_kroenke,
-                              title: Kroenke et al. 2007 – validación GAD-2,
-                              url: 'https://pubmed.ncbi.nlm.nih.gov/17339617/',
-                            }
+                          - id: 'pfizer_gad7_es_mx'
+                            url: 'https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/GAD7_Spanish%20for%20Mexico.pdf'
+                            title: 'Pfizer Inc. · phqscreeners.com · GAD-7 (Spanish for Mexico), ítems 1 y 2'
+                            language_version: 'Spanish for Mexico'
+                          - id: 'pfizer_phq4_en'
+                            url: 'https://www.phqscreeners.com/select-screener'
+                            title: 'Pfizer Inc. · phqscreeners.com · PHQ-4 (English), ítems 1 y 2'
+                            language_version: 'English'
+                          - id: 'gad2_kroenke'
+                            url: 'https://pubmed.ncbi.nlm.nih.gov/17339617/'
+                            title: 'Kroenke et al. 2007, Ann Intern Med – Anxiety disorders in primary care (validación GAD-2)'
+                          - id: 'nasa_bhp_ops'
+                            url: 'https://ntrs.nasa.gov/api/citations/20170003866/downloads/20170003866.pdf'
+                            title: 'NASA NTRS – BHP Operations at JSC (conferencias psicológicas privadas)'
+                en:
+                  summary: English (?lang=en)
+                  value:
+                    items:
+                      - code: 'PHQ2'
+                        name: 'PHQ-2'
+                        indicator_code: 'PHQ2_SCORE'
+                        lang: 'en'
+                        official: true
+                        language_version: 'English'
+                        prompt: 'Over the last 2 weeks, how often have you been bothered by the following problems?'
+                        items:
+                          - code: 'item_1'
+                            text: 'Little interest or pleasure in doing things'
+                          - code: 'item_2'
+                            text: 'Feeling down, depressed, or hopeless'
+                        options:
+                          - label: 'Not at all'
+                            value: 0
+                          - label: 'Several days'
+                            value: 1
+                          - label: 'More than half the days'
+                            value: 2
+                          - label: 'Nearly every day'
+                            value: 3
+                        license: 'Pfizer Inc. · phqscreeners.com · Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission required to reproduce, translate, display or distribute. Versiones: English (PHQ-4, ítems 3 y 4; https://www.phqscreeners.com/select-screener) y Spanish for Mexico (PHQ-9, ítems 1 y 2; https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/PHQ9_Spanish%20for%20Mexico.pdf).'
+                        sources:
+                          - id: 'pfizer_phq9_es_mx'
+                            url: 'https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/PHQ9_Spanish%20for%20Mexico.pdf'
+                            title: 'Pfizer Inc. · phqscreeners.com · PHQ-9 (Spanish for Mexico), ítems 1 y 2'
+                            language_version: 'Spanish for Mexico'
+                          - id: 'pfizer_phq4_en'
+                            url: 'https://www.phqscreeners.com/select-screener'
+                            title: 'Pfizer Inc. · phqscreeners.com · PHQ-4 (English), ítems 3 y 4'
+                            language_version: 'English'
+                          - id: 'phq2_nida'
+                            url: 'https://cde.nida.nih.gov/node/22'
+                            title: 'NIDA CDE – Patient Health Questionnaire-2 (PHQ-2)'
+                          - id: 'nasa_bhp_ops'
+                            url: 'https://ntrs.nasa.gov/api/citations/20170003866/downloads/20170003866.pdf'
+                            title: 'NASA NTRS – BHP Operations at JSC (conferencias psicológicas privadas)'
+                      - code: 'GAD2'
+                        name: 'GAD-2'
+                        indicator_code: 'GAD2_SCORE'
+                        lang: 'en'
+                        official: true
+                        language_version: 'English'
+                        prompt: 'Over the last 2 weeks, how often have you been bothered by the following problems?'
+                        items:
+                          - code: 'item_1'
+                            text: 'Feeling nervous, anxious or on edge'
+                          - code: 'item_2'
+                            text: 'Not being able to stop or control worrying'
+                        options:
+                          - label: 'Not at all'
+                            value: 0
+                          - label: 'Several days'
+                            value: 1
+                          - label: 'More than half the days'
+                            value: 2
+                          - label: 'Nearly every day'
+                            value: 3
+                        license: 'Pfizer Inc. · phqscreeners.com · Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission required to reproduce, translate, display or distribute. Versiones: English (PHQ-4, ítems 1 y 2; https://www.phqscreeners.com/select-screener) y Spanish for Mexico (GAD-7, ítems 1 y 2; https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/GAD7_Spanish%20for%20Mexico.pdf).'
+                        sources:
+                          - id: 'pfizer_gad7_es_mx'
+                            url: 'https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/GAD7_Spanish%20for%20Mexico.pdf'
+                            title: 'Pfizer Inc. · phqscreeners.com · GAD-7 (Spanish for Mexico), ítems 1 y 2'
+                            language_version: 'Spanish for Mexico'
+                          - id: 'pfizer_phq4_en'
+                            url: 'https://www.phqscreeners.com/select-screener'
+                            title: 'Pfizer Inc. · phqscreeners.com · PHQ-4 (English), ítems 1 y 2'
+                            language_version: 'English'
+                          - id: 'gad2_kroenke'
+                            url: 'https://pubmed.ncbi.nlm.nih.gov/17339617/'
+                            title: 'Kroenke et al. 2007, Ann Intern Med – Anxiety disorders in primary care (validación GAD-2)'
+                          - id: 'nasa_bhp_ops'
+                            url: 'https://ntrs.nasa.gov/api/citations/20170003866/downloads/20170003866.pdf'
+                            title: 'NASA NTRS – BHP Operations at JSC (conferencias psicológicas privadas)'
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
@@ -4683,6 +4916,7 @@ paths:
       description: El puntaje lo calcula el servidor y solo lo ve behavioral_health. Al astronauta se le responde un mensaje neutro.
       operationId: createWellbeingScreening
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -4736,6 +4970,7 @@ paths:
         quedan en `normal`, si no `not_confirmed` (`fitnessFromPvt`). Es lo único que llega a admin.
       operationId: createPvtRun
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -4798,6 +5033,7 @@ paths:
         a admin). Viaja a Tierra con el retraso del enlace (`deliver_at`).
       operationId: createSupportRequest
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -4849,6 +5085,7 @@ paths:
       description: Solo mensajes ya entregados (`deliver_at <= now()`).
       operationId: listSupportMessages
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -4890,6 +5127,7 @@ paths:
       description: Lo que el propio astronauta registró. Sin colores, niveles ni puntajes.
       operationId: listMyWellbeing
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -4946,6 +5184,7 @@ paths:
       description: Por astronauta e indicador físico, nivel, último valor y tendencia, más cumplimiento y aptitud. **Sin estado conductual.**
       operationId: getCrewDashboard
       x-status: mvp
+      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [gravity_fields, space_radiation, hostile_closed_env, distance_from_earth]
       parameters:
@@ -5013,6 +5252,7 @@ paths:
         estado), `manual`.
       operationId: getGroundInbox
       x-status: mvp
+      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5091,6 +5331,7 @@ paths:
       summary: Marca un escalamiento como recibido
       operationId: ackEscalation
       x-status: mvp
+      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5126,6 +5367,7 @@ paths:
       description: Devuelve `deliver_at` calculado con `compute_deliver_at`. Si el enlace está caído y el corte sigue abierto, `deliver_at` es null (en cola).
       operationId: replyEscalation
       x-status: mvp
+      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5180,6 +5422,7 @@ paths:
       description: Solo los ya entregados a bordo (`deliver_at <= now()`).
       operationId: listEscalationMessages
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5221,6 +5464,7 @@ paths:
       description: Una sesión aparece cuando al menos uno de sus escalamientos tiene `deliver_at <= now()` (la tabla de sesiones no tiene `deliver_at`).
       operationId: listGroundEmergencies
       x-status: mvp
+      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       parameters:
@@ -5265,6 +5509,7 @@ paths:
       summary: Detalle de una emergencia con evaluaciones y respuestas
       operationId: getGroundEmergency
       x-status: mvp
+      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       parameters:
@@ -5394,6 +5639,7 @@ paths:
       summary: Cumplimiento y aptitud (lo único de bienestar que ve admin)
       operationId: getCompliance
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -5471,6 +5717,7 @@ paths:
         confidenciales. `expected_rules_version` evita pisar un cambio ajeno (**409**).
       operationId: replaceIndicatorRules
       x-status: extra
+      x-status-impl: pending
       x-roles: [flight_surgeon, behavioral_health]
       x-hazards:
         [
@@ -5566,6 +5813,7 @@ paths:
       description: Alertas de bienestar, cuestionarios en precaución y solicitudes "Quiero hablar con alguien". Solo lo ya entregado en Tierra.
       operationId: getBehavioralInbox
       x-status: mvp
+      x-status-impl: pending
       x-roles: [behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -5622,6 +5870,7 @@ paths:
       description: Cada consulta queda registrada en `GET /admin/audit/confidential-access`.
       operationId: getBehavioralAstronaut
       x-status: mvp
+      x-status-impl: pending
       x-roles: [behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -5694,6 +5943,7 @@ paths:
       summary: Responde una solicitud de apoyo (viaja con retraso)
       operationId: replySupportRequest
       x-status: mvp
+      x-status-impl: pending
       x-roles: [behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -5736,6 +5986,7 @@ paths:
       summary: Acciones delegadas del comandante
       operationId: listDelegatedActions
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5782,6 +6033,7 @@ paths:
       description: Quién vio datos de bienestar, de quién y cuándo. Sin el contenido.
       operationId: listConfidentialAccess
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin, behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -6020,7 +6272,7 @@ components:
       value:
         access_token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMTEiLCJyb2xlIjoiYXN0cm9uYXV0In0.demo
         token_type: Bearer
-        expires_in: 3600
+        expires_in: 900
         refresh_token: rt_8f2c1d0e9b7a4c3f
         must_change_password: false
         offline_unlock_until: '2026-11-21T16:00:00Z'
@@ -6302,7 +6554,8 @@ components:
       description: Cursor de la página siguiente; null = última página.
     Role:
       type: string
-      enum: [astronaut, flight_surgeon, behavioral_health, admin]
+      description: 'service = cuenta de servicio de los sensores del hábitat (solo POST /habitat/readings).'
+      enum: [astronaut, flight_surgeon, behavioral_health, admin, service]
     CrewRole:
       type: string
       enum: [commander, pilot, crew_medical_officer, flight_engineer, mission_specialist]
@@ -6340,8 +6593,8 @@ components:
       enum: [green, yellow, red, black]
     TriggerType:
       type: string
-      description: manual_button = botón manual; missed_checkin, critical_reading y environment_alarm = activación automática.
-      enum: [manual_button, missed_checkin, critical_reading, environment_alarm]
+      description: manual_button = botón manual; crew_event = un tripulante avisa (p. ej. por voz); missed_checkin, critical_reading y environment_alarm = activación automática.
+      enum: [manual_button, crew_event, missed_checkin, critical_reading, environment_alarm]
     EmergencyStatus:
       type: string
       enum: [active, closed, cancelled]
@@ -6393,7 +6646,8 @@ components:
             UNAUTHENTICATED (401), FORBIDDEN (403), NOT_FOUND (404), CONFLICT (409),
             ACCOUNT_LOCKED (423), PASSWORD_CHANGE_REQUIRED (428), RATE_LIMITED (429).
             Específicos: INVALID_CREDENTIALS, TOKEN_REUSE_DETECTED, NO_ACTIVE_ASSIGNMENT,
-            WEAK_PASSWORD, USERNAME_TAKEN, CREW_ROLE_TAKEN, ASSIGNMENT_OVERLAP, OUTAGE_OVERLAP,
+            WEAK_PASSWORD, USERNAME_TAKEN, EMAIL_TAKEN, CALL_SIGN_TAKEN, CREW_ROLE_TAKEN,
+            ASSIGNMENT_OVERLAP, OUTAGE_OVERLAP,
             SESSION_ALREADY_ACTIVE, INVALID_JSON, PAYLOAD_TOO_LARGE, INTERNAL_ERROR.
           example: NOT_FOUND
         message:
@@ -6550,8 +6804,15 @@ components:
             crew_role: { $ref: '#/components/schemas/CrewRole' }
         ground_mission_ids:
           type: array
-          description: Misiones a cuyo equipo en Tierra se agrega (no aplica a astronautas).
+          description: Misiones a cuyo equipo en Tierra se agrega (no aplica a astronautas ni a service). Si se omite, las misiones activas del equipo en Tierra del admin que crea la cuenta.
           items: { $ref: '#/components/schemas/Uuid' }
+        service:
+          type: object
+          description: Obligatorio si role = service. Vincula la cuenta de los sensores con su misión.
+          required: [mission_id, description]
+          properties:
+            mission_id: { $ref: '#/components/schemas/Uuid' }
+            description: { type: string, minLength: 1, maxLength: 200 }
     AstronautProfile:
       type: object
       required: [id, user_id, call_sign, synthetic]
@@ -6745,7 +7006,7 @@ components:
         assigned_to:
           type: string
           format: date-time
-          description: Ahora o una fecha pasada (una futura responde 400).
+          description: Fin de la asignación (puede ser futuro; vigente hasta esa fecha).
         crew_role: { $ref: '#/components/schemas/CrewRole' }
     AssignmentPage:
       type: object
@@ -6865,6 +7126,8 @@ components:
         id: { type: string }
         title: { type: string }
         url: { type: string, format: uri }
+        language_version:
+          { type: string, description: 'Versión de idioma de la fuente (cuestionarios).' }
     Condition:
       type: object
       description: |
@@ -7133,6 +7396,9 @@ components:
         indicators:
           type: array
           items: { $ref: '#/components/schemas/IndicatorStatus' }
+        checkin_completed:
+          type: boolean
+          description: 'Solo en brain: ¿completó hoy (día UTC) el check-in de bienestar? Sí/no, nunca el resultado.'
     BodyStatus:
       type: object
       required: [astronaut_id, generated_at, rules_version, zones]
@@ -7143,6 +7409,7 @@ components:
         zones:
           type: array
           items: { $ref: '#/components/schemas/ZoneStatus' }
+        environment: { $ref: '#/components/schemas/HabitatModuleStatus' }
     AttachmentUpload:
       type: object
       required: [file, client_uuid, kind]
@@ -7221,15 +7488,16 @@ components:
         generated_at: { $ref: '#/components/schemas/Timestamp' }
         modules:
           type: array
-          items:
-            type: object
-            required: [module_id, worst_level, indicators]
-            properties:
-              module_id: { type: string }
-              worst_level: { $ref: '#/components/schemas/Level' }
-              indicators:
-                type: array
-                items: { $ref: '#/components/schemas/HabitatIndicatorStatus' }
+          items: { $ref: '#/components/schemas/HabitatModuleStatus' }
+    HabitatModuleStatus:
+      type: object
+      required: [module_id, worst_level, indicators]
+      properties:
+        module_id: { type: string }
+        worst_level: { $ref: '#/components/schemas/Level' }
+        indicators:
+          type: array
+          items: { $ref: '#/components/schemas/HabitatIndicatorStatus' }
 
     # ---------------------------------------------------------------- extras de la app
     Routine:
@@ -7716,11 +7984,37 @@ components:
         offer_support: { type: boolean, description: true = mostrar "Quiero hablar con alguien". }
     Instrument:
       type: object
-      required: [code, name, indicator_code, prompt, items, options, sources]
+      required:
+        [
+          code,
+          name,
+          indicator_code,
+          lang,
+          official,
+          language_version,
+          prompt,
+          items,
+          options,
+          license,
+          sources,
+        ]
       properties:
         code: { type: string, enum: [PHQ2, GAD2] }
         name: { type: string }
         indicator_code: { type: string }
+        lang: { type: string, enum: [es, en] }
+        official:
+          {
+            type: boolean,
+            description: 'true = traducción oficial de Pfizer; false = adaptación propia.',
+          }
+        language_version:
+          {
+            type: string,
+            description: 'Versión de idioma de la fuente, p. ej. Spanish for Mexico o English.',
+          }
+        note: { type: string, description: Aclaración cuando el texto no es oficial. }
+        license: { type: string }
         prompt: { type: string }
         items:
           type: array
