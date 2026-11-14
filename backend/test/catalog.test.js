@@ -68,9 +68,18 @@ const CASES = [
   // Radiación
   ['RAD_DOSE_DAILY', { value: 0.4, ratio_to_baseline: 1.1 }, 'normal'],
   ['RAD_DOSE_DAILY', { value: 1.0, ratio_to_baseline: 2.5 }, 'caution', 'crew'],
-  ['RAD_DOSE_DAILY', { value: 60, ratio_to_baseline: 150, event_active: true, event_dose_msv: 130 }, 'caution', 'flight_surgeon'],
+  [
+    'RAD_DOSE_DAILY',
+    { value: 60, ratio_to_baseline: 150, event_active: true, event_dose_msv: 130 },
+    'caution',
+    'flight_surgeon',
+  ],
   ['RAD_DOSE_DAILY', { value: 90, event_active: true, event_dose_msv: 260 }, 'critical'],
-  ['RAD_DOSE_DAILY', { value: 5, event_active: true, event_dose_msv: 20, symptoms: ['vomiting'] }, 'critical'],
+  [
+    'RAD_DOSE_DAILY',
+    { value: 5, event_active: true, event_dose_msv: 20, symptoms: ['vomiting'] },
+    'critical',
+  ],
   ['RAD_DOSE_CUM', { value: 120, pct_of_career_limit: 20, projected_end_msv: 210 }, 'normal'],
   ['RAD_DOSE_CUM', { value: 500, pct_of_career_limit: 83.3, projected_end_msv: 560 }, 'caution'],
   ['RAD_DOSE_CUM', { value: 450, pct_of_career_limit: 75, projected_end_msv: 640 }, 'caution'],
@@ -83,19 +92,54 @@ const CASES = [
   ['HAB_CO2', { value: 10.0, module_id: 'HAB-1' }, 'critical'],
   // Bienestar (confidencial)
   ['WB_MOOD', { value: 30, baseline_ready: false }, 'unrated'],
-  ['WB_MOOD', { value: 60, baseline_ready: true, adverse_z_3d: 0.2, adverse_sustained_days: 0 }, 'normal'],
-  ['WB_MOOD', { value: 20, baseline_ready: true, adverse_z_3d: 1.8, adverse_sustained_days: 3 }, 'caution', 'self_care'],
-  ['WB_STRESS', { value: 90, baseline_ready: true, adverse_z_3d: 2.1, adverse_sustained_days: 5 }, 'caution', 'behavioral_health'],
+  [
+    'WB_MOOD',
+    { value: 60, baseline_ready: true, adverse_z_3d: 0.2, adverse_sustained_days: 0 },
+    'normal',
+  ],
+  [
+    'WB_MOOD',
+    { value: 20, baseline_ready: true, adverse_z_3d: 1.8, adverse_sustained_days: 3 },
+    'caution',
+    'self_care',
+  ],
+  [
+    'WB_STRESS',
+    { value: 90, baseline_ready: true, adverse_z_3d: 2.1, adverse_sustained_days: 5 },
+    'caution',
+    'behavioral_health',
+  ],
   ['PHQ2_SCORE', { value: 2, item_1: 1, item_2: 1 }, 'normal'],
   ['PHQ2_SCORE', { value: 3, item_1: 2, item_2: 1 }, 'caution', 'behavioral_health'],
   ['GAD2_SCORE', { value: 4, item_1: 2, item_2: 2 }, 'caution', 'behavioral_health'],
   ['PVT_LAPSES', { value: 2, baseline_ready: false, device_id: 'TAB-1' }, 'unrated'],
-  ['PVT_LAPSES', { value: 3, baseline_ready: true, z_device_baseline: 0.5, device_id: 'TAB-1' }, 'normal'],
-  ['PVT_LAPSES', { value: 6, baseline_ready: true, z_device_baseline: 2.4, device_id: 'TAB-1' }, 'caution'],
+  [
+    'PVT_LAPSES',
+    { value: 3, baseline_ready: true, z_device_baseline: 0.5, device_id: 'TAB-1' },
+    'normal',
+  ],
+  [
+    'PVT_LAPSES',
+    { value: 6, baseline_ready: true, z_device_baseline: 2.4, device_id: 'TAB-1' },
+    'caution',
+  ],
   ['PVT_LAPSES', { value: 12, baseline_ready: false, device_id: 'TAB-1' }, 'caution'],
-  ['PVT_LAPSES', { value: 22, baseline_ready: true, z_device_baseline: 5, device_id: 'TAB-1' }, 'critical', 'flight_surgeon'],
-  ['PVT_MEAN_RT', { value: 290, baseline_ready: true, z_device_baseline: 2.2, device_id: 'TAB-1' }, 'caution'],
-  ['PVT_FALSE_STARTS', { value: 1, baseline_ready: true, z_device_baseline: 0, device_id: 'TAB-1' }, 'normal'],
+  [
+    'PVT_LAPSES',
+    { value: 22, baseline_ready: true, z_device_baseline: 5, device_id: 'TAB-1' },
+    'critical',
+    'flight_surgeon',
+  ],
+  [
+    'PVT_MEAN_RT',
+    { value: 290, baseline_ready: true, z_device_baseline: 2.2, device_id: 'TAB-1' },
+    'caution',
+  ],
+  [
+    'PVT_FALSE_STARTS',
+    { value: 1, baseline_ready: true, z_device_baseline: 0, device_id: 'TAB-1' },
+    'normal',
+  ],
   // Resto
   ['BODY_MASS', { value: 74, pct_change_from_preflight: -2.5 }, 'normal'],
   ['BODY_MASS', { value: 70, pct_change_from_preflight: -6.0 }, 'caution', 'flight_surgeon'],
@@ -103,9 +147,45 @@ const CASES = [
   ['EXERCISE_MIN', { value: 90, rolling_7d_pct_of_prescription: 100 }, 'normal'],
   ['EXERCISE_MIN', { value: 30, rolling_7d_pct_of_prescription: 70 }, 'caution', 'self_care'],
   ['EXERCISE_MIN', { value: 0, rolling_7d_pct_of_prescription: 40 }, 'caution', 'flight_surgeon'],
-  ['VISION_CHECK', { near_blur: false, far_blur: false, amsler_distortion: false, blind_spot_or_field_loss: false, double_vision: false, transient_vision_loss: false, severe_headache: false }, 'normal'],
-  ['VISION_CHECK', { near_blur: true, far_blur: false, amsler_distortion: false, blind_spot_or_field_loss: false, double_vision: false, transient_vision_loss: false, severe_headache: false }, 'caution'],
-  ['VISION_CHECK', { near_blur: false, far_blur: false, amsler_distortion: true, blind_spot_or_field_loss: false, double_vision: false, transient_vision_loss: false, severe_headache: false }, 'critical'],
+  [
+    'VISION_CHECK',
+    {
+      near_blur: false,
+      far_blur: false,
+      amsler_distortion: false,
+      blind_spot_or_field_loss: false,
+      double_vision: false,
+      transient_vision_loss: false,
+      severe_headache: false,
+    },
+    'normal',
+  ],
+  [
+    'VISION_CHECK',
+    {
+      near_blur: true,
+      far_blur: false,
+      amsler_distortion: false,
+      blind_spot_or_field_loss: false,
+      double_vision: false,
+      transient_vision_loss: false,
+      severe_headache: false,
+    },
+    'caution',
+  ],
+  [
+    'VISION_CHECK',
+    {
+      near_blur: false,
+      far_blur: false,
+      amsler_distortion: true,
+      blind_spot_or_field_loss: false,
+      double_vision: false,
+      transient_vision_loss: false,
+      severe_headache: false,
+    },
+    'critical',
+  ],
   ['SYMPTOM', { symptoms: [] }, 'normal'],
   ['SYMPTOM', { symptoms: ['headache'] }, 'caution', 'self_care'],
   ['SYMPTOM', { symptoms: ['cough', 'fever_feeling'] }, 'caution', 'crew'],
@@ -137,7 +217,13 @@ test('operadores: between, in, grupos anidados y campo ausente', () => {
   assert.equal(evalCondition({ field: 'v', op: 'in', value: ['a', 'b'] }, { v: 'b' }), true);
   assert.equal(evalCondition({ field: 'x', op: 'gt', value: 1 }, {}), false);
   assert.equal(evalCondition({ all: [] }, {}), true);
-  assert.equal(evalCondition({ any: [{ all: [{ field: 'a', op: 'eq', value: 1 }] }, { field: 'b', op: 'lt', value: 0 }] }, { a: 1 }), true);
+  assert.equal(
+    evalCondition(
+      { any: [{ all: [{ field: 'a', op: 'eq', value: 1 }] }, { field: 'b', op: 'lt', value: 0 }] },
+      { a: 1 },
+    ),
+    true,
+  );
   assert.throws(() => evalCondition({ field: 'a', op: 'regex', value: 'x' }, { a: 1 }));
 });
 

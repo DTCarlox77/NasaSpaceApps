@@ -73,4 +73,11 @@ function fitnessFromPvt(results) {
   return ok ? 'fit' : 'not_confirmed';
 }
 
-module.exports = { OPS, LEVEL_ORDER, ESCALATION_ORDER, evalCondition, evaluateIndicator, fitnessFromPvt };
+module.exports = {
+  OPS,
+  LEVEL_ORDER,
+  ESCALATION_ORDER,
+  evalCondition,
+  evaluateIndicator,
+  fitnessFromPvt,
+};

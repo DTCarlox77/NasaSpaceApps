@@ -105,12 +105,15 @@ function evaluateAssessment(definition, answers = {}, context = {}) {
     scope.answers[current] = value;
     path.push(`${current}=${JSON.stringify(value)}`);
     current = nextFor(question, value);
-    if (!current) throw new Error(`Respuesta sin rama definida en ${question.code}: ${JSON.stringify(value)}`);
+    if (!current)
+      throw new Error(`Respuesta sin rama definida en ${question.code}: ${JSON.stringify(value)}`);
   }
 
   if (!category) throw new Error('El recorrido terminó sin categoría de triaje');
 
-  const flagRule = (definition.radiation_flag_rules || []).find((r) => testCondition(r.when, scope));
+  const flagRule = (definition.radiation_flag_rules || []).find((r) =>
+    testCondition(r.when, scope),
+  );
   const radiationFlag = flagRule ? flagRule.flag : definition.radiation_flag_default || 'none';
 
   scope.fields = { category, radiation_flag: radiationFlag };
