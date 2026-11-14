@@ -11,3 +11,6 @@ coverage/
 logs/
 *.log
 npm-debug.log*
+
+# Caché de Python (generador del catálogo)
+__pycache__/
