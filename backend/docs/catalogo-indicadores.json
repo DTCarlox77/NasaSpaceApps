@@ -1,0 +1,3728 @@
+{
+  "catalog_version": 1,
+  "generated_at": "2026-11-14",
+  "blocks": [
+    1,
+    2,
+    3
+  ],
+  "hazards": [
+    {
+      "code": "space_radiation",
+      "name": "Space Radiation"
+    },
+    {
+      "code": "isolation_confinement",
+      "name": "Isolation and Confinement"
+    },
+    {
+      "code": "distance_from_earth",
+      "name": "Distance from Earth"
+    },
+    {
+      "code": "gravity_fields",
+      "name": "Gravity Fields"
+    },
+    {
+      "code": "hostile_closed_env",
+      "name": "Hostile/Closed Environments"
+    }
+  ],
+  "body_zones": [
+    {
+      "code": "heart",
+      "name": "Corazón y circulación"
+    },
+    {
+      "code": "lungs",
+      "name": "Pulmones y respiración"
+    },
+    {
+      "code": "immune",
+      "name": "Sistema inmune"
+    },
+    {
+      "code": "metabolism",
+      "name": "Metabolismo y nutrición"
+    },
+    {
+      "code": "muscle",
+      "name": "Músculo"
+    },
+    {
+      "code": "bones",
+      "name": "Huesos"
+    },
+    {
+      "code": "brain",
+      "name": "Cerebro, sueño y ánimo"
+    },
+    {
+      "code": "eyes",
+      "name": "Ojos"
+    },
+    {
+      "code": "environment",
+      "name": "Entorno del módulo (no es zona del cuerpo; tarjeta aparte en la figura)"
+    },
+    {
+      "code": "by_symptom",
+      "name": "Según el síntoma (se toma de la zona de cada síntoma)"
+    }
+  ],
+  "symptoms": [
+    {
+      "code": "chest_pain",
+      "label": "Dolor o presión en el pecho",
+      "body_zone": "heart",
+      "red_flag": true
+    },
+    {
+      "code": "shortness_of_breath",
+      "label": "Falta de aire",
+      "body_zone": "lungs",
+      "red_flag": true
+    },
+    {
+      "code": "face_drooping",
+      "label": "Un lado de la cara caído o adormecido",
+      "body_zone": "brain",
+      "red_flag": true
+    },
+    {
+      "code": "arm_weakness",
+      "label": "Debilidad o adormecimiento de un brazo o pierna",
+      "body_zone": "brain",
+      "red_flag": true
+    },
+    {
+      "code": "speech_difficulty",
+      "label": "Dificultad para hablar o entender",
+      "body_zone": "brain",
+      "red_flag": true
+    },
+    {
+      "code": "sudden_vision_change",
+      "label": "Cambio súbito de visión (doble, borrosa o pérdida)",
+      "body_zone": "eyes",
+      "red_flag": true
+    },
+    {
+      "code": "sudden_balance_loss",
+      "label": "Pérdida súbita del equilibrio o la coordinación",
+      "body_zone": "brain",
+      "red_flag": true
+    },
+    {
+      "code": "severe_headache_sudden",
+      "label": "Dolor de cabeza súbito e intenso sin causa conocida",
+      "body_zone": "brain",
+      "red_flag": true
+    },
+    {
+      "code": "unresponsive",
+      "label": "No responde",
+      "body_zone": "brain",
+      "red_flag": true
+    },
+    {
+      "code": "confusion",
+      "label": "Confusión nueva",
+      "body_zone": "brain",
+      "red_flag": true
+    },
+    {
+      "code": "fainting",
+      "label": "Desmayo o casi desmayo",
+      "body_zone": "heart",
+      "red_flag": false
+    },
+    {
+      "code": "dizziness",
+      "label": "Mareo",
+      "body_zone": "heart",
+      "red_flag": false
+    },
+    {
+      "code": "palpitations",
+      "label": "Palpitaciones",
+      "body_zone": "heart",
+      "red_flag": false
+    },
+    {
+      "code": "headache",
+      "label": "Dolor de cabeza",
+      "body_zone": "brain",
+      "red_flag": false
+    },
+    {
+      "code": "nausea",
+      "label": "Náusea",
+      "body_zone": "metabolism",
+      "red_flag": false
+    },
+    {
+      "code": "vomiting",
+      "label": "Vómito",
+      "body_zone": "metabolism",
+      "red_flag": false
+    },
+    {
+      "code": "diarrhea",
+      "label": "Diarrea",
+      "body_zone": "metabolism",
+      "red_flag": false
+    },
+    {
+      "code": "fever_feeling",
+      "label": "Sensación de fiebre o escalofríos",
+      "body_zone": "immune",
+      "red_flag": false
+    },
+    {
+      "code": "cough",
+      "label": "Tos",
+      "body_zone": "lungs",
+      "red_flag": false
+    },
+    {
+      "code": "sore_throat",
+      "label": "Dolor de garganta",
+      "body_zone": "immune",
+      "red_flag": false
+    },
+    {
+      "code": "rash",
+      "label": "Sarpullido o lesiones en la piel",
+      "body_zone": "immune",
+      "red_flag": false
+    },
+    {
+      "code": "excessive_thirst",
+      "label": "Sed excesiva",
+      "body_zone": "metabolism",
+      "red_flag": false
+    },
+    {
+      "code": "frequent_urination",
+      "label": "Orinar mucho más de lo habitual",
+      "body_zone": "metabolism",
+      "red_flag": false
+    },
+    {
+      "code": "blurred_vision",
+      "label": "Visión borrosa",
+      "body_zone": "eyes",
+      "red_flag": false
+    },
+    {
+      "code": "back_pain",
+      "label": "Dolor de espalda",
+      "body_zone": "bones",
+      "red_flag": false
+    },
+    {
+      "code": "muscle_pain",
+      "label": "Dolor muscular",
+      "body_zone": "muscle",
+      "red_flag": false
+    },
+    {
+      "code": "bone_pain",
+      "label": "Dolor óseo o articular",
+      "body_zone": "bones",
+      "red_flag": false
+    },
+    {
+      "code": "fatigue",
+      "label": "Cansancio fuera de lo habitual",
+      "body_zone": "brain",
+      "red_flag": false
+    }
+  ],
+  "indicators": [
+    {
+      "code": "BLOOD_PRESSURE",
+      "name": "Presión arterial",
+      "unit": "mmHg",
+      "value_type": "composite",
+      "components": [
+        {
+          "name": "systolic",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "mmHg"
+        },
+        {
+          "name": "diastolic",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "mmHg"
+        },
+        {
+          "name": "symptoms",
+          "type": "string[]",
+          "role": "context",
+          "required": false,
+          "values": "códigos del catálogo de síntomas"
+        }
+      ],
+      "derived_fields": [],
+      "hazards": [
+        "gravity_fields"
+      ],
+      "body_zone": "heart",
+      "input_methods": [
+        "manual",
+        "camera"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Tensiómetro automático de brazo, tras 5 min de reposo, anclado o sentado y con el brazo a la altura del corazón. La foto de la pantalla del tensiómetro queda como respaldo.",
+        "why": "La presión muy alta puede dañar corazón, cerebro y riñones; la muy baja puede causar mareo o desmayo.",
+        "hazard_effect": "Gravity Fields: la ingravidez altera la circulación y el funcionamiento del corazón y los vasos (riesgo de adaptaciones cardiovasculares de NASA HRP). Al pasar a 0.16 g, 0.38 g o 1 g puede aparecer mareo al incorporarse.",
+        "when_to_escalate": "Tripulación + flight surgeon: más de 180/120, o sistólica de 90 o menos con mareo, desmayo o confusión. Flight surgeon de rutina: 140/90 o más.",
+        "prevention": "Medir con buena técnica y repetir antes de concluir, cumplir el ejercicio prescrito, hidratarse y dormir lo suficiente."
+      },
+      "rules": [
+        {
+          "level": "critical",
+          "when": {
+            "all": [
+              {
+                "any": [
+                  {
+                    "field": "systolic",
+                    "op": "gt",
+                    "value": 180
+                  },
+                  {
+                    "field": "diastolic",
+                    "op": "gt",
+                    "value": 120
+                  }
+                ]
+              },
+              {
+                "field": "symptoms",
+                "op": "has_any",
+                "value": [
+                  "chest_pain",
+                  "shortness_of_breath",
+                  "back_pain",
+                  "arm_weakness",
+                  "face_drooping",
+                  "sudden_vision_change",
+                  "speech_difficulty"
+                ]
+              }
+            ]
+          },
+          "recommendation": "Tu presión está muy alta y tienes síntomas de alarma. Avisa ya a tu tripulación y activa el modo emergencia.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "aha_bp"
+          ],
+          "basis": "source"
+        },
+        {
+          "level": "critical",
+          "when": {
+            "any": [
+              {
+                "field": "systolic",
+                "op": "gt",
+                "value": 180
+              },
+              {
+                "field": "diastolic",
+                "op": "gt",
+                "value": 120
+              }
+            ]
+          },
+          "recommendation": "Tu presión está muy alta. Quédate en reposo 5 minutos y vuelve a medir. Si sigue igual, se avisa a tu tripulación y al flight surgeon.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "aha_bp"
+          ],
+          "basis": "source"
+        },
+        {
+          "level": "critical",
+          "when": {
+            "all": [
+              {
+                "field": "systolic",
+                "op": "lte",
+                "value": 90
+              },
+              {
+                "field": "symptoms",
+                "op": "has_any",
+                "value": [
+                  "dizziness",
+                  "fainting",
+                  "confusion"
+                ]
+              }
+            ]
+          },
+          "recommendation": "Tu presión está baja y tienes mareo o confusión. Quédate quieto y sujeto, y avisa a tu tripulación.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "aha_low_bp",
+            "news2"
+          ],
+          "basis": "source_adapted",
+          "note": "Sistólica ≤90 = puntaje 3 de NEWS2; AHA: la presión baja preocupa cuando hay síntomas."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "any": [
+              {
+                "field": "systolic",
+                "op": "gte",
+                "value": 140
+              },
+              {
+                "field": "diastolic",
+                "op": "gte",
+                "value": 90
+              }
+            ]
+          },
+          "recommendation": "Tu presión está alta. Repite la medición mañana a la misma hora; si sigue así, el flight surgeon la revisará.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "aha_bp",
+            "ama_bp2025"
+          ],
+          "basis": "source"
+        },
+        {
+          "level": "caution",
+          "when": {
+            "any": [
+              {
+                "field": "systolic",
+                "op": "gte",
+                "value": 130
+              },
+              {
+                "field": "diastolic",
+                "op": "gte",
+                "value": 80
+              }
+            ]
+          },
+          "recommendation": "Tu presión está un poco alta. Repite la medición en reposo y cumple tu ejercicio y tu hidratación.",
+          "escalation": "self_care",
+          "source_ids": [
+            "aha_bp",
+            "ama_bp2025"
+          ],
+          "basis": "source"
+        },
+        {
+          "level": "caution",
+          "when": {
+            "any": [
+              {
+                "field": "systolic",
+                "op": "lt",
+                "value": 90
+              },
+              {
+                "field": "diastolic",
+                "op": "lt",
+                "value": 60
+              }
+            ]
+          },
+          "recommendation": "Tu presión está baja. Bebe agua y muévete despacio. Si te mareas, regístralo como síntoma.",
+          "escalation": "self_care",
+          "source_ids": [
+            "aha_low_bp"
+          ],
+          "basis": "source"
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "systolic",
+            "op": "gte",
+            "value": 120
+          },
+          "recommendation": "Tu presión está ligeramente elevada. No es urgente: mantén tus hábitos y vuelve a medir en tu próxima rutina.",
+          "escalation": "self_care",
+          "source_ids": [
+            "aha_bp"
+          ],
+          "basis": "source"
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Tu presión está en rango normal.",
+          "escalation": "self_care",
+          "source_ids": [
+            "aha_bp"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "aha_bp",
+          "title": "AHA – Understanding Blood Pressure Readings",
+          "url": "https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings"
+        },
+        {
+          "id": "aha_low_bp",
+          "title": "AHA – Low Blood Pressure: When Blood Pressure Is Too Low",
+          "url": "https://www.heart.org/en/health-topics/high-blood-pressure/the-facts-about-high-blood-pressure/low-blood-pressure-when-blood-pressure-is-too-low"
+        },
+        {
+          "id": "news2",
+          "title": "Royal College of Physicians – NEWS2, Chart 1: The NEWS scoring system (reproducido por NHS NWAS)",
+          "url": "https://www.nwas.nhs.uk/publications/news2-national-early-warning-score"
+        },
+        {
+          "id": "ama_bp2025",
+          "title": "AMA – New BP guideline: 5 things physicians should know (2025 AHA/ACC conserva las categorías de 2017)",
+          "url": "https://www.ama-assn.org/delivering-care/hypertension/new-bp-guideline-5-things-physicians-should-know"
+        }
+      ]
+    },
+    {
+      "code": "HEART_RATE",
+      "name": "Frecuencia cardíaca en reposo",
+      "unit": "lpm",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "lpm"
+        },
+        {
+          "name": "at_rest",
+          "type": "boolean",
+          "role": "context",
+          "required": false
+        },
+        {
+          "name": "symptoms",
+          "type": "string[]",
+          "role": "context",
+          "required": false,
+          "values": "códigos del catálogo de síntomas"
+        }
+      ],
+      "derived_fields": [],
+      "hazards": [
+        "gravity_fields"
+      ],
+      "body_zone": "heart",
+      "input_methods": [
+        "manual",
+        "wearable"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Pulsera o pulsioxímetro, o contando el pulso 30 s y multiplicando por 2. Se evalúa solo en reposo.",
+        "why": "Un pulso en reposo muy rápido o muy lento puede indicar deshidratación, fiebre, problemas del ritmo o desacondicionamiento.",
+        "hazard_effect": "Gravity Fields: la ingravidez cambia la circulación y el trabajo del corazón; los cambios de gravedad pueden causar mareo y pulso acelerado al incorporarse.",
+        "when_to_escalate": "Tripulación + flight surgeon: 40 lpm o menos, o 131 lpm o más, en reposo. Tripulación: 111–130 lpm, o pulso lento con mareo.",
+        "prevention": "Hidratación, sueño, ejercicio prescrito y medir siempre en las mismas condiciones."
+      },
+      "rules": [
+        {
+          "level": "unrated",
+          "when": {
+            "field": "at_rest",
+            "op": "eq",
+            "value": false
+          },
+          "recommendation": "Esta medición se hizo en actividad; los rangos de reposo no aplican.",
+          "escalation": "self_care",
+          "source_ids": [
+            "aha_hr"
+          ],
+          "basis": "source_adapted",
+          "note": "La AHA define el rango normal para personas sentadas o acostadas, en calma."
+        },
+        {
+          "level": "critical",
+          "when": {
+            "any": [
+              {
+                "field": "value",
+                "op": "lte",
+                "value": 40
+              },
+              {
+                "field": "value",
+                "op": "gte",
+                "value": 131
+              }
+            ]
+          },
+          "recommendation": "Tu pulso en reposo está fuera de un rango seguro. Quédate en reposo, vuelve a medir en 5 minutos y avisa a tu tripulación.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "news2"
+          ],
+          "basis": "source_adapted",
+          "note": "Puntaje 3 de NEWS2 (≤40 o ≥131)."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "all": [
+              {
+                "field": "value",
+                "op": "lt",
+                "value": 60
+              },
+              {
+                "field": "symptoms",
+                "op": "has_any",
+                "value": [
+                  "dizziness",
+                  "fainting",
+                  "confusion"
+                ]
+              }
+            ]
+          },
+          "recommendation": "Tu pulso está lento y tienes mareo. Quédate sujeto y avisa a tu tripulación.",
+          "escalation": "crew",
+          "source_ids": [
+            "aha_hr"
+          ],
+          "basis": "source_adapted"
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "gte",
+            "value": 111
+          },
+          "recommendation": "Tu pulso en reposo está alto. Descansa, bebe agua y vuelve a medir en 15 minutos.",
+          "escalation": "crew",
+          "source_ids": [
+            "aha_hr",
+            "news2"
+          ],
+          "basis": "source_adapted",
+          "note": "NEWS2 puntaje 2 en 111–130."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "gt",
+            "value": 100
+          },
+          "recommendation": "Tu pulso en reposo está algo alto. Descansa, hidrátate y vuelve a medir más tarde.",
+          "escalation": "self_care",
+          "source_ids": [
+            "aha_hr"
+          ],
+          "basis": "source"
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "lt",
+            "value": 60
+          },
+          "recommendation": "Tu pulso está por debajo de 60. En personas muy entrenadas puede ser normal; si te sientes mareado, regístralo como síntoma.",
+          "escalation": "self_care",
+          "source_ids": [
+            "aha_hr"
+          ],
+          "basis": "source"
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Tu pulso en reposo está en rango normal.",
+          "escalation": "self_care",
+          "source_ids": [
+            "aha_hr"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "aha_hr",
+          "title": "AHA – All About Heart Rate",
+          "url": "https://www.heart.org/en/health-topics/high-blood-pressure/the-facts-about-high-blood-pressure/all-about-heart-rate-pulse"
+        },
+        {
+          "id": "news2",
+          "title": "Royal College of Physicians – NEWS2, Chart 1: The NEWS scoring system (reproducido por NHS NWAS)",
+          "url": "https://www.nwas.nhs.uk/publications/news2-national-early-warning-score"
+        }
+      ]
+    },
+    {
+      "code": "RESP_RATE",
+      "name": "Frecuencia respiratoria",
+      "unit": "rpm",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "rpm"
+        }
+      ],
+      "derived_fields": [],
+      "hazards": [
+        "hostile_closed_env"
+      ],
+      "body_zone": "lungs",
+      "input_methods": [
+        "wearable",
+        "manual"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Contando respiraciones durante 60 s en reposo, o estimada por la pulsera.",
+        "why": "Respirar muy rápido o muy lento es una de las primeras señales de que algo va mal (falta de oxígeno, CO₂ alto, infección).",
+        "hazard_effect": "Hostile/Closed: un CO₂ alto en la cabina o una infección hacen respirar más rápido. El triaje usa este mismo dato (START: más de 30 rpm = atención inmediata).",
+        "when_to_escalate": "Tripulación + flight surgeon: 8 rpm o menos, o 25 rpm o más. Tripulación: 21–24 rpm.",
+        "prevention": "Vigilar el CO₂ del módulo, reportar tos o fiebre temprano y medir en reposo."
+      },
+      "rules": [
+        {
+          "level": "critical",
+          "when": {
+            "any": [
+              {
+                "field": "value",
+                "op": "lte",
+                "value": 8
+              },
+              {
+                "field": "value",
+                "op": "gte",
+                "value": 25
+              }
+            ]
+          },
+          "recommendation": "Tu respiración está fuera de un rango seguro. Avisa ya a tu tripulación y revisa el CO₂ del módulo.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "news2",
+            "chemm_start"
+          ],
+          "basis": "source_adapted",
+          "note": "Puntaje 3 de NEWS2; START: >30 rpm = inmediato."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "gte",
+            "value": 21
+          },
+          "recommendation": "Respiras más rápido de lo normal. Descansa 5 minutos y vuelve a medir; revisa el CO₂ del módulo.",
+          "escalation": "crew",
+          "source_ids": [
+            "statpearls_rr",
+            "news2"
+          ],
+          "basis": "source_adapted"
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "lte",
+            "value": 11
+          },
+          "recommendation": "Respiras más lento de lo normal. Vuelve a medir en reposo, contando 60 segundos.",
+          "escalation": "self_care",
+          "source_ids": [
+            "statpearls_rr",
+            "news2"
+          ],
+          "basis": "source_adapted"
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Tu respiración está en rango normal (12–20 rpm).",
+          "escalation": "self_care",
+          "source_ids": [
+            "statpearls_rr"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "news2",
+          "title": "Royal College of Physicians – NEWS2, Chart 1: The NEWS scoring system (reproducido por NHS NWAS)",
+          "url": "https://www.nwas.nhs.uk/publications/news2-national-early-warning-score"
+        },
+        {
+          "id": "chemm_start",
+          "title": "HHS CHEMM – START Adult Triage Algorithm",
+          "url": "https://chemm.hhs.gov/startalgotext.htm"
+        },
+        {
+          "id": "statpearls_rr",
+          "title": "StatPearls (NCBI Bookshelf) – frecuencia respiratoria normal del adulto en reposo",
+          "url": "https://www.ncbi.nlm.nih.gov/books/NBK537306/"
+        }
+      ]
+    },
+    {
+      "code": "SPO2",
+      "name": "Saturación de oxígeno",
+      "unit": "%",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "%"
+        }
+      ],
+      "derived_fields": [],
+      "hazards": [
+        "hostile_closed_env"
+      ],
+      "body_zone": "lungs",
+      "input_methods": [
+        "manual",
+        "wearable"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Pulsioxímetro de dedo o pulsera; dedo tibio y quieto durante la lectura.",
+        "why": "Indica cuánto oxígeno lleva la sangre. Un valor bajo puede significar que el cuerpo no recibe suficiente oxígeno.",
+        "hazard_effect": "Hostile/Closed: depende de la atmósfera de la cabina (presión, O₂) y de la salud pulmonar; NASA HRP estudia el riesgo de hipoxia en atmósferas de exploración.",
+        "when_to_escalate": "Tripulación + flight surgeon: 91 % o menos. Tripulación: 92–93 %.",
+        "prevention": "Revisar la atmósfera del módulo, repetir con buena técnica y reportar falta de aire de inmediato."
+      },
+      "rules": [
+        {
+          "level": "critical",
+          "when": {
+            "field": "value",
+            "op": "lte",
+            "value": 91
+          },
+          "recommendation": "Tu oxígeno en sangre está bajo. Avisa ya a tu tripulación; revisen la atmósfera del módulo y el protocolo de oxígeno.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "who_pulseox",
+            "news2"
+          ],
+          "basis": "source_adapted",
+          "note": "OMS: SpO₂ < 90 % es una emergencia clínica; NEWS2: ≤91 % = puntaje 3."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "lte",
+            "value": 93
+          },
+          "recommendation": "Tu oxígeno está por debajo de lo normal. Vuelve a medir con el dedo tibio; si se repite, avisa a tu tripulación.",
+          "escalation": "crew",
+          "source_ids": [
+            "who_pulseox",
+            "news2"
+          ],
+          "basis": "source_adapted"
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "lte",
+            "value": 94
+          },
+          "recommendation": "Tu oxígeno está ligeramente bajo. Repite la medición con el dedo tibio y quieto.",
+          "escalation": "self_care",
+          "source_ids": [
+            "who_pulseox"
+          ],
+          "basis": "source"
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Tu oxígeno está en rango normal (95 % o más).",
+          "escalation": "self_care",
+          "source_ids": [
+            "who_pulseox"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "who_pulseox",
+          "title": "WHO Pulse Oximetry Training Manual (texto literal reproducido por PhenX Toolkit)",
+          "url": "https://dev.phenxtoolkit.org/protocols/view/91102"
+        },
+        {
+          "id": "news2",
+          "title": "Royal College of Physicians – NEWS2, Chart 1: The NEWS scoring system (reproducido por NHS NWAS)",
+          "url": "https://www.nwas.nhs.uk/publications/news2-national-early-warning-score"
+        }
+      ],
+      "notes": [
+        "Los cortes valen para atmósfera a nivel del mar. En atmósferas de exploración con menor presión parcial de O₂, el admin debe poder ajustar los cortes por entorno (pendiente de fuente)."
+      ]
+    },
+    {
+      "code": "BODY_TEMP",
+      "name": "Temperatura corporal",
+      "unit": "°C",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "°C"
+        }
+      ],
+      "derived_fields": [],
+      "hazards": [
+        "hostile_closed_env"
+      ],
+      "body_zone": "immune",
+      "input_methods": [
+        "manual"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Termómetro digital oral o de oído; siempre con el mismo método.",
+        "why": "La fiebre es una señal temprana de infección; la temperatura muy baja también es peligrosa.",
+        "hazard_effect": "Hostile/Closed: en un espacio cerrado una infección pasa fácil a toda la tripulación; NASA HRP describe cambios del sistema inmune y del microbioma que aumentan el riesgo de enfermar.",
+        "when_to_escalate": "Flight surgeon: 35.0 °C o menos, o 39.4 °C o más. Tripulación: fiebre de 38.0 °C o más (riesgo de contagio).",
+        "prevention": "Higiene de manos y superficies, reportar síntomas temprano, hidratación y descanso."
+      },
+      "rules": [
+        {
+          "level": "critical",
+          "when": {
+            "field": "value",
+            "op": "lte",
+            "value": 35.0
+          },
+          "recommendation": "Tu temperatura está demasiado baja. Abrígate, avisa a tu tripulación y vuelve a medir.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "mayo_hypothermia",
+            "news2"
+          ],
+          "basis": "source_adapted",
+          "note": "Hipotermia: < 35 °C (Mayo Clinic, citando a CDC); NEWS2: ≤35.0 = puntaje 3."
+        },
+        {
+          "level": "critical",
+          "when": {
+            "field": "value",
+            "op": "gte",
+            "value": 39.4
+          },
+          "recommendation": "Tienes fiebre alta. Avisa a tu tripulación, bebe líquidos y se consultará al flight surgeon.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "adam_fever"
+          ],
+          "basis": "source_adapted",
+          "note": "A.D.A.M.: un adulto debe contactar a su médico si la fiebre se mantiene en 39.4 °C (103 °F) o más."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "gte",
+            "value": 38.0
+          },
+          "recommendation": "Tienes fiebre. Descansa, bebe líquidos, usa medidas de higiene para no contagiar y vuelve a medir en 4 horas.",
+          "escalation": "crew",
+          "source_ids": [
+            "cdc_fever"
+          ],
+          "basis": "source_adapted",
+          "note": "Escalamiento a tripulación por contagio en espacio cerrado; reevaluar en 4 h es regla de diseño."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "lte",
+            "value": 36.0
+          },
+          "recommendation": "Tu temperatura está algo baja. Abrígate y vuelve a medir en 30 minutos.",
+          "escalation": "self_care",
+          "source_ids": [
+            "news2"
+          ],
+          "basis": "source_adapted",
+          "note": "NEWS2: 35.1–36.0 = puntaje 1."
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Tu temperatura está en rango normal.",
+          "escalation": "self_care",
+          "source_ids": [
+            "cdc_fever",
+            "news2"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "mayo_hypothermia",
+          "title": "Mayo Clinic – Hypothermia: First aid",
+          "url": "https://www.mayoclinic.org/first-aid/first-aid-hypothermia/basics/ART-20056624"
+        },
+        {
+          "id": "news2",
+          "title": "Royal College of Physicians – NEWS2, Chart 1: The NEWS scoring system (reproducido por NHS NWAS)",
+          "url": "https://www.nwas.nhs.uk/publications/news2-national-early-warning-score"
+        },
+        {
+          "id": "adam_fever",
+          "title": "A.D.A.M. Medical Encyclopedia – Fever (Penn Medicine; mismo texto que MedlinePlus 003090)",
+          "url": "https://www3.pennmedicine.org/for-patients-and-visitors/patient-information/conditions-treated-a-to-z/fever"
+        },
+        {
+          "id": "cdc_fever",
+          "title": "CDC – Definitions of Signs, Symptoms, and Conditions of Ill Travelers (fiebre)",
+          "url": "https://www.cdc.gov/quarantine/maritime/definitions-signs-symptoms-conditions-ill-travelers.html"
+        }
+      ]
+    },
+    {
+      "code": "GLUCOSE",
+      "name": "Glucosa en sangre",
+      "unit": "mg/dL",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "fasting",
+          "type": "boolean",
+          "role": "context",
+          "required": true
+        },
+        {
+          "name": "symptoms",
+          "type": "string[]",
+          "role": "context",
+          "required": false,
+          "values": "códigos del catálogo de síntomas"
+        }
+      ],
+      "derived_fields": [],
+      "hazards": [
+        "distance_from_earth",
+        "gravity_fields"
+      ],
+      "body_zone": "metabolism",
+      "input_methods": [
+        "manual",
+        "camera"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Glucómetro con gota de sangre del dedo; la foto de la pantalla queda como respaldo. Indicar si estás en ayunas (8 h sin comer).",
+        "why": "La glucosa es la energía del cuerpo. Muy baja puede causar confusión o desmayo; alta de forma repetida debe revisarla un médico.",
+        "hazard_effect": "Distance from Earth: los alimentos son limitados y la ingesta suele ser menor (riesgo de nutrición inadecuada de NASA HRP); Gravity Fields: menos actividad y cambios metabólicos en ingravidez.",
+        "when_to_escalate": "Tripulación + flight surgeon: menos de 54 mg/dL, menos de 70 con confusión o desmayo, o 200 o más con síntomas. Flight surgeon de rutina: 126 o más en ayunas, o 200 o más sin síntomas.",
+        "prevention": "Comer las raciones completas, no saltarse comidas antes de una EVA o del ejercicio, y medir en ayunas cuando la rutina lo pida."
+      },
+      "rules": [
+        {
+          "level": "critical",
+          "when": {
+            "all": [
+              {
+                "field": "value",
+                "op": "lt",
+                "value": 70
+              },
+              {
+                "field": "symptoms",
+                "op": "has_any",
+                "value": [
+                  "confusion",
+                  "fainting",
+                  "unresponsive"
+                ]
+              }
+            ]
+          },
+          "recommendation": "Glucosa baja con confusión. La tripulación debe ayudarte a tomar azúcar de absorción rápida ahora.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ada_hypo"
+          ],
+          "basis": "source",
+          "note": "ADA nivel 3: alteración mental o física que requiere ayuda."
+        },
+        {
+          "level": "critical",
+          "when": {
+            "field": "value",
+            "op": "lt",
+            "value": 54
+          },
+          "recommendation": "Tu glucosa está muy baja. Toma ya 15 g de azúcar de absorción rápida, vuelve a medir en 15 minutos y avisa a tu tripulación.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ada_hypo"
+          ],
+          "basis": "source",
+          "note": "ADA nivel 2: < 54 mg/dL. Regla 15-15."
+        },
+        {
+          "level": "critical",
+          "when": {
+            "all": [
+              {
+                "field": "value",
+                "op": "gte",
+                "value": 200
+              },
+              {
+                "field": "symptoms",
+                "op": "has_any",
+                "value": [
+                  "excessive_thirst",
+                  "frequent_urination",
+                  "blurred_vision",
+                  "nausea",
+                  "vomiting",
+                  "confusion"
+                ]
+              }
+            ]
+          },
+          "recommendation": "Tu glucosa está muy alta y tienes síntomas. Avisa a tu tripulación; se consultará al flight surgeon.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ada_dx"
+          ],
+          "basis": "source_adapted",
+          "note": "ADA: glucosa aleatoria ≥200 con síntomas cumple un criterio diagnóstico. Clasificarla como crítica es decisión de diseño."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "lt",
+            "value": 70
+          },
+          "recommendation": "Tu glucosa está baja. Toma 15 g de azúcar de absorción rápida y vuelve a medir en 15 minutos.",
+          "escalation": "self_care",
+          "source_ids": [
+            "ada_hypo"
+          ],
+          "basis": "source",
+          "note": "ADA nivel 1: 54–69 mg/dL."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "gte",
+            "value": 200
+          },
+          "recommendation": "Tu glucosa está alta. Vuelve a medir mañana en ayunas; el flight surgeon revisará el resultado.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ada_dx"
+          ],
+          "basis": "source_adapted"
+        },
+        {
+          "level": "caution",
+          "when": {
+            "all": [
+              {
+                "field": "fasting",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "field": "value",
+                "op": "gte",
+                "value": 126
+              }
+            ]
+          },
+          "recommendation": "Tu glucosa en ayunas está alta. Hace falta confirmarla otro día; el flight surgeon la revisará.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ada_dx"
+          ],
+          "basis": "source",
+          "note": "ADA: ≥126 en ayunas requiere confirmación."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "all": [
+              {
+                "field": "fasting",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "field": "value",
+                "op": "gte",
+                "value": 100
+              }
+            ]
+          },
+          "recommendation": "Tu glucosa en ayunas está algo alta. Repite la medición en ayunas otro día.",
+          "escalation": "self_care",
+          "source_ids": [
+            "ada_dx"
+          ],
+          "basis": "source",
+          "note": "ADA: 100–125 en ayunas."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "all": [
+              {
+                "field": "fasting",
+                "op": "eq",
+                "value": false
+              },
+              {
+                "field": "value",
+                "op": "gte",
+                "value": 140
+              }
+            ]
+          },
+          "recommendation": "Tu glucosa después de comer está algo alta. Mide mañana en ayunas para comparar.",
+          "escalation": "self_care",
+          "source_ids": [
+            "aafp_dm",
+            "ada_dx"
+          ],
+          "basis": "source_adapted",
+          "note": "AAFP: valores aleatorios de 140–180 ameritan una prueba más definitiva; ADA: 2 h post-carga normal < 140."
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Tu glucosa está en rango normal.",
+          "escalation": "self_care",
+          "source_ids": [
+            "ada_dx"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "ada_hypo",
+          "title": "American Diabetes Association – Hypoglycemia (versión profesional, 2025)",
+          "url": "https://professional.diabetes.org/sites/dpro/files/2025-05/hypoglycemia-hcp-5-27-25.pdf"
+        },
+        {
+          "id": "ada_dx",
+          "title": "American Diabetes Association – Diagnosis",
+          "url": "https://diabetes.org/about-diabetes/diagnosis"
+        },
+        {
+          "id": "aafp_dm",
+          "title": "AAFP – Diabetes Mellitus: Diagnosis and Screening (glucosa aleatoria 140–180)",
+          "url": "https://www.aafp.org/pubs/afp/issues/2010/0401/p863.html"
+        }
+      ]
+    },
+    {
+      "code": "SLEEP_HOURS",
+      "name": "Horas de sueño",
+      "unit": "h",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "h"
+        }
+      ],
+      "derived_fields": [
+        {
+          "name": "consecutive_nights_le_6h",
+          "type": "integer",
+          "how": "noches seguidas (incluida la actual) con ≤ 6 h"
+        }
+      ],
+      "hazards": [
+        "isolation_confinement"
+      ],
+      "body_zone": "brain",
+      "input_methods": [
+        "wearable",
+        "manual"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Actigrafía con la pulsera (NASA la usa en vuelo) o registro manual.",
+        "why": "Dormir poco reduce la atención y aumenta los errores; en una misión, un error puede ser grave.",
+        "hazard_effect": "Isolation and Confinement: ruido, luz, horarios cambiantes y confinamiento reducen el sueño; en vuelo los astronautas duermen en promedio 6–6.5 h (NASA OCHMO).",
+        "when_to_escalate": "Flight surgeon: 7 noches seguidas con 6 h o menos. Tripulación (para ajustar horarios): 3 noches seguidas con 6 h o menos.",
+        "prevention": "Respetar el periodo de sueño, oscuridad y tapones contra el ruido, y hacer la prueba de reacción antes de una tarea crítica si dormiste poco."
+      },
+      "rules": [
+        {
+          "level": "critical",
+          "when": {
+            "field": "consecutive_nights_le_6h",
+            "op": "gte",
+            "value": 7
+          },
+          "recommendation": "Llevas una semana durmiendo 6 horas o menos. Tu atención puede estar tan afectada como si no hubieras dormido un día entero. Se avisa al flight surgeon y se recomienda la prueba de reacción antes de tareas críticas.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ochmo_sleep",
+            "aasm_press"
+          ],
+          "basis": "source_adapted",
+          "note": "NASA OCHMO-TB-041: tras 7 días de 6 h de sueño, el desempeño equivale a 24–36 h sin dormir."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "consecutive_nights_le_6h",
+            "op": "gte",
+            "value": 3
+          },
+          "recommendation": "Llevas varias noches durmiendo poco. Habla con tu tripulación para proteger tu próximo periodo de sueño.",
+          "escalation": "crew",
+          "source_ids": [
+            "aasm_press"
+          ],
+          "basis": "design_rule",
+          "note": "El umbral de 3 noches es regla de diseño (pendiente de validar con el flight surgeon)."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "lte",
+            "value": 6
+          },
+          "recommendation": "Dormiste 6 horas o menos. Si hoy tienes una tarea crítica, haz antes la prueba de reacción.",
+          "escalation": "self_care",
+          "source_ids": [
+            "aasm_press"
+          ],
+          "basis": "source",
+          "note": "AASM: 6 h o menos es insuficiente para sostener salud y seguridad."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "lt",
+            "value": 7
+          },
+          "recommendation": "Dormiste menos de 7 horas. Intenta proteger tu próximo periodo de sueño.",
+          "escalation": "self_care",
+          "source_ids": [
+            "aasm_sleep"
+          ],
+          "basis": "source"
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Dormiste 7 horas o más.",
+          "escalation": "self_care",
+          "source_ids": [
+            "aasm_sleep"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "ochmo_sleep",
+          "title": "NASA OCHMO-TB-041 – Sleep Accommodations (NASA-STD-3001)",
+          "url": "https://www.nasa.gov/wp-content/uploads/2023/03/sleep-accomodations-technical-brief-ochmo.pdf"
+        },
+        {
+          "id": "aasm_press",
+          "title": "AASM – Seven or more hours of sleep per night: a health necessity for adults",
+          "url": "https://aasm.org/seven-or-more-hours-of-sleep-per-night-a-health-necessity-for-adults/"
+        },
+        {
+          "id": "aasm_sleep",
+          "title": "AASM/SRS – Recommended Amount of Sleep for a Healthy Adult (consenso)",
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC4434546/"
+        }
+      ]
+    },
+    {
+      "code": "RAD_DOSE_DAILY",
+      "name": "Dosis de radiación diaria",
+      "unit": "mSv/día",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "mSv"
+        },
+        {
+          "name": "event_active",
+          "type": "boolean",
+          "role": "context",
+          "required": false
+        },
+        {
+          "name": "symptoms",
+          "type": "string[]",
+          "role": "context",
+          "required": false,
+          "values": "códigos del catálogo de síntomas"
+        }
+      ],
+      "derived_fields": [
+        {
+          "name": "ratio_to_baseline",
+          "type": "number",
+          "how": "valor / mediana de los últimos 7 días del mismo tripulante (sin días de evento)"
+        },
+        {
+          "name": "event_dose_msv",
+          "type": "number",
+          "how": "suma de dosis desde que se activó la alerta de evento solar (null si no hay evento)"
+        }
+      ],
+      "hazards": [
+        "space_radiation"
+      ],
+      "body_zone": "immune",
+      "input_methods": [
+        "sensor"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Dosímetros personales y de área; la CSA desarrolla un espectrómetro de neutrones autónomo (CANS) porque los neutrones aportan cerca del 30 % de la radiación en la ISS. En la demo, dosímetro simulado.",
+        "why": "La radiación acumulada aumenta el riesgo de cáncer; una dosis alta en poco tiempo (evento solar) puede causar síntomas agudos.",
+        "hazard_effect": "Space Radiation: fuera de la protección de la Tierra, los rayos cósmicos y los eventos solares aumentan la dosis. Como referencia, en la ISS se acumulan 0.2–0.5 mSv por día.",
+        "when_to_escalate": "Flight surgeon: dosis del evento de 125 mSv o más, o náusea o vómito durante un evento. Crítico: 250 mSv en un evento (límite de NASA). Tripulación: dosis del día al doble de lo habitual.",
+        "prevention": "Ir al refugio de tormenta en cuanto haya alerta solar, reducir el tiempo fuera del refugio y llevar siempre el dosímetro."
+      },
+      "rules": [
+        {
+          "level": "critical",
+          "when": {
+            "all": [
+              {
+                "field": "event_active",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "field": "symptoms",
+                "op": "has_any",
+                "value": [
+                  "nausea",
+                  "vomiting"
+                ]
+              }
+            ]
+          },
+          "recommendation": "Tienes náusea o vómito durante un evento solar. Activa el modo emergencia: el triaje te guiará con el módulo de radiación.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "orau_ars",
+            "ntrs_ars_spe"
+          ],
+          "basis": "source_adapted",
+          "note": "El vómito es parte del pródromo del síndrome agudo por radiación; en vuelo también puede deberse al mareo espacial, por eso pasa al triaje."
+        },
+        {
+          "level": "critical",
+          "when": {
+            "field": "event_dose_msv",
+            "op": "gte",
+            "value": 250
+          },
+          "recommendation": "La dosis de este evento alcanzó el límite de NASA para eventos solares. Permanece en el refugio; se avisa al flight surgeon.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ochmo_rad"
+          ],
+          "basis": "source",
+          "note": "NASA-STD-3001 Vol. 1 [V1 4031]: 250 mSv por evento solar."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "event_dose_msv",
+            "op": "gte",
+            "value": 125
+          },
+          "recommendation": "La dosis del evento ya es la mitad del límite. Permanece en el refugio; se avisa al flight surgeon.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ochmo_rad"
+          ],
+          "basis": "design_rule",
+          "note": "50 % del límite de 250 mSv: margen de diseño."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "ratio_to_baseline",
+            "op": "gte",
+            "value": 2
+          },
+          "recommendation": "Tu dosis de hoy es al menos el doble de lo habitual. Revisa las alertas de clima espacial y sigue el protocolo del refugio.",
+          "escalation": "crew",
+          "source_ids": [
+            "ntrs_ascend_rad"
+          ],
+          "basis": "design_rule",
+          "note": "Factor 2 sobre la línea base: regla de diseño (pendiente de fuente)."
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Tu dosis de hoy está dentro de lo habitual para esta misión.",
+          "escalation": "self_care",
+          "source_ids": [
+            "ntrs_ascend_rad"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "orau_ars",
+          "title": "ORAU/REACTS – Triage handout: pródromo de ARS y tiempo hasta el vómito",
+          "url": "https://www.orau.gov/hsc/RadMassCasualties/assets/4_Triage_Handout.pdf"
+        },
+        {
+          "id": "ntrs_ars_spe",
+          "title": "NASA HRP – Space Radiation Protection Strategies (ARS por eventos solares)",
+          "url": "https://ntrs.nasa.gov/api/citations/20170001372/downloads/20170001372.pdf"
+        },
+        {
+          "id": "ochmo_rad",
+          "title": "NASA OCHMO-TB-020 – Design for Ionizing Radiation Protection (NASA-STD-3001)",
+          "url": "https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf"
+        },
+        {
+          "id": "ntrs_ascend_rad",
+          "title": "NASA NTRS – Simonsen et al., ASCEND (dosis ISS 0.2–0.5 mSv/día)",
+          "url": "https://ntrs.nasa.gov/api/citations/20250006168/downloads/ASCEND%20Simonsen%20draft%201.pdf"
+        }
+      ]
+    },
+    {
+      "code": "RAD_DOSE_CUM",
+      "name": "Dosis de radiación acumulada (carrera)",
+      "unit": "mSv",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "mSv"
+        }
+      ],
+      "derived_fields": [
+        {
+          "name": "pct_of_career_limit",
+          "type": "number",
+          "how": "valor / 600 × 100"
+        },
+        {
+          "name": "projected_end_msv",
+          "type": "number",
+          "how": "valor + mediana diaria × días restantes de misión"
+        }
+      ],
+      "hazards": [
+        "space_radiation"
+      ],
+      "body_zone": "immune",
+      "input_methods": [
+        "sensor"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Se calcula sumando las dosis diarias del dosímetro a la dosis de carrera previa.",
+        "why": "Cuanta más dosis se acumula, mayor es el riesgo de cáncer a largo plazo.",
+        "hazard_effect": "Space Radiation: NASA limita la dosis efectiva de carrera a 600 mSv para todas las edades y sexos (riesgo de cánceres inducidos por radiación).",
+        "when_to_escalate": "Flight surgeon: proyección de 600 mSv o más al final de la misión, o 80 % del límite alcanzado. Crítico: 600 mSv alcanzados.",
+        "prevention": "Planear las EVA y el tiempo fuera del refugio según la proyección, y aplicar el principio ALARA (tan bajo como sea razonablemente posible)."
+      },
+      "rules": [
+        {
+          "level": "critical",
+          "when": {
+            "field": "value",
+            "op": "gte",
+            "value": 600
+          },
+          "recommendation": "Alcanzaste el límite de dosis de carrera de NASA. El flight surgeon definirá los siguientes pasos.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ochmo_rad"
+          ],
+          "basis": "source",
+          "note": "NASA-STD-3001 Vol. 1 [V1 4030]: < 600 mSv de carrera."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "projected_end_msv",
+            "op": "gte",
+            "value": 600
+          },
+          "recommendation": "Con el ritmo actual superarías el límite de carrera antes de terminar la misión. El flight surgeon revisará el plan.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ochmo_rad"
+          ],
+          "basis": "source_adapted"
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "pct_of_career_limit",
+            "op": "gte",
+            "value": 80
+          },
+          "recommendation": "Ya usaste el 80 % de tu límite de dosis de carrera.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ochmo_rad"
+          ],
+          "basis": "design_rule",
+          "note": "Corte del 80 %: regla de diseño."
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Tu dosis acumulada está por debajo del 80 % del límite.",
+          "escalation": "self_care",
+          "source_ids": [
+            "ochmo_rad"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "ochmo_rad",
+          "title": "NASA OCHMO-TB-020 – Design for Ionizing Radiation Protection (NASA-STD-3001)",
+          "url": "https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf"
+        }
+      ]
+    },
+    {
+      "code": "HAB_CO2",
+      "name": "CO₂ del módulo (promedio de 1 h)",
+      "unit": "mmHg",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "mmHg"
+        },
+        {
+          "name": "module_id",
+          "type": "string",
+          "role": "context",
+          "required": true
+        }
+      ],
+      "derived_fields": [
+        {
+          "name": "avg_7d",
+          "type": "number",
+          "how": "promedio de 7 días del mismo módulo"
+        }
+      ],
+      "hazards": [
+        "hostile_closed_env"
+      ],
+      "body_zone": "environment",
+      "input_methods": [
+        "sensor"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Sensores de presión parcial de CO₂ del sistema de soporte vital. En la demo, sensor simulado.",
+        "why": "El CO₂ alto causa dolor de cabeza, fatiga y menor rendimiento; los dolores de cabeza en vuelo se asocian con el CO₂.",
+        "hazard_effect": "Hostile/Closed: la tripulación produce CO₂ y sin convección natural se acumula; en la ISS se han medido 1–9 mmHg.",
+        "when_to_escalate": "Tripulación: más de 3 mmHg (promedio de 1 h) o 2.5 mmHg o más (promedio de 7 días). Flight surgeon: 10 mmHg o más.",
+        "prevention": "Revisar el sistema de remoción de CO₂, mejorar la ventilación del módulo y planear el ejercicio en módulos bien ventilados."
+      },
+      "rules": [
+        {
+          "level": "critical",
+          "when": {
+            "field": "value",
+            "op": "gte",
+            "value": 10
+          },
+          "recommendation": "El CO₂ del módulo está muy alto. Sigan el protocolo de CO₂ alto y revisen ya el sistema de remoción.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ntrs_co2_smac",
+            "jsc20584b"
+          ],
+          "basis": "source_adapted",
+          "note": "10 mmHg era el SMAC de 24 h; JSC 20584 Rev B (2022) eliminó los SMAC de CO₂, por eso se usa como referencia histórica."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "gt",
+            "value": 4.5
+          },
+          "recommendation": "El CO₂ está alto: puede causar fatiga, malestar y náusea. Revisen la ventilación y el sistema de remoción.",
+          "escalation": "crew",
+          "source_ids": [
+            "ochmo_co2"
+          ],
+          "basis": "source_adapted",
+          "note": "Síntomas reportados en vuelo por encima de 4.5 mmHg (dato anecdótico de NASA)."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "gt",
+            "value": 3.0
+          },
+          "recommendation": "El CO₂ supera el límite de NASA para el promedio de 1 hora. Revisen la ventilación del módulo.",
+          "escalation": "crew",
+          "source_ids": [
+            "ochmo_co2"
+          ],
+          "basis": "source",
+          "note": "NASA-STD-3001 Vol. 2 Rev D [V2 6004]: ≤ 3 mmHg (promedio de 1 h)."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "avg_7d",
+            "op": "gte",
+            "value": 2.5
+          },
+          "recommendation": "El CO₂ promedio de la semana está alto; aumenta el riesgo de dolor de cabeza.",
+          "escalation": "crew",
+          "source_ids": [
+            "ochmo_co2"
+          ],
+          "basis": "source",
+          "note": "NASA: mantener el promedio de 7 días < 2.5 mmHg para que el riesgo de dolor de cabeza sea < 1 %."
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "El CO₂ del módulo está dentro del límite de NASA.",
+          "escalation": "self_care",
+          "source_ids": [
+            "ochmo_co2"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "ntrs_co2_smac",
+          "title": "NASA NTRS – Scully et al., Effects of Acute Exposures to CO2 upon Cognitive Functions (SMAC histórico 24 h = 10 mmHg)",
+          "url": "https://ntrs.nasa.gov/api/citations/20150021777/downloads/20150021777.pdf"
+        },
+        {
+          "id": "jsc20584b",
+          "title": "NASA JSC 20584 Rev B – SMACs (2022): se eliminan los SMAC de CO2",
+          "url": "https://ntrs.nasa.gov/citations/20230001817"
+        },
+        {
+          "id": "ochmo_co2",
+          "title": "NASA OCHMO-TB-004 – Carbon Dioxide (NASA-STD-3001 Vol. 2 Rev D [V2 6004])",
+          "url": "https://www.nasa.gov/ochmo-tb-004-carbon-dioxide-2/"
+        }
+      ],
+      "notes": [
+        "Indicador de entorno: se evalúa por módulo y genera la alerta para todos los tripulantes de ese módulo."
+      ]
+    },
+    {
+      "code": "WB_MOOD",
+      "name": "Ánimo (check-in)",
+      "unit": "0–100",
+      "value_type": "scale",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "0–100"
+        }
+      ],
+      "derived_fields": [
+        {
+          "name": "baseline_ready",
+          "type": "boolean",
+          "how": "hay al menos 7 check-ins en la ventana de línea base (14 días, excluye los últimos 3)"
+        },
+        {
+          "name": "adverse_z_3d",
+          "type": "number",
+          "how": "z del promedio de los últimos 3 check-ins contra la línea base personal, orientado para que positivo = peor (se invierte el signo: más bajo es peor)"
+        },
+        {
+          "name": "adverse_sustained_days",
+          "type": "integer",
+          "how": "check-ins seguidos con adverse_z_3d ≥ 1.5"
+        }
+      ],
+      "hazards": [
+        "isolation_confinement"
+      ],
+      "body_zone": "brain",
+      "input_methods": [
+        "slider"
+      ],
+      "sensitivity": "confidential",
+      "rules_version": 1,
+      "direction": "high",
+      "guide": {
+        "measurable": "Sí. Deslizador sin números en el check-in diario (20 s). NASA BHP usa escalas analógicas visuales (VAS) como medida estándar.",
+        "why": "El ánimo bajo sostenido afecta el sueño, la concentración y la convivencia.",
+        "hazard_effect": "Isolation and Confinement: el aislamiento, la distancia de la Tierra y el estrés de la misión afectan la salud mental (riesgo de cambios conductuales y de trabajo en equipo de NASA HRP).",
+        "when_to_escalate": "Salud conductual (confidencial): 5 check-ins seguidos claramente más bajo que tu rango habitual. Nunca se avisa a la tripulación.",
+        "prevention": "Mantener rutinas, contacto con la familia, ejercicio y sueño; usar \"Quiero hablar con alguien\" en cualquier momento."
+      },
+      "rules": [
+        {
+          "level": "unrated",
+          "when": {
+            "field": "baseline_ready",
+            "op": "eq",
+            "value": false
+          },
+          "recommendation": "Estamos aprendiendo tu rango habitual. Sigue con tus check-ins.",
+          "escalation": "self_care",
+          "source_ids": [
+            "nasa_bhp_measures"
+          ],
+          "basis": "design_rule",
+          "note": "Línea base mínima de 7 check-ins: regla de diseño."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "adverse_sustained_days",
+            "op": "gte",
+            "value": 5
+          },
+          "recommendation": "Llevas varios días distinto de lo habitual. Tu equipo de apoyo en Tierra lo sabrá de forma confidencial. Si quieres, usa \"Quiero hablar con alguien\".",
+          "escalation": "behavioral_health",
+          "source_ids": [
+            "nasa_bhp_measures"
+          ],
+          "basis": "design_rule",
+          "note": "z ≥ 1.5 sostenido 5 días: regla de diseño, pendiente de validación por salud conductual. NASA BHP no publica un corte clínico para las VAS."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "adverse_sustained_days",
+            "op": "gte",
+            "value": 3
+          },
+          "recommendation": "Llevas unos días distinto de lo habitual. Puede ayudar dormir, moverte o hablar con alguien de confianza.",
+          "escalation": "self_care",
+          "source_ids": [
+            "nasa_bhp_measures"
+          ],
+          "basis": "design_rule"
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Gracias por tu check-in.",
+          "escalation": "self_care",
+          "source_ids": [
+            "nasa_bhp_measures"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "nasa_bhp_measures",
+          "title": "NASA NTRS – BHP Laboratory Standard Measures",
+          "url": "https://ntrs.nasa.gov/api/citations/20170005421/downloads/20170005421.pdf"
+        }
+      ],
+      "notes": [
+        "El astronauta no ve un semáforo rojo en bienestar: la app muestra mensajes neutros. La racha premia completar el check-in, nunca el resultado."
+      ]
+    },
+    {
+      "code": "WB_FATIGUE",
+      "name": "Fatiga (check-in)",
+      "unit": "0–100",
+      "value_type": "scale",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "0–100"
+        }
+      ],
+      "derived_fields": [
+        {
+          "name": "baseline_ready",
+          "type": "boolean",
+          "how": "hay al menos 7 check-ins en la ventana de línea base (14 días, excluye los últimos 3)"
+        },
+        {
+          "name": "adverse_z_3d",
+          "type": "number",
+          "how": "z del promedio de los últimos 3 check-ins contra la línea base personal, orientado para que positivo = peor (más alto es peor)"
+        },
+        {
+          "name": "adverse_sustained_days",
+          "type": "integer",
+          "how": "check-ins seguidos con adverse_z_3d ≥ 1.5"
+        }
+      ],
+      "hazards": [
+        "isolation_confinement"
+      ],
+      "body_zone": "brain",
+      "input_methods": [
+        "slider"
+      ],
+      "sensitivity": "confidential",
+      "rules_version": 1,
+      "direction": "low",
+      "guide": {
+        "measurable": "Sí. Deslizador sin números en el check-in diario (20 s). NASA BHP usa escalas analógicas visuales (VAS) como medida estándar.",
+        "why": "La fatiga sostenida aumenta el riesgo de errores y puede reflejar mal sueño o carga excesiva.",
+        "hazard_effect": "Isolation and Confinement: el aislamiento, la distancia de la Tierra y el estrés de la misión afectan la salud mental (riesgo de cambios conductuales y de trabajo en equipo de NASA HRP).",
+        "when_to_escalate": "Salud conductual (confidencial): 5 check-ins seguidos claramente más alto que tu rango habitual. Nunca se avisa a la tripulación.",
+        "prevention": "Mantener rutinas, contacto con la familia, ejercicio y sueño; usar \"Quiero hablar con alguien\" en cualquier momento."
+      },
+      "rules": [
+        {
+          "level": "unrated",
+          "when": {
+            "field": "baseline_ready",
+            "op": "eq",
+            "value": false
+          },
+          "recommendation": "Estamos aprendiendo tu rango habitual. Sigue con tus check-ins.",
+          "escalation": "self_care",
+          "source_ids": [
+            "nasa_bhp_measures"
+          ],
+          "basis": "design_rule",
+          "note": "Línea base mínima de 7 check-ins: regla de diseño."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "adverse_sustained_days",
+            "op": "gte",
+            "value": 5
+          },
+          "recommendation": "Llevas varios días distinto de lo habitual. Tu equipo de apoyo en Tierra lo sabrá de forma confidencial. Si quieres, usa \"Quiero hablar con alguien\".",
+          "escalation": "behavioral_health",
+          "source_ids": [
+            "nasa_bhp_measures"
+          ],
+          "basis": "design_rule",
+          "note": "z ≥ 1.5 sostenido 5 días: regla de diseño, pendiente de validación por salud conductual. NASA BHP no publica un corte clínico para las VAS."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "adverse_sustained_days",
+            "op": "gte",
+            "value": 3
+          },
+          "recommendation": "Llevas unos días distinto de lo habitual. Puede ayudar dormir, moverte o hablar con alguien de confianza.",
+          "escalation": "self_care",
+          "source_ids": [
+            "nasa_bhp_measures"
+          ],
+          "basis": "design_rule"
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Gracias por tu check-in.",
+          "escalation": "self_care",
+          "source_ids": [
+            "nasa_bhp_measures"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "nasa_bhp_measures",
+          "title": "NASA NTRS – BHP Laboratory Standard Measures",
+          "url": "https://ntrs.nasa.gov/api/citations/20170005421/downloads/20170005421.pdf"
+        }
+      ],
+      "notes": [
+        "El astronauta no ve un semáforo rojo en bienestar: la app muestra mensajes neutros. La racha premia completar el check-in, nunca el resultado."
+      ]
+    },
+    {
+      "code": "WB_STRESS",
+      "name": "Estrés (check-in)",
+      "unit": "0–100",
+      "value_type": "scale",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "0–100"
+        }
+      ],
+      "derived_fields": [
+        {
+          "name": "baseline_ready",
+          "type": "boolean",
+          "how": "hay al menos 7 check-ins en la ventana de línea base (14 días, excluye los últimos 3)"
+        },
+        {
+          "name": "adverse_z_3d",
+          "type": "number",
+          "how": "z del promedio de los últimos 3 check-ins contra la línea base personal, orientado para que positivo = peor (más alto es peor)"
+        },
+        {
+          "name": "adverse_sustained_days",
+          "type": "integer",
+          "how": "check-ins seguidos con adverse_z_3d ≥ 1.5"
+        }
+      ],
+      "hazards": [
+        "isolation_confinement"
+      ],
+      "body_zone": "brain",
+      "input_methods": [
+        "slider"
+      ],
+      "sensitivity": "confidential",
+      "rules_version": 1,
+      "direction": "low",
+      "guide": {
+        "measurable": "Sí. Deslizador sin números en el check-in diario (20 s). NASA BHP usa escalas analógicas visuales (VAS) como medida estándar.",
+        "why": "El estrés sostenido afecta el sueño, el ánimo y el desempeño.",
+        "hazard_effect": "Isolation and Confinement: el aislamiento, la distancia de la Tierra y el estrés de la misión afectan la salud mental (riesgo de cambios conductuales y de trabajo en equipo de NASA HRP).",
+        "when_to_escalate": "Salud conductual (confidencial): 5 check-ins seguidos claramente más alto que tu rango habitual. Nunca se avisa a la tripulación.",
+        "prevention": "Mantener rutinas, contacto con la familia, ejercicio y sueño; usar \"Quiero hablar con alguien\" en cualquier momento."
+      },
+      "rules": [
+        {
+          "level": "unrated",
+          "when": {
+            "field": "baseline_ready",
+            "op": "eq",
+            "value": false
+          },
+          "recommendation": "Estamos aprendiendo tu rango habitual. Sigue con tus check-ins.",
+          "escalation": "self_care",
+          "source_ids": [
+            "nasa_bhp_measures"
+          ],
+          "basis": "design_rule",
+          "note": "Línea base mínima de 7 check-ins: regla de diseño."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "adverse_sustained_days",
+            "op": "gte",
+            "value": 5
+          },
+          "recommendation": "Llevas varios días distinto de lo habitual. Tu equipo de apoyo en Tierra lo sabrá de forma confidencial. Si quieres, usa \"Quiero hablar con alguien\".",
+          "escalation": "behavioral_health",
+          "source_ids": [
+            "nasa_bhp_measures"
+          ],
+          "basis": "design_rule",
+          "note": "z ≥ 1.5 sostenido 5 días: regla de diseño, pendiente de validación por salud conductual. NASA BHP no publica un corte clínico para las VAS."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "adverse_sustained_days",
+            "op": "gte",
+            "value": 3
+          },
+          "recommendation": "Llevas unos días distinto de lo habitual. Puede ayudar dormir, moverte o hablar con alguien de confianza.",
+          "escalation": "self_care",
+          "source_ids": [
+            "nasa_bhp_measures"
+          ],
+          "basis": "design_rule"
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Gracias por tu check-in.",
+          "escalation": "self_care",
+          "source_ids": [
+            "nasa_bhp_measures"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "nasa_bhp_measures",
+          "title": "NASA NTRS – BHP Laboratory Standard Measures",
+          "url": "https://ntrs.nasa.gov/api/citations/20170005421/downloads/20170005421.pdf"
+        }
+      ],
+      "notes": [
+        "El astronauta no ve un semáforo rojo en bienestar: la app muestra mensajes neutros. La racha premia completar el check-in, nunca el resultado."
+      ]
+    },
+    {
+      "code": "WB_CREW_CONFLICT",
+      "name": "Roces con la tripulación (check-in)",
+      "unit": "0–100",
+      "value_type": "scale",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "0–100"
+        }
+      ],
+      "derived_fields": [
+        {
+          "name": "baseline_ready",
+          "type": "boolean",
+          "how": "hay al menos 7 check-ins en la ventana de línea base (14 días, excluye los últimos 3)"
+        },
+        {
+          "name": "adverse_z_3d",
+          "type": "number",
+          "how": "z del promedio de los últimos 3 check-ins contra la línea base personal, orientado para que positivo = peor (más alto es peor)"
+        },
+        {
+          "name": "adverse_sustained_days",
+          "type": "integer",
+          "how": "check-ins seguidos con adverse_z_3d ≥ 1.5"
+        }
+      ],
+      "hazards": [
+        "isolation_confinement"
+      ],
+      "body_zone": "brain",
+      "input_methods": [
+        "slider"
+      ],
+      "sensitivity": "confidential",
+      "rules_version": 1,
+      "direction": "low",
+      "guide": {
+        "measurable": "Sí. Deslizador sin números en el check-in diario (20 s). NASA BHP usa escalas analógicas visuales (VAS) como medida estándar.",
+        "why": "Los conflictos sostenidos afectan la cohesión del equipo, clave para la seguridad de la misión.",
+        "hazard_effect": "Isolation and Confinement: el aislamiento, la distancia de la Tierra y el estrés de la misión afectan la salud mental (riesgo de cambios conductuales y de trabajo en equipo de NASA HRP).",
+        "when_to_escalate": "Salud conductual (confidencial): 5 check-ins seguidos claramente más alto que tu rango habitual. Nunca se avisa a la tripulación.",
+        "prevention": "Mantener rutinas, contacto con la familia, ejercicio y sueño; usar \"Quiero hablar con alguien\" en cualquier momento."
+      },
+      "rules": [
+        {
+          "level": "unrated",
+          "when": {
+            "field": "baseline_ready",
+            "op": "eq",
+            "value": false
+          },
+          "recommendation": "Estamos aprendiendo tu rango habitual. Sigue con tus check-ins.",
+          "escalation": "self_care",
+          "source_ids": [
+            "nasa_bhp_measures"
+          ],
+          "basis": "design_rule",
+          "note": "Línea base mínima de 7 check-ins: regla de diseño."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "adverse_sustained_days",
+            "op": "gte",
+            "value": 5
+          },
+          "recommendation": "Llevas varios días distinto de lo habitual. Tu equipo de apoyo en Tierra lo sabrá de forma confidencial. Si quieres, usa \"Quiero hablar con alguien\".",
+          "escalation": "behavioral_health",
+          "source_ids": [
+            "nasa_bhp_measures"
+          ],
+          "basis": "design_rule",
+          "note": "z ≥ 1.5 sostenido 5 días: regla de diseño, pendiente de validación por salud conductual. NASA BHP no publica un corte clínico para las VAS."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "adverse_sustained_days",
+            "op": "gte",
+            "value": 3
+          },
+          "recommendation": "Llevas unos días distinto de lo habitual. Puede ayudar dormir, moverte o hablar con alguien de confianza.",
+          "escalation": "self_care",
+          "source_ids": [
+            "nasa_bhp_measures"
+          ],
+          "basis": "design_rule"
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Gracias por tu check-in.",
+          "escalation": "self_care",
+          "source_ids": [
+            "nasa_bhp_measures"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "nasa_bhp_measures",
+          "title": "NASA NTRS – BHP Laboratory Standard Measures",
+          "url": "https://ntrs.nasa.gov/api/citations/20170005421/downloads/20170005421.pdf"
+        }
+      ],
+      "notes": [
+        "El astronauta no ve un semáforo rojo en bienestar: la app muestra mensajes neutros. La racha premia completar el check-in, nunca el resultado.",
+        "Con 4 tripulantes este dato nunca es anónimo: solo lo ve el astronauta y salud conductual."
+      ]
+    },
+    {
+      "code": "PHQ2_SCORE",
+      "name": "Tamizaje de ánimo (PHQ-2)",
+      "unit": "puntos (0–6)",
+      "value_type": "scale",
+      "components": [
+        {
+          "name": "value",
+          "type": "integer",
+          "role": "value",
+          "required": true,
+          "unit": "puntos"
+        },
+        {
+          "name": "item_1",
+          "type": "integer",
+          "role": "context",
+          "required": true,
+          "values": "0–3"
+        },
+        {
+          "name": "item_2",
+          "type": "integer",
+          "role": "context",
+          "required": true,
+          "values": "0–3"
+        }
+      ],
+      "derived_fields": [],
+      "hazards": [
+        "isolation_confinement"
+      ],
+      "body_zone": "brain",
+      "input_methods": [
+        "questionnaire"
+      ],
+      "sensitivity": "confidential",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. PHQ-2: 2 preguntas sobre las últimas 2 semanas, cada 2 semanas, un día antes de la conferencia psicológica privada.",
+        "why": "Es un tamizaje breve: no diagnostica, solo indica si conviene que salud conductual converse contigo.",
+        "hazard_effect": "Isolation and Confinement: NASA HRP incluye el riesgo de cambios conductuales y trastornos psiquiátricos por aislamiento, radiación y distancia de la Tierra.",
+        "when_to_escalate": "Salud conductual (confidencial): 3 puntos o más. Nunca se avisa a la tripulación ni a control de misión.",
+        "prevention": "Conferencias psicológicas privadas, rutinas, contacto con la familia y \"Quiero hablar con alguien\"."
+      },
+      "rules": [
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "gte",
+            "value": 3
+          },
+          "recommendation": "Gracias por responder. Tu equipo de apoyo en Tierra revisará tus respuestas antes de tu conferencia privada. Si quieres hablar antes, usa \"Quiero hablar con alguien\".",
+          "escalation": "behavioral_health",
+          "source_ids": [
+            "phq2_nida",
+            "nasa_bhp_ops"
+          ],
+          "basis": "source",
+          "note": "Punto de corte 3."
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Gracias por responder.",
+          "escalation": "self_care",
+          "source_ids": [
+            "phq2_nida"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "phq2_nida",
+          "title": "NIDA CDE – Patient Health Questionnaire-2 (PHQ-2)",
+          "url": "https://cde.nida.nih.gov/node/22"
+        },
+        {
+          "id": "nasa_bhp_ops",
+          "title": "NASA NTRS – BHP Operations at JSC (conferencias psicológicas privadas)",
+          "url": "https://ntrs.nasa.gov/api/citations/20170003866/downloads/20170003866.pdf"
+        }
+      ],
+      "notes": [
+        "Al astronauta nunca se le muestra el puntaje ni un diagnóstico. No se usa PHQ-9 (exige protocolo de crisis)."
+      ]
+    },
+    {
+      "code": "GAD2_SCORE",
+      "name": "Tamizaje de ansiedad (GAD-2)",
+      "unit": "puntos (0–6)",
+      "value_type": "scale",
+      "components": [
+        {
+          "name": "value",
+          "type": "integer",
+          "role": "value",
+          "required": true,
+          "unit": "puntos"
+        },
+        {
+          "name": "item_1",
+          "type": "integer",
+          "role": "context",
+          "required": true,
+          "values": "0–3"
+        },
+        {
+          "name": "item_2",
+          "type": "integer",
+          "role": "context",
+          "required": true,
+          "values": "0–3"
+        }
+      ],
+      "derived_fields": [],
+      "hazards": [
+        "isolation_confinement"
+      ],
+      "body_zone": "brain",
+      "input_methods": [
+        "questionnaire"
+      ],
+      "sensitivity": "confidential",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. GAD-2: 2 preguntas sobre las últimas 2 semanas, cada 2 semanas, un día antes de la conferencia psicológica privada.",
+        "why": "Es un tamizaje breve: no diagnostica, solo indica si conviene que salud conductual converse contigo.",
+        "hazard_effect": "Isolation and Confinement: NASA HRP incluye el riesgo de cambios conductuales y trastornos psiquiátricos por aislamiento, radiación y distancia de la Tierra.",
+        "when_to_escalate": "Salud conductual (confidencial): 3 puntos o más. Nunca se avisa a la tripulación ni a control de misión.",
+        "prevention": "Conferencias psicológicas privadas, rutinas, contacto con la familia y \"Quiero hablar con alguien\"."
+      },
+      "rules": [
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "gte",
+            "value": 3
+          },
+          "recommendation": "Gracias por responder. Tu equipo de apoyo en Tierra revisará tus respuestas antes de tu conferencia privada. Si quieres hablar antes, usa \"Quiero hablar con alguien\".",
+          "escalation": "behavioral_health",
+          "source_ids": [
+            "gad2_kroenke",
+            "nasa_bhp_ops"
+          ],
+          "basis": "source",
+          "note": "Punto de corte 3."
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Gracias por responder.",
+          "escalation": "self_care",
+          "source_ids": [
+            "gad2_kroenke"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "gad2_kroenke",
+          "title": "Kroenke et al. 2007, Ann Intern Med – Anxiety disorders in primary care (validación GAD-2)",
+          "url": "https://pubmed.ncbi.nlm.nih.gov/17339617/"
+        },
+        {
+          "id": "nasa_bhp_ops",
+          "title": "NASA NTRS – BHP Operations at JSC (conferencias psicológicas privadas)",
+          "url": "https://ntrs.nasa.gov/api/citations/20170003866/downloads/20170003866.pdf"
+        }
+      ],
+      "notes": [
+        "Al astronauta nunca se le muestra el puntaje ni un diagnóstico. No se usa PHQ-9 (exige protocolo de crisis)."
+      ]
+    },
+    {
+      "code": "PVT_LAPSES",
+      "name": "Prueba de reacción: lapsos",
+      "unit": "conteo",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "integer",
+          "role": "value",
+          "required": true,
+          "unit": "lapsos (TR ≥ 355 ms)"
+        },
+        {
+          "name": "device_id",
+          "type": "string",
+          "role": "context",
+          "required": true
+        }
+      ],
+      "derived_fields": [
+        {
+          "name": "baseline_ready",
+          "type": "boolean",
+          "how": "al menos 3 corridas previas en el mismo dispositivo y en condiciones de descanso"
+        },
+        {
+          "name": "z_device_baseline",
+          "type": "number",
+          "how": "z contra la línea base personal del mismo dispositivo (positivo = peor)"
+        }
+      ],
+      "hazards": [
+        "isolation_confinement"
+      ],
+      "body_zone": "brain",
+      "input_methods": [
+        "minigame"
+      ],
+      "sensitivity": "confidential",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Minijuego de 3 min inspirado en la PVT-B: tocar el círculo en cuanto aparece. La PVT forma parte de la Cognition Test Battery usada por NASA.",
+        "why": "Mide la atención sostenida, que cae con la falta de sueño y la fatiga. Es obligatoria antes de tareas críticas (EVA, maniobras).",
+        "hazard_effect": "Isolation and Confinement: el sueño corto y los horarios irregulares (riesgo de sueño inadecuado de NASA HRP) reducen la atención.",
+        "when_to_escalate": "Flight surgeon (confidencial): 20 lapsos o más. A control de misión solo llega \"apto: sí / no confirmado\".",
+        "prevention": "Proteger el sueño antes de tareas críticas y repetir la prueba tras descansar."
+      },
+      "rules": [
+        {
+          "level": "critical",
+          "when": {
+            "field": "value",
+            "op": "gte",
+            "value": 20
+          },
+          "recommendation": "Tu atención hoy está muy por debajo de lo normal. Descansa antes de cualquier tarea crítica; tu aptitud queda como \"no confirmada\".",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "pvt_fd",
+            "pvtb_basner"
+          ],
+          "basis": "source_adapted",
+          "note": "Basner & Rubinstein 2011: 11 y 20 lapsos (umbral 355 ms) separan desempeño alto, medio y bajo en una tarea de vigilancia. Se aplica fuera de ese contexto."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "gte",
+            "value": 11
+          },
+          "recommendation": "Tu atención hoy está por debajo de lo ideal. Si puedes, descansa y repite la prueba antes de una tarea crítica.",
+          "escalation": "self_care",
+          "source_ids": [
+            "pvt_fd",
+            "pvtb_basner"
+          ],
+          "basis": "source_adapted"
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "z_device_baseline",
+            "op": "gte",
+            "value": 2
+          },
+          "recommendation": "Tu resultado está peor que tu rango habitual. Repite la prueba después de descansar.",
+          "escalation": "self_care",
+          "source_ids": [
+            "pvtb_basner"
+          ],
+          "basis": "design_rule",
+          "note": "z ≥ 2 contra la línea base del dispositivo: regla de diseño."
+        },
+        {
+          "level": "unrated",
+          "when": {
+            "field": "baseline_ready",
+            "op": "eq",
+            "value": false
+          },
+          "recommendation": "Aún estamos construyendo tu línea base en este dispositivo.",
+          "escalation": "self_care",
+          "source_ids": [
+            "pvtb_basner"
+          ],
+          "basis": "design_rule"
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Tu atención está en tu rango habitual.",
+          "escalation": "self_care",
+          "source_ids": [
+            "pvtb_basner"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "pvt_fd",
+          "title": "Basner & Rubinstein 2011, JOEM – Fitness for duty: 3-min PVT (11 y 20 lapsos, umbral 355 ms)",
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3190077"
+        },
+        {
+          "id": "pvtb_basner",
+          "title": "Basner, Mollicone, Dinges 2011, Acta Astronautica – Validity and Sensitivity of a Brief PVT (PVT-B)",
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3197786"
+        }
+      ],
+      "notes": [
+        "Lapso = respuesta ≥ 355 ms (umbral de la PVT-B; 500 ms es el de la PVT de 10 min).",
+        "Aptitud para tarea crítica = \"no confirmado\" si cualquiera de los 3 indicadores PVT no está en normal."
+      ]
+    },
+    {
+      "code": "PVT_MEAN_RT",
+      "name": "Prueba de reacción: tiempo medio",
+      "unit": "ms",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "ms"
+        },
+        {
+          "name": "device_id",
+          "type": "string",
+          "role": "context",
+          "required": true
+        }
+      ],
+      "derived_fields": [
+        {
+          "name": "baseline_ready",
+          "type": "boolean",
+          "how": "al menos 3 corridas previas en el mismo dispositivo y en condiciones de descanso"
+        },
+        {
+          "name": "z_device_baseline",
+          "type": "number",
+          "how": "z contra la línea base personal del mismo dispositivo (positivo = peor)"
+        }
+      ],
+      "hazards": [
+        "isolation_confinement"
+      ],
+      "body_zone": "brain",
+      "input_methods": [
+        "minigame"
+      ],
+      "sensitivity": "confidential",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Minijuego de 3 min inspirado en la PVT-B: tocar el círculo en cuanto aparece. La PVT forma parte de la Cognition Test Battery usada por NASA.",
+        "why": "Mide la atención sostenida, que cae con la falta de sueño y la fatiga. Es obligatoria antes de tareas críticas (EVA, maniobras).",
+        "hazard_effect": "Isolation and Confinement: el sueño corto y los horarios irregulares (riesgo de sueño inadecuado de NASA HRP) reducen la atención.",
+        "when_to_escalate": "Flight surgeon (confidencial): 20 lapsos o más. A control de misión solo llega \"apto: sí / no confirmado\".",
+        "prevention": "Proteger el sueño antes de tareas críticas y repetir la prueba tras descansar."
+      },
+      "rules": [
+        {
+          "level": "caution",
+          "when": {
+            "field": "z_device_baseline",
+            "op": "gte",
+            "value": 2
+          },
+          "recommendation": "Hoy reaccionas más lento que de costumbre. Descansa y repite la prueba antes de una tarea crítica.",
+          "escalation": "self_care",
+          "source_ids": [
+            "pvtb_basner"
+          ],
+          "basis": "design_rule",
+          "note": "No hay corte absoluto publicado para el tiempo medio; se compara contra la línea base."
+        },
+        {
+          "level": "unrated",
+          "when": {
+            "field": "baseline_ready",
+            "op": "eq",
+            "value": false
+          },
+          "recommendation": "Aún estamos construyendo tu línea base en este dispositivo.",
+          "escalation": "self_care",
+          "source_ids": [
+            "pvtb_basner"
+          ],
+          "basis": "design_rule"
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Tu tiempo de reacción está en tu rango habitual.",
+          "escalation": "self_care",
+          "source_ids": [
+            "pvtb_basner"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "pvtb_basner",
+          "title": "Basner, Mollicone, Dinges 2011, Acta Astronautica – Validity and Sensitivity of a Brief PVT (PVT-B)",
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3197786"
+        }
+      ]
+    },
+    {
+      "code": "PVT_FALSE_STARTS",
+      "name": "Prueba de reacción: falsos inicios",
+      "unit": "conteo",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "integer",
+          "role": "value",
+          "required": true,
+          "unit": "respuestas < 100 ms o sin estímulo"
+        },
+        {
+          "name": "device_id",
+          "type": "string",
+          "role": "context",
+          "required": true
+        }
+      ],
+      "derived_fields": [
+        {
+          "name": "baseline_ready",
+          "type": "boolean",
+          "how": "al menos 3 corridas previas en el mismo dispositivo y en condiciones de descanso"
+        },
+        {
+          "name": "z_device_baseline",
+          "type": "number",
+          "how": "z contra la línea base personal del mismo dispositivo (positivo = peor)"
+        }
+      ],
+      "hazards": [
+        "isolation_confinement"
+      ],
+      "body_zone": "brain",
+      "input_methods": [
+        "minigame"
+      ],
+      "sensitivity": "confidential",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Minijuego de 3 min inspirado en la PVT-B: tocar el círculo en cuanto aparece. La PVT forma parte de la Cognition Test Battery usada por NASA.",
+        "why": "Mide la atención sostenida, que cae con la falta de sueño y la fatiga. Es obligatoria antes de tareas críticas (EVA, maniobras).",
+        "hazard_effect": "Isolation and Confinement: el sueño corto y los horarios irregulares (riesgo de sueño inadecuado de NASA HRP) reducen la atención.",
+        "when_to_escalate": "Flight surgeon (confidencial): 20 lapsos o más. A control de misión solo llega \"apto: sí / no confirmado\".",
+        "prevention": "Proteger el sueño antes de tareas críticas y repetir la prueba tras descansar."
+      },
+      "rules": [
+        {
+          "level": "caution",
+          "when": {
+            "field": "z_device_baseline",
+            "op": "gte",
+            "value": 2
+          },
+          "recommendation": "Hoy tocaste antes de tiempo más de lo habitual. Puede ser señal de cansancio; repite la prueba tras descansar.",
+          "escalation": "self_care",
+          "source_ids": [
+            "pvtb_basner",
+            "psytoolkit_pvtb"
+          ],
+          "basis": "design_rule"
+        },
+        {
+          "level": "unrated",
+          "when": {
+            "field": "baseline_ready",
+            "op": "eq",
+            "value": false
+          },
+          "recommendation": "Aún estamos construyendo tu línea base en este dispositivo.",
+          "escalation": "self_care",
+          "source_ids": [
+            "pvtb_basner"
+          ],
+          "basis": "design_rule"
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Sin cambios respecto a tu rango habitual.",
+          "escalation": "self_care",
+          "source_ids": [
+            "pvtb_basner"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "pvtb_basner",
+          "title": "Basner, Mollicone, Dinges 2011, Acta Astronautica – Validity and Sensitivity of a Brief PVT (PVT-B)",
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3197786"
+        },
+        {
+          "id": "psytoolkit_pvtb",
+          "title": "PsyToolkit – PVT-B (falsos inicios < 100 ms, según Basner 2011)",
+          "url": "https://www.psytoolkit.org/library/pvtb.html"
+        }
+      ],
+      "notes": [
+        "Falso inicio < 100 ms: se toma de PsyToolkit, que lo atribuye a Basner 2011; confirmar en el texto original (pendiente)."
+      ]
+    },
+    {
+      "code": "BODY_MASS",
+      "name": "Masa corporal",
+      "unit": "kg",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "kg"
+        }
+      ],
+      "derived_fields": [
+        {
+          "name": "pct_change_from_preflight",
+          "type": "number",
+          "how": "(valor − masa preflight) / masa preflight × 100"
+        }
+      ],
+      "hazards": [
+        "gravity_fields",
+        "distance_from_earth"
+      ],
+      "body_zone": "muscle",
+      "input_methods": [
+        "manual"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí, pero no con báscula: en ingravidez se mide la masa con dispositivos de aceleración (SLAMMD o BMMD en la ISS).",
+        "why": "Perder masa suele indicar que se come menos de lo necesario y se pierde músculo y hueso.",
+        "hazard_effect": "Gravity Fields y Distance from Earth: los astronautas suelen comer menos de lo recomendado; pierden 2–5 % de masa el primer mes y la mantienen baja durante el vuelo.",
+        "when_to_escalate": "Flight surgeon: pérdida del 5 % o más respecto a la masa preflight (rutina); 10 % o más (crítico).",
+        "prevention": "Comer las raciones completas, ejercicio de resistencia y medir la masa con la frecuencia de la rutina."
+      },
+      "rules": [
+        {
+          "level": "critical",
+          "when": {
+            "field": "pct_change_from_preflight",
+            "op": "lte",
+            "value": -10
+          },
+          "recommendation": "Has perdido el 10 % o más de tu masa inicial. El flight surgeon revisará tu alimentación.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "sn_smith"
+          ],
+          "basis": "source_adapted",
+          "note": "Declaración de S. M. Smith (nutrición, NASA JSC): más de 10 % es crítico. No es una norma publicada."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "pct_change_from_preflight",
+            "op": "lte",
+            "value": -5
+          },
+          "recommendation": "Has perdido el 5 % o más de tu masa inicial. Intenta completar todas tus raciones; el flight surgeon lo revisará.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "sn_smith",
+            "aafp_weight"
+          ],
+          "basis": "source_adapted",
+          "note": "Smith: 5–10 % es preocupante. AAFP: > 5 % en 6–12 meses es clínicamente relevante (en adultos mayores)."
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Tu masa corporal está cerca de tu valor inicial.",
+          "escalation": "self_care",
+          "source_ids": [
+            "ntrs_body_mass"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "sn_smith",
+          "title": "Science News – The Zero Gravity Diet (declaraciones de S. M. Smith, NASA JSC)",
+          "url": "https://www.sciencenews.org/?p=40630"
+        },
+        {
+          "id": "aafp_weight",
+          "title": "AAFP – Unintentional Weight Loss in Older Adults (>5 % en 6–12 meses)",
+          "url": "https://www.aafp.org/pubs/afp/issues/2014/0501/p718.html"
+        },
+        {
+          "id": "ntrs_body_mass",
+          "title": "NASA NTRS – Smith, Heer, Zwart: Nutrition SMO (pérdida de 2–5 % de masa el primer mes)",
+          "url": "https://ntrs.nasa.gov/citations/20140013313"
+        }
+      ]
+    },
+    {
+      "code": "EXERCISE_MIN",
+      "name": "Ejercicio",
+      "unit": "min/día",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "min"
+        },
+        {
+          "name": "type",
+          "type": "string",
+          "role": "context",
+          "required": false,
+          "values": "aerobic | resistive"
+        }
+      ],
+      "derived_fields": [
+        {
+          "name": "rolling_7d_pct_of_prescription",
+          "type": "number",
+          "how": "minutos de los últimos 7 días / prescripción semanal × 100 (prescripción por defecto: 600 min/semana)"
+        }
+      ],
+      "hazards": [
+        "gravity_fields"
+      ],
+      "body_zone": "bones",
+      "input_methods": [
+        "manual",
+        "wearable"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Registro de sesiones en cinta (T2), cicloergómetro (CEVIS) y equipo de resistencia (ARED).",
+        "why": "El ejercicio es la principal contramedida contra la pérdida de hueso, músculo y capacidad aeróbica.",
+        "hazard_effect": "Gravity Fields: sin carga, hueso y músculo se pierden; NASA exige mantener la capacidad aeróbica y la fuerza en 80 % o más de la previa. En la ISS el promedio es de 600 min por semana.",
+        "when_to_escalate": "Flight surgeon: menos del 50 % de la prescripción semanal.",
+        "prevention": "Seguir la prescripción diaria (unos 30 min aeróbicos + 30–60 min de resistencia) y reprogramar las sesiones perdidas."
+      },
+      "rules": [
+        {
+          "level": "caution",
+          "when": {
+            "field": "rolling_7d_pct_of_prescription",
+            "op": "lt",
+            "value": 50
+          },
+          "recommendation": "Esta semana hiciste menos de la mitad de tu ejercicio prescrito. El flight surgeon revisará tu plan.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ochmo_exercise"
+          ],
+          "basis": "design_rule",
+          "note": "Cortes de 50 % y 80 % de cumplimiento: regla de diseño."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "rolling_7d_pct_of_prescription",
+            "op": "lt",
+            "value": 80
+          },
+          "recommendation": "Vas por debajo de tu ejercicio prescrito esta semana. Intenta recuperar sesiones.",
+          "escalation": "self_care",
+          "source_ids": [
+            "ochmo_exercise"
+          ],
+          "basis": "design_rule"
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Vas al día con tu ejercicio prescrito.",
+          "escalation": "self_care",
+          "source_ids": [
+            "ochmo_exercise"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "ochmo_exercise",
+          "title": "NASA OCHMO-TB-031 – Exercise Overview",
+          "url": "https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-031-exercise-overview.pdf"
+        }
+      ],
+      "notes": [
+        "Sin nivel crítico: el déficit de ejercicio no es una emergencia aguda."
+      ]
+    },
+    {
+      "code": "VISION_CHECK",
+      "name": "Síntomas visuales (SANS)",
+      "unit": "sí/no",
+      "value_type": "boolean",
+      "components": [
+        {
+          "name": "near_blur",
+          "type": "boolean",
+          "role": "value",
+          "required": true
+        },
+        {
+          "name": "far_blur",
+          "type": "boolean",
+          "role": "value",
+          "required": true
+        },
+        {
+          "name": "amsler_distortion",
+          "type": "boolean",
+          "role": "value",
+          "required": true
+        },
+        {
+          "name": "blind_spot_or_field_loss",
+          "type": "boolean",
+          "role": "value",
+          "required": true
+        },
+        {
+          "name": "double_vision",
+          "type": "boolean",
+          "role": "value",
+          "required": true
+        },
+        {
+          "name": "transient_vision_loss",
+          "type": "boolean",
+          "role": "value",
+          "required": true
+        },
+        {
+          "name": "severe_headache",
+          "type": "boolean",
+          "role": "value",
+          "required": true
+        }
+      ],
+      "derived_fields": [],
+      "hazards": [
+        "gravity_fields"
+      ],
+      "body_zone": "eyes",
+      "input_methods": [
+        "clicks"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Autoevaluación con carta de agudeza visual y rejilla de Amsler; en la ISS también hay fondo de ojo y OCT.",
+        "why": "El SANS puede cambiar la visión durante misiones largas; detectarlo temprano protege la vista y la misión.",
+        "hazard_effect": "Gravity Fields: en ingravidez la estructura del ojo y del cerebro puede cambiar (edema del disco óptico, pliegues coroideos, aplanamiento del globo, cambio de graduación).",
+        "when_to_escalate": "Flight surgeon (prioritario): distorsión en la rejilla de Amsler, punto ciego o pérdida de campo, visión doble o pérdidas breves de visión. Flight surgeon (rutina): visión borrosa nueva o dolor de cabeza intenso.",
+        "prevention": "Autoevaluación semanal, usar las gafas de anticipación espacial si cambia la graduación y reportar cualquier cambio."
+      },
+      "rules": [
+        {
+          "level": "critical",
+          "when": {
+            "any": [
+              {
+                "field": "amsler_distortion",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "field": "blind_spot_or_field_loss",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "field": "double_vision",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "field": "transient_vision_loss",
+                "op": "eq",
+                "value": true
+              }
+            ]
+          },
+          "recommendation": "Reportaste un cambio en tu visión que el flight surgeon debe revisar pronto. Evita tareas que dependan de la vista fina hasta recibir indicaciones.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ntrs_sans_2023",
+            "ntrs_sans_intro"
+          ],
+          "basis": "source_adapted",
+          "note": "NASA: SANS con impacto funcional agudo = pérdida de campo visual o visión central distorsionada; visión doble y oscurecimientos transitorios son síntomas clásicos de hipertensión intracraneal."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "severe_headache",
+            "op": "eq",
+            "value": true
+          },
+          "recommendation": "Reportaste dolor de cabeza intenso. Revisa también el CO₂ del módulo; el flight surgeon lo revisará.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ntrs_sans_intro",
+            "ochmo_co2"
+          ],
+          "basis": "source_adapted"
+        },
+        {
+          "level": "caution",
+          "when": {
+            "any": [
+              {
+                "field": "near_blur",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "field": "far_blur",
+                "op": "eq",
+                "value": true
+              }
+            ]
+          },
+          "recommendation": "Reportaste visión borrosa. Prueba tus gafas de anticipación espacial; el flight surgeon lo revisará en la próxima consulta.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ntrs_sans_2023"
+          ],
+          "basis": "source_adapted",
+          "note": "El cambio de graduación (hipermetropía) es un signo de SANS."
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Sin cambios visuales reportados.",
+          "escalation": "self_care",
+          "source_ids": [
+            "ntrs_sans_2023"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "ntrs_sans_2023",
+          "title": "NASA NTRS – SANS: 2023 Clinical Update",
+          "url": "https://ntrs.nasa.gov/citations/20220014606"
+        },
+        {
+          "id": "ntrs_sans_intro",
+          "title": "NASA NTRS – Brunstetter, Introduction to SANS and its Risk to NASA Astronauts",
+          "url": "https://ntrs.nasa.gov/api/citations/20170009173/downloads/20170009173.pdf"
+        },
+        {
+          "id": "ochmo_co2",
+          "title": "NASA OCHMO-TB-004 – Carbon Dioxide (NASA-STD-3001 Vol. 2 Rev D [V2 6004])",
+          "url": "https://www.nasa.gov/ochmo-tb-004-carbon-dioxide-2/"
+        }
+      ]
+    },
+    {
+      "code": "SYMPTOM",
+      "name": "Síntoma por zona del cuerpo",
+      "unit": "catálogo",
+      "value_type": "catalog",
+      "components": [
+        {
+          "name": "symptoms",
+          "type": "string[]",
+          "role": "value",
+          "required": true,
+          "values": "códigos del catálogo de síntomas"
+        },
+        {
+          "name": "severity",
+          "type": "integer",
+          "role": "context",
+          "required": false,
+          "values": "1–3"
+        }
+      ],
+      "derived_fields": [],
+      "hazards": [
+        "gravity_fields",
+        "hostile_closed_env",
+        "space_radiation",
+        "isolation_confinement"
+      ],
+      "body_zone": "by_symptom",
+      "input_methods": [
+        "clicks"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. El astronauta toca la zona del cuerpo en la figura y elige el síntoma.",
+        "why": "Algunos síntomas son señales de alarma que no pueden esperar a la siguiente medición.",
+        "hazard_effect": "Varios peligros: mareo y desorientación al cambiar de gravedad, infecciones en espacio cerrado, náusea tras un evento solar y dolor de cabeza por CO₂.",
+        "when_to_escalate": "Tripulación + flight surgeon: cualquier señal de alarma de infarto o ACV (dolor en el pecho, falta de aire, cara caída, debilidad de un brazo, dificultad para hablar, cambio súbito de visión o de equilibrio, dolor de cabeza súbito e intenso) o confusión nueva. Tripulación: síntomas de posible infección.",
+        "prevention": "Reportar temprano, higiene y revisar el entorno (CO₂, temperatura) cuando hay dolor de cabeza o mareo."
+      },
+      "rules": [
+        {
+          "level": "critical",
+          "when": {
+            "field": "symptoms",
+            "op": "has_any",
+            "value": [
+              "chest_pain",
+              "shortness_of_breath",
+              "face_drooping",
+              "arm_weakness",
+              "speech_difficulty",
+              "sudden_vision_change",
+              "sudden_balance_loss",
+              "severe_headache_sudden",
+              "unresponsive",
+              "confusion"
+            ]
+          },
+          "recommendation": "Reportaste un síntoma de alarma. Avisa ya a tu tripulación y activa el modo emergencia si empeora.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "aha_warning",
+            "news2"
+          ],
+          "basis": "source_adapted",
+          "note": "Señales de alarma de infarto y ACV de la AHA; confusión nueva = puntaje 3 en NEWS2."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "symptoms",
+            "op": "has_any",
+            "value": [
+              "fainting"
+            ]
+          },
+          "recommendation": "Reportaste un desmayo o casi desmayo. Quédate sujeto, mide tu presión y pulso, y avisa a tu tripulación.",
+          "escalation": "crew",
+          "source_ids": [
+            "aha_low_bp"
+          ],
+          "basis": "source_adapted"
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "symptoms",
+            "op": "has_any",
+            "value": [
+              "fever_feeling",
+              "cough",
+              "sore_throat",
+              "diarrhea",
+              "vomiting",
+              "rash"
+            ]
+          },
+          "recommendation": "Tus síntomas podrían ser de una infección. Mide tu temperatura, refuerza la higiene y avisa a tu tripulación para evitar contagios.",
+          "escalation": "crew",
+          "source_ids": [
+            "nasa_hrp_risks",
+            "nasa_hrp_hazards"
+          ],
+          "basis": "source_adapted",
+          "note": "NASA HRP: cambios inmunes y del microbioma aumentan el riesgo de enfermar en espacio cerrado."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "symptoms",
+            "op": "has_any",
+            "value": [
+              "dizziness",
+              "palpitations",
+              "headache",
+              "nausea",
+              "excessive_thirst",
+              "frequent_urination",
+              "blurred_vision",
+              "back_pain",
+              "muscle_pain",
+              "bone_pain",
+              "fatigue"
+            ]
+          },
+          "recommendation": "Gracias por reportarlo. Sigue la guía de autocuidado y vuelve a registrarlo si continúa o empeora.",
+          "escalation": "self_care",
+          "source_ids": [
+            "nasa_hrp_risks"
+          ],
+          "basis": "design_rule"
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Sin síntomas reportados.",
+          "escalation": "self_care",
+          "source_ids": [
+            "nasa_hrp_risks"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "aha_warning",
+          "title": "AHA – Heart Attack, Stroke and Cardiac Arrest Symptoms",
+          "url": "https://www.heart.org/en/about-us/heart-attack-and-stroke-symptoms"
+        },
+        {
+          "id": "news2",
+          "title": "Royal College of Physicians – NEWS2, Chart 1: The NEWS scoring system (reproducido por NHS NWAS)",
+          "url": "https://www.nwas.nhs.uk/publications/news2-national-early-warning-score"
+        },
+        {
+          "id": "aha_low_bp",
+          "title": "AHA – Low Blood Pressure: When Blood Pressure Is Too Low",
+          "url": "https://www.heart.org/en/health-topics/high-blood-pressure/the-facts-about-high-blood-pressure/low-blood-pressure-when-blood-pressure-is-too-low"
+        },
+        {
+          "id": "nasa_hrp_risks",
+          "title": "NASA HRP – Risks of Human Spaceflight",
+          "url": "https://www.nasa.gov/hrp/risks/"
+        },
+        {
+          "id": "nasa_hrp_hazards",
+          "title": "NASA HRP – 5 Hazards of Human Spaceflight",
+          "url": "https://www.nasa.gov/hrp/hazards/"
+        }
+      ]
+    },
+    {
+      "code": "HAB_TEMP",
+      "name": "Temperatura del módulo",
+      "unit": "°C",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "°C"
+        },
+        {
+          "name": "module_id",
+          "type": "string",
+          "role": "context",
+          "required": true
+        }
+      ],
+      "derived_fields": [],
+      "hazards": [
+        "hostile_closed_env"
+      ],
+      "body_zone": "environment",
+      "input_methods": [
+        "sensor"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Sensores del sistema de control ambiental. En la demo, sensor simulado.",
+        "why": "Fuera del rango cómodo baja el rendimiento y se duerme peor; los extremos dañan la salud.",
+        "hazard_effect": "Hostile/Closed: el soporte vital debe mantener la temperatura; el ejercicio y los equipos generan calor.",
+        "when_to_escalate": "Tripulación: fuera de 20–25 °C. Flight surgeon: fuera de 18–27 °C.",
+        "prevention": "Ajustar el control térmico del módulo y la ropa, y planear el ejercicio en módulos ventilados."
+      },
+      "rules": [
+        {
+          "level": "critical",
+          "when": {
+            "any": [
+              {
+                "field": "value",
+                "op": "lt",
+                "value": 18
+              },
+              {
+                "field": "value",
+                "op": "gt",
+                "value": 27
+              }
+            ]
+          },
+          "recommendation": "La temperatura del módulo está fuera de los límites de salud de NASA. Ajusten el control térmico o cambien de módulo.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ochmo_eclss"
+          ],
+          "basis": "source_adapted",
+          "note": "[V2 6012] límites de salud: envolvente de 18 °C/75 % HR a 27 °C/25 % HR (aquí simplificada a 18–27 °C)."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "any": [
+              {
+                "field": "value",
+                "op": "lt",
+                "value": 20
+              },
+              {
+                "field": "value",
+                "op": "gt",
+                "value": 25
+              }
+            ]
+          },
+          "recommendation": "La temperatura del módulo está fuera de la zona de rendimiento. Ajusten el control térmico.",
+          "escalation": "crew",
+          "source_ids": [
+            "ochmo_eclss"
+          ],
+          "basis": "source",
+          "note": "[V2 6013] zona de rendimiento: 20–25 °C."
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Temperatura del módulo en la zona de rendimiento.",
+          "escalation": "self_care",
+          "source_ids": [
+            "ochmo_eclss"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "ochmo_eclss",
+          "title": "NASA OCHMO-TB-002 – ECLSS: Human-Centered Approach ([V2 6012], [V2 6013])",
+          "url": "https://www.nasa.gov/wp-content/uploads/2023/07/eclss-technical-brief-ochmo.pdf"
+        }
+      ]
+    },
+    {
+      "code": "HAB_HUMIDITY",
+      "name": "Humedad relativa del módulo",
+      "unit": "%",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "% HR"
+        },
+        {
+          "name": "module_id",
+          "type": "string",
+          "role": "context",
+          "required": true
+        }
+      ],
+      "derived_fields": [],
+      "hazards": [
+        "hostile_closed_env"
+      ],
+      "body_zone": "environment",
+      "input_methods": [
+        "sensor"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Sensores del sistema de control ambiental. En la demo, sensor simulado.",
+        "why": "El aire muy seco irrita ojos y vías respiratorias; el muy húmedo favorece el moho y la condensación.",
+        "hazard_effect": "Hostile/Closed: la respiración y el sudor agregan humedad que el soporte vital debe retirar; la humedad influye en la carga microbiana.",
+        "when_to_escalate": "Tripulación: fuera de 30–60 %. Flight surgeon: fuera de 25–75 %.",
+        "prevention": "Ajustar el control de humedad y revisar la condensación."
+      },
+      "rules": [
+        {
+          "level": "critical",
+          "when": {
+            "any": [
+              {
+                "field": "value",
+                "op": "lt",
+                "value": 25
+              },
+              {
+                "field": "value",
+                "op": "gt",
+                "value": 75
+              }
+            ]
+          },
+          "recommendation": "La humedad del módulo está fuera de los límites de salud de NASA. Ajusten el control de humedad.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ochmo_eclss"
+          ],
+          "basis": "source_adapted",
+          "note": "[V2 6012] envolvente simplificada a 25–75 % HR."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "any": [
+              {
+                "field": "value",
+                "op": "lt",
+                "value": 30
+              },
+              {
+                "field": "value",
+                "op": "gt",
+                "value": 60
+              }
+            ]
+          },
+          "recommendation": "La humedad del módulo está fuera de la zona de rendimiento.",
+          "escalation": "crew",
+          "source_ids": [
+            "ochmo_eclss"
+          ],
+          "basis": "source",
+          "note": "[V2 6013] zona de rendimiento: 30–60 % HR."
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "Humedad del módulo en la zona de rendimiento.",
+          "escalation": "self_care",
+          "source_ids": [
+            "ochmo_eclss"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "ochmo_eclss",
+          "title": "NASA OCHMO-TB-002 – ECLSS: Human-Centered Approach ([V2 6012], [V2 6013])",
+          "url": "https://www.nasa.gov/wp-content/uploads/2023/07/eclss-technical-brief-ochmo.pdf"
+        }
+      ]
+    },
+    {
+      "code": "HAB_NOISE",
+      "name": "Ruido del módulo",
+      "unit": "dBA",
+      "value_type": "simple",
+      "components": [
+        {
+          "name": "value",
+          "type": "number",
+          "role": "value",
+          "required": true,
+          "unit": "dBA"
+        },
+        {
+          "name": "period",
+          "type": "string",
+          "role": "context",
+          "required": true,
+          "values": "work | sleep"
+        },
+        {
+          "name": "module_id",
+          "type": "string",
+          "role": "context",
+          "required": true
+        }
+      ],
+      "derived_fields": [],
+      "hazards": [
+        "hostile_closed_env"
+      ],
+      "body_zone": "environment",
+      "input_methods": [
+        "sensor"
+      ],
+      "sensitivity": "standard",
+      "rules_version": 1,
+      "guide": {
+        "measurable": "Sí. Sonómetros y dosímetros acústicos. En la demo, sensor simulado.",
+        "why": "El ruido continuo causa dolor de cabeza, fatiga, mal sueño y puede impedir oír alarmas; el muy alto daña el oído.",
+        "hazard_effect": "Hostile/Closed: ventiladores, bombas y equipos de ejercicio funcionan todo el día en un espacio pequeño.",
+        "when_to_escalate": "Tripulación: más de ~58 dBA en trabajo o ~49 dBA en sueño. Flight surgeon: 85 dBA o más.",
+        "prevention": "Usar protección auditiva, alejarse de las fuentes de ruido y apagar equipos innecesarios en el periodo de sueño."
+      },
+      "rules": [
+        {
+          "level": "critical",
+          "when": {
+            "field": "value",
+            "op": "gte",
+            "value": 85
+          },
+          "recommendation": "El ruido está en nivel peligroso para el oído. Usa protección auditiva ya y aléjate de la fuente.",
+          "escalation": "flight_surgeon",
+          "source_ids": [
+            "ochmo_acoustics"
+          ],
+          "basis": "source",
+          "note": "[V2 6077]: < 85 dBA sin importar la duración."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "all": [
+              {
+                "field": "period",
+                "op": "eq",
+                "value": "sleep"
+              },
+              {
+                "field": "value",
+                "op": "gt",
+                "value": 49
+              }
+            ]
+          },
+          "recommendation": "Hay demasiado ruido para dormir bien. Usa tapones y avisa a la tripulación para reducir fuentes.",
+          "escalation": "crew",
+          "source_ids": [
+            "ochmo_sleep",
+            "ntrs_nc_dba"
+          ],
+          "basis": "source_adapted",
+          "note": "Límite de sueño NC-40 (≈ 49 dBA). La equivalencia NC → dBA es aproximada."
+        },
+        {
+          "level": "caution",
+          "when": {
+            "field": "value",
+            "op": "gt",
+            "value": 58
+          },
+          "recommendation": "El ruido del módulo supera el límite continuo para áreas de trabajo. Considera protección auditiva.",
+          "escalation": "crew",
+          "source_ids": [
+            "ochmo_acoustics",
+            "ntrs_nc_dba"
+          ],
+          "basis": "source_adapted",
+          "note": "[V2 6078] NC-50 en áreas de trabajo (≈ 58 dBA). La equivalencia NC → dBA es aproximada."
+        },
+        {
+          "level": "normal",
+          "when": {
+            "all": []
+          },
+          "recommendation": "El ruido del módulo está dentro de los límites.",
+          "escalation": "self_care",
+          "source_ids": [
+            "ochmo_acoustics"
+          ],
+          "basis": "source"
+        }
+      ],
+      "sources": [
+        {
+          "id": "ochmo_acoustics",
+          "title": "NASA OCHMO-TB-035 – Acoustics ([V2 6077], [V2 6078])",
+          "url": "https://www.nasa.gov/sites/default/files/atoms/files/acoustics_technical_brief_ochmo_0.pdf"
+        },
+        {
+          "id": "ochmo_sleep",
+          "title": "NASA OCHMO-TB-041 – Sleep Accommodations (NASA-STD-3001)",
+          "url": "https://www.nasa.gov/wp-content/uploads/2023/03/sleep-accomodations-technical-brief-ochmo.pdf"
+        },
+        {
+          "id": "ntrs_nc_dba",
+          "title": "NASA NTRS – Goodman, acústica en naves (NC-50 ≈ 58.1 dBA; NC-40 ≈ 49.0 dBA)",
+          "url": "https://ntrs.nasa.gov/api/citations/20090043801/downloads/20090043801.pdf"
+        }
+      ]
+    }
+  ]
+}
