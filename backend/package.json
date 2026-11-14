@@ -17,7 +17,9 @@
     "db:seed": "node scripts/seed.js",
     "db:reset": "node scripts/migrate.js --reset && node scripts/seed.js",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "api:lint": "npx --yes @redocly/cli@2.72.1 lint docs/openapi.yaml",
+    "api:mock": "npx --yes @stoplight/prism-cli@5.16.0 mock docs/openapi.yaml -p 4010"
   },
   "dependencies": {
     "cors": "^2.8.6",
