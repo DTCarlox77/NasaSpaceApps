@@ -85,6 +85,10 @@ const env = Object.freeze({
     tempPasswordLength: toPositiveInt('TEMP_PASSWORD_LENGTH', 12, { min: 10 }),
     loginRateLimitPerMinute: toPositiveInt('RATE_LIMIT_LOGIN_PER_MINUTE', 30),
   }),
+  health: Object.freeze({
+    // Prescripción semanal de ejercicio para EXERCISE_MIN (rolling_7d_pct_of_prescription).
+    exerciseWeeklyPrescriptionMin: toPositiveInt('EXERCISE_WEEKLY_PRESCRIPTION_MIN', 600),
+  }),
 });
 
 module.exports = env;
