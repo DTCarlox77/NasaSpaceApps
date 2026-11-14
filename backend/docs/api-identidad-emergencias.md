@@ -48,7 +48,7 @@ erDiagram
     text username UK "único sin distinguir mayúsculas"
     text email UK "único sin distinguir mayúsculas (si no es NULL)"
     text password_hash "bcrypt"
-    user_role role "admin|flight_surgeon|astronaut"
+    user_role role "admin|flight_surgeon|astronaut|behavioral_health|service"
     bool must_change_password
     smallint failed_login_attempts
     timestamptz locked_until
@@ -177,7 +177,7 @@ erDiagram
 
 Restricciones clave (probadas manualmente con `db:reset`; todavía no hay pruebas automáticas de la base de datos en el repo):
 - Un astronauta no puede tener dos asignaciones solapadas (`EXCLUDE` con `tstzrange`), pero sí un historial de misiones.
-- Un solo comandante y un solo oficial médico (CMO) vigentes por misión (vigente = `assigned_to IS NULL`).
+- Un solo comandante y un solo oficial médico (CMO) por misión en cada momento: sus periodos no se pueden solapar (`EXCLUDE` por rango, migración 004). Vigente = `assigned_from <= now() < assigned_to` (o sin `assigned_to`), como en `v_current_crew`.
 - Solo usuarios con rol `astronaut` tienen perfil de astronauta, y un astronauta no puede estar en el equipo de Tierra (triggers).
 - `password_hash` debe tener formato bcrypt (`CHECK`).
 - `username` y `call_sign` son únicos sin distinguir mayúsculas (índices sobre `lower(...)`); `email` también, cuando no es NULL.
@@ -287,7 +287,7 @@ El panel solo ve lo que ya llegó: `v_ground_inbox` filtra `deliver_at <= now()`
 ```json
 { "assigned_to": "2026-11-14T15:00:00Z" }
 ```
-`assigned_to` debe ser **ahora o una fecha pasada**. `v_current_crew` y los índices de "un comandante / un CMO vigente" consideran vigente solo `assigned_to IS NULL`: con una fecha futura, el astronauta saldría de la tripulación vigente en ese mismo momento. El servicio rechaza fechas futuras con `400 VALIDATION_ERROR`.
+`assigned_to` puede ser una fecha pasada, actual o futura: desde la migración 004, `v_current_crew` usa la vigencia real (`assigned_from <= now() < assigned_to`), así que la asignación sigue vigente hasta esa fecha. Un periodo de comandante o de CMO que se solape con otro del mismo rol responde `409`.
 
 ### `POST /admin/users/:id/reset-password` → **200** `{ "temporary_password": "..." }` (activa `must_change_password` y revoca sus refresh tokens)
 
