@@ -86,10 +86,11 @@ function canAccess(actor, resource) {
       return sameMission && !habitat && category === 'behavioral';
 
     case 'flight_surgeon':
-      if (!sameMission || confidential) return false;
+      // Solo LEE: no registra datos por el astronauta; responde con mensajes de escalamiento.
+      if (!sameMission || confidential || action !== 'read') return false;
       if (category === 'physical' || category === 'emergency') return true;
       // De bienestar, solo el estado de las alertas escaladas a él (nunca el detalle).
-      return category === 'behavioral' && view === 'escalated_alert' && action === 'read';
+      return category === 'behavioral' && view === 'escalated_alert';
 
     case 'admin':
       // Solo lectura de lo estándar del panel; de bienestar, cumplimiento y aptitud.

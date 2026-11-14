@@ -36,7 +36,7 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
 - `TAB-1`: `dc_demo_tab1_sintetica`
 - `TAB-2`: `dc_demo_tab2_sintetica`
 
-`npm run db:reset` vuelve todo a este estado. **`node --test` también reinicia la base local** (antes y después de la suite de integración).
+`npm run db:reset` vuelve todo a este estado. `node --test` **no toca** `astro_health`: usa la base de pruebas `astro_health_test` (`DB_NAME_TEST`).
 
 ## Decisiones
 
@@ -69,12 +69,17 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
   - cada intento queda en `auth_events`.
 - **Rate limit**: en memoria y por IP (30 logins/minuto, `RATE_LIMIT_LOGIN_PER_MINUTE`), sin dependencias nuevas. Sirve para una sola instancia; con varias haría falta un almacén compartido. Detrás de un proxy (Render/Railway) habrá que configurar `trust proxy` para que `req.ip` sea la del cliente.
 - **Rol `service`**: un middleware global (`restrictServiceAccounts`) responde 403 a toda ruta fuera de `POST /api/v1/habitat/readings`, incluidas las que no existen.
-- **Política de acceso**: `canAccess(actor, resource)` es pura y la única fuente de verdad. Los servicios usan `enforceAccess`, que responde 403 si se niega y registra en `confidential_access_log` cada lectura confidencial permitida. El actor se arma con `loadActor(userId)`. `admin` no está acotado por misión (rol global de operaciones); el resto sí.
+- **Política de acceso**: `canAccess(actor, resource)` es pura y la única fuente de verdad. El `flight_surgeon` solo **lee** lo físico de otros: no registra datos por el astronauta y responde con los mensajes de escalamiento. Los servicios usan `enforceAccess`, que responde 403 si se niega y registra en `confidential_access_log` cada lectura confidencial permitida. El actor se arma con `loadActor(userId)`. `admin` no está acotado por misión (rol global de operaciones); el resto sí.
 - **Altas**: la contraseña temporal (12 caracteres, `TEMP_PASSWORD_LENGTH`) se devuelve una sola vez y solo se guarda su hash bcrypt. Si a un rol de Tierra no se le indican misiones, entra al equipo de las misiones activas del admin que lo crea.
-- **Pruebas con base**: `db:reset` antes y después de cada suite de integración, bajo un advisory lock de PostgreSQL (`test/helpers/db.js`), porque `node --test` corre los archivos en paralelo. Una transacción que se deshace no sirve: la app usa sus propias conexiones del pool.
+- **Pruebas con base**:
+  - usan siempre la base de pruebas `DB_NAME_TEST` (por defecto `astro_health_test`); `node --test` **nunca** toca la de desarrollo;
+  - `test/helpers/db.js` cambia `DB_NAME` del proceso antes de cargar `src/` y se niega a correr si las dos bases coinciden;
+  - si la base de pruebas no existe, la crea; si el usuario no tiene `CREATEDB`, la suite se salta con el comando para crearla;
+  - cada suite la reinicia (migrate + seed) al empezar, bajo un advisory lock, porque `node --test` corre los archivos en paralelo. Una transacción que se deshace no sirve: la app usa sus propias conexiones del pool.
 
 ## Pendientes
 
+- **Despliegue**: activar `app.set('trust proxy', 1)` detrás del proxy de Render/Railway, para que el rate limit vea la IP real del cliente y no la del proxy.
 - Tarea 9: `responder_safe` es una pregunta de la sesión. El servicio debe copiar esa respuesta en las respuestas de cada evaluación antes de llamar a `evaluateAssessment`; si no, el resultado es `incomplete` con `pending: "responder_safe"`.
 - Una respuesta `{ value: null }` cuenta como pendiente.
 - PHQ-2 y GAD-2: el seed 003 todavía usa una **redacción adaptada** al español. La traducción oficial está detrás del botón "Agree" de https://www.phqscreeners.com/terms, que no se pudo abrir de forma automática. Falta el enlace directo al PDF en español para reemplazar los textos y la licencia.

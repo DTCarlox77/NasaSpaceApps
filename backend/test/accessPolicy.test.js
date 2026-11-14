@@ -170,7 +170,7 @@ const MATRIX = {
   commander:         [1,  1,  0,  0,  0,  0,  0,  0,  0,  1,  1,  0,  0,  1,  1,  0,  0],
   cmo:               [1,  1,  1,  0,  0,  1,  0,  0,  0,  1,  1,  0,  0,  1,  1,  0,  0],
   behavioral_health: [0,  1,  0,  0,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0,  0,  0,  0],
-  flight_surgeon:    [1,  0,  1,  1,  0,  0,  1,  0,  0,  1,  1,  1,  0,  1,  1,  0,  0],
+  flight_surgeon:    [1,  0,  1,  0,  0,  0,  1,  0,  0,  1,  0,  0,  0,  1,  0,  0,  0],
   admin:             [1,  0,  1,  0,  0,  0,  0,  1,  1,  1,  0,  0,  0,  1,  0,  1,  0],
   service:           [0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0],
 };
@@ -218,6 +218,15 @@ test('negativos explícitos del encargo', () => {
     false,
     'comandante lee lo compartido con el CMO',
   );
+});
+
+test('flight surgeon: solo lectura de lo físico (responde por mensajes de escalamiento)', () => {
+  const fs = ACTORS.flight_surgeon;
+  for (const r of Object.values(RESOURCES).filter((x) => x.action === 'write')) {
+    assert.equal(canAccess(fs, r), false, `escribe ${JSON.stringify(r)}`);
+  }
+  assert.equal(canAccess(fs, RESOURCES.other_physical), true);
+  assert.equal(canAccess(fs, { ...RESOURCES.emergency_triage, action: 'read' }), true);
 });
 
 test('behavioral_health de otra misión no ve nada', () => {

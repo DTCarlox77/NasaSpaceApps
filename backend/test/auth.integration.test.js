@@ -1,14 +1,13 @@
 'use strict';
-// Integración: autenticación, administración de cuentas y permisos (supertest + BD local).
-// Antes y después de la suite: db:reset (migrate + seed) bajo el advisory lock de las
-// suites de BD, así cada suite parte de los datos del seed y los deja igual al terminar.
-// Se salta sola si no hay base.
-process.env.NODE_ENV = 'test';
+// Integración: autenticación, administración de cuentas y permisos (supertest).
+// Usa la base de PRUEBAS (DB_NAME_TEST), que se reinicia (migrate + seed) al empezar la suite
+// bajo el advisory lock de las suites de BD. Nunca toca la base de desarrollo.
+// Se salta sola si no hay base de pruebas.
+const { openTestDb, resetDatabase } = require('./helpers/db'); // antes que cualquier src/
 process.env.RATE_LIMIT_LOGIN_PER_MINUTE = '1000'; // la suite hace muchos logins seguidos
 
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { openTestDb, resetDatabase, SKIP_REASON } = require('./helpers/db');
 
 const PASSWORD = 'Demo2026!';
 const ARES1 = '20000000-0000-4000-8000-000000000001';
@@ -27,11 +26,14 @@ const A = {
 };
 
 let db = null;
+let SKIP_REASON = '';
 let request = null;
 let app = null;
 
 before(async () => {
-  db = await openTestDb();
+  const opened = await openTestDb();
+  db = opened.db;
+  SKIP_REASON = opened.reason;
   if (!db) return;
   await resetDatabase();
   request = require('supertest');
@@ -40,8 +42,6 @@ before(async () => {
 
 after(async () => {
   if (!db) return;
-  // Deja la base como el seed para las suites que corran después (y para desarrollo).
-  await resetDatabase();
   await require('../src/config/db').pool.end();
   await db.close();
 });

@@ -1,11 +1,10 @@
 'use strict';
-// Prueba de humo de la base de datos (después de `npm run db:reset`).
-// Se salta sola si no hay .env o conexión a PostgreSQL. No usa src/config/env.js porque
-// ese módulo termina el proceso si falta el .env; aquí la ausencia de base no es un error.
-// Toma el advisory lock de las suites de BD para no correr durante un reset.
+// Prueba de humo de la base de datos, sobre la base de PRUEBAS (DB_NAME_TEST) recién
+// reiniciada (migraciones + seeds). Se salta sola si no hay .env o base de pruebas.
+// Toma el advisory lock de las suites de BD para no correr durante el reset de otra.
+const { openTestDb, resetDatabase } = require('./helpers/db'); // antes que cualquier src/
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { openTestDb, SKIP_REASON: SKIP } = require('./helpers/db');
 
 const ORION_USER = '00000000-0000-4000-8000-000000000011';
 const ORION = '10000000-0000-4000-8000-000000000011';
@@ -13,14 +12,21 @@ const ARES1 = '20000000-0000-4000-8000-000000000001';
 
 let db = null;
 let pool = null;
+let SKIP = '';
 
 before(async () => {
-  db = await openTestDb();
-  if (db) pool = db.pool;
+  const opened = await openTestDb();
+  db = opened.db;
+  SKIP = opened.reason;
+  if (!db) return;
+  await resetDatabase();
+  pool = db.pool;
 });
 
 after(async () => {
-  if (db) await db.close();
+  if (!db) return;
+  await require('../src/config/db').pool.end();
+  await db.close();
 });
 
 const one = async (sql) => (await pool.query(sql)).rows[0];
