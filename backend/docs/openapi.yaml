@@ -22,6 +22,8 @@ info:
       - `x-crew-role`: rol de tripulación exigido además del rol (`commander`,
         `crew_medical_officer`).
       - `x-status`: `mvp` o `extra`.
+      - `x-status-impl: pending`: todavía no está implementada en la API local (`:3000`);
+        sigue siendo solo mock (`:4010`). Sin esa marca, la operación ya es real.
       - `x-hazards`: peligros RIDGE que atiende (`space_radiation`, `isolation_confinement`,
         `distance_from_earth`, `gravity_fields`, `hostile_closed_env`).
       - `x-sensitivity: confidential`: datos de bienestar (ver "Quién ve qué").
@@ -471,6 +473,7 @@ paths:
         último login en línea). El PIN se guarda con hash; nunca viaja de vuelta.
       operationId: setOfflinePin
       x-status: extra
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -688,6 +691,7 @@ paths:
         tableta la envía en `X-Device-Credential` para usar los endpoints de emergencia sin sesión.
       operationId: registerDevice
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -743,6 +747,7 @@ paths:
       summary: Revoca la credencial de un dispositivo
       operationId: revokeDevice
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: []
       parameters:
@@ -782,6 +787,7 @@ paths:
       description: Permiso delegado para cuando Tierra no responde a tiempo. Queda auditado y se reporta a Tierra con el retraso del enlace.
       operationId: crewUnlockUser
       x-status: extra
+      x-status-impl: pending
       x-roles: [astronaut]
       x-crew-role: [commander]
       x-hazards: [distance_from_earth, isolation_confinement]
@@ -818,6 +824,7 @@ paths:
       summary: El comandante restablece el PIN offline de un tripulante
       operationId: crewResetPin
       x-status: extra
+      x-status-impl: pending
       x-roles: [astronaut]
       x-crew-role: [commander]
       x-hazards: [distance_from_earth, isolation_confinement]
@@ -854,6 +861,7 @@ paths:
       summary: El comandante registra una tableta de reemplazo
       operationId: crewRegisterDevice
       x-status: extra
+      x-status-impl: pending
       x-roles: [astronaut]
       x-crew-role: [commander]
       x-hazards: [distance_from_earth]
@@ -911,6 +919,7 @@ paths:
         `mission_id` o la primera activa de su equipo. `comm.link: down` si hay un corte en curso.
       operationId: getCurrentMission
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut, flight_surgeon, behavioral_health, admin]
       x-hazards: [distance_from_earth, gravity_fields]
       parameters:
@@ -966,6 +975,7 @@ paths:
       summary: Tripulación vigente de una misión
       operationId: getMissionCrew
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut, flight_surgeon, behavioral_health, admin]
       x-hazards: [isolation_confinement]
       parameters:
@@ -1030,6 +1040,7 @@ paths:
       summary: Lista misiones
       operationId: listMissions
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -1069,6 +1080,7 @@ paths:
       summary: Crea una misión
       operationId: createMission
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth, gravity_fields]
       requestBody:
@@ -1110,6 +1122,7 @@ paths:
       summary: Actualiza una misión
       operationId: updateMission
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -1149,6 +1162,7 @@ paths:
       summary: Lista entornos
       operationId: listEnvironments
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [gravity_fields, distance_from_earth]
       parameters:
@@ -1221,6 +1235,7 @@ paths:
       summary: Crea un entorno
       operationId: createEnvironment
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [gravity_fields, distance_from_earth]
       requestBody:
@@ -1276,6 +1291,7 @@ paths:
       summary: Actualiza un entorno (p. ej. el retraso de comunicación)
       operationId: updateEnvironment
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [gravity_fields, distance_from_earth]
       parameters:
@@ -1319,6 +1335,7 @@ paths:
       summary: Lista asignaciones de tripulación (historial incluido)
       operationId: listAssignments
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [isolation_confinement]
       parameters:
@@ -1369,6 +1386,7 @@ paths:
       summary: Asigna un astronauta a una misión
       operationId: createAssignment
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [isolation_confinement]
       requestBody:
@@ -1426,6 +1444,7 @@ paths:
         CMO no puede tener un periodo que se solape con otro del mismo rol en la misión (**409**).
       operationId: updateAssignment
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [isolation_confinement]
       parameters:
@@ -1478,6 +1497,7 @@ paths:
       summary: Lista cortes de comunicación de una misión
       operationId: listCommOutages
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -1513,6 +1533,7 @@ paths:
       description: Sin `ends_at` el corte queda abierto y `compute_deliver_at` devuelve null (los mensajes esperan en cola).
       operationId: createCommOutage
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -1566,6 +1587,7 @@ paths:
       summary: Cierra o corrige un corte de comunicación
       operationId: updateCommOutage
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -3122,7 +3144,11 @@ paths:
         Guarda la lectura, calcula los campos derivados, la evalúa con `evaluateIndicator` y, si
         la regla escala a `crew` o `flight_surgeon`, crea un escalamiento (`escalation_id`).
         Idempotente por `client_uuid` (201 la primera vez, 200 si es duplicado).
-        Los indicadores confidenciales no entran por aquí: usa `/wellbeing/...`.
+        `values` se valida contra los `components` del catálogo: requeridos, tipos, valores
+        admitidos, códigos de síntomas y un rango plausible por unidad (detecta °F en vez de °C
+        o lb en vez de kg). `input_method` debe estar en `input_methods` del indicador.
+        **400** para los indicadores confidenciales (entran solo por `/wellbeing/*`) y para los
+        del hábitat (`POST /habitat/readings`).
       operationId: createReading
       x-status: mvp
       x-roles: [astronaut]
@@ -3168,7 +3194,19 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          description: Sin rol astronauta o sin asignación de misión vigente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                noAssignment:
+                  summary: Sin misión vigente
+                  value:
+                    error:
+                      code: NO_ACTIVE_ASSIGNMENT
+                      message: No tienes una asignación de misión vigente.
+                      details: null
         '409':
           description: supersedes_uuid no existe o ya fue reemplazada
           content:
@@ -3252,11 +3290,20 @@ paths:
         Para la figura humana: por zona, el peor nivel (`critical` > `caution` > `normal` >
         `unrated`) y cada indicador con su último valor. Los indicadores confidenciales
         (bienestar) **no** aparecen aquí. Los síntomas (`SYMPTOM`) se muestran en la zona de cada
-        síntoma. El entorno del módulo está en `GET /habitat/status`.
+        síntoma. En la zona `brain` solo colorea `SLEEP_HOURS`; del bienestar se informa
+        `checkin_completed` (check-in de hoy: sí/no, nunca el resultado). Incluye la tarjeta
+        `environment` del módulo `module_id` o, si se omite, del módulo con la lectura del
+        hábitat más reciente de la misión (se omite si no hay lecturas del hábitat).
       operationId: getMyBodyStatus
       x-status: mvp
       x-roles: [astronaut]
       x-hazards: [gravity_fields, space_radiation, hostile_closed_env]
+      parameters:
+        - name: module_id
+          in: query
+          description: Módulo de la tarjeta environment.
+          schema: { type: string }
+          example: HAB-1
       responses:
         '200':
           description: Estado por zona
@@ -3316,6 +3363,7 @@ paths:
                       - zone: brain
                         name: Cerebro, sueño y ánimo
                         worst_level: caution
+                        checkin_completed: true
                         indicators:
                           - code: SLEEP_HOURS
                             name: Horas de sueño
@@ -3339,6 +3387,19 @@ paths:
                               escalation: self_care,
                               recommendation: null,
                             }
+                    environment:
+                      module_id: HAB-1
+                      worst_level: caution
+                      indicators:
+                        - {
+                            code: HAB_CO2,
+                            level: caution,
+                            value: 2.8,
+                            avg_7d: 2.6,
+                            measured_at: '2026-11-14T08:00:00Z',
+                            escalation: crew,
+                            recommendation: El CO₂ promedio de la semana está alto; aumenta el riesgo de dolor de cabeza.,
+                          }
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -3351,6 +3412,7 @@ paths:
       description: Respaldo de una lectura manual (p. ej. la pantalla del tensiómetro). Devuelve `attachment_id` para `POST /readings`. Máximo 5 MB, JPEG o PNG.
       operationId: uploadAttachment
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -3406,6 +3468,7 @@ paths:
       summary: Mis rutinas del día
       operationId: listMyRoutines
       x-status: extra
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [gravity_fields, isolation_confinement]
       responses:
@@ -3446,6 +3509,7 @@ paths:
       description: La racha premia completar el check-in, nunca el resultado.
       operationId: getMyGamification
       x-status: extra
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [isolation_confinement]
       responses:
@@ -3648,6 +3712,7 @@ paths:
         - `rejected`: inválido (`error` con el formato de errores); no reintentar sin corregir.
       operationId: syncPush
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -3794,6 +3859,7 @@ paths:
         y envíalo en la próxima llamada; si `has_more`, vuelve a llamar enseguida.
       operationId: syncPull
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
       parameters:
@@ -3842,6 +3908,7 @@ paths:
       description: La app lo guarda en caché para evaluar sin conexión con `evaluateAssessment`. El ejemplo es el protocolo real del seed.
       operationId: getEmergencyProtocol
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut, flight_surgeon, admin]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4089,6 +4156,7 @@ paths:
         la misión → **409** `SESSION_ALREADY_ACTIVE` con su id para unirse.
       operationId: createEmergencySession
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4154,6 +4222,7 @@ paths:
       description: Primero quien tenga lecturas críticas recientes o check-ins perdidos; luego el resto.
       operationId: getEmergencySession
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut, flight_surgeon, admin]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4183,6 +4252,7 @@ paths:
       description: Una evaluación por tripulante y sesión. Idempotente por `client_uuid`.
       operationId: createAssessment
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4257,6 +4327,7 @@ paths:
         La respuesta de sesión `responder_safe` se copia automáticamente en cada evaluación.
       operationId: putAssessmentAnswers
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4378,6 +4449,7 @@ paths:
         - `stopped`: `reason` (p. ej. `STOP_SECURE_SELF`).
       operationId: completeAssessment
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4455,6 +4527,7 @@ paths:
         automáticamente a la tripulación y al flight surgeon.
       operationId: emergencyHeartbeat
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, isolation_confinement]
       security:
@@ -4503,6 +4576,7 @@ paths:
       summary: Cierra o cancela la sesión de emergencia
       operationId: closeEmergencySession
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-crew-role: [commander, crew_medical_officer]
       x-hazards: [distance_from_earth]
@@ -4597,6 +4671,7 @@ paths:
         "Quiero hablar con alguien".
       operationId: createWellbeingCheckin
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -4650,6 +4725,7 @@ paths:
       summary: Cuestionarios breves (PHQ-2 y GAD-2)
       operationId: listWellbeingInstruments
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut, behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -4717,6 +4793,7 @@ paths:
       description: El puntaje lo calcula el servidor y solo lo ve behavioral_health. Al astronauta se le responde un mensaje neutro.
       operationId: createWellbeingScreening
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -4770,6 +4847,7 @@ paths:
         quedan en `normal`, si no `not_confirmed` (`fitnessFromPvt`). Es lo único que llega a admin.
       operationId: createPvtRun
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -4832,6 +4910,7 @@ paths:
         a admin). Viaja a Tierra con el retraso del enlace (`deliver_at`).
       operationId: createSupportRequest
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -4883,6 +4962,7 @@ paths:
       description: Solo mensajes ya entregados (`deliver_at <= now()`).
       operationId: listSupportMessages
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -4924,6 +5004,7 @@ paths:
       description: Lo que el propio astronauta registró. Sin colores, niveles ni puntajes.
       operationId: listMyWellbeing
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -4980,6 +5061,7 @@ paths:
       description: Por astronauta e indicador físico, nivel, último valor y tendencia, más cumplimiento y aptitud. **Sin estado conductual.**
       operationId: getCrewDashboard
       x-status: mvp
+      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [gravity_fields, space_radiation, hostile_closed_env, distance_from_earth]
       parameters:
@@ -5047,6 +5129,7 @@ paths:
         estado), `manual`.
       operationId: getGroundInbox
       x-status: mvp
+      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5125,6 +5208,7 @@ paths:
       summary: Marca un escalamiento como recibido
       operationId: ackEscalation
       x-status: mvp
+      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5160,6 +5244,7 @@ paths:
       description: Devuelve `deliver_at` calculado con `compute_deliver_at`. Si el enlace está caído y el corte sigue abierto, `deliver_at` es null (en cola).
       operationId: replyEscalation
       x-status: mvp
+      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5214,6 +5299,7 @@ paths:
       description: Solo los ya entregados a bordo (`deliver_at <= now()`).
       operationId: listEscalationMessages
       x-status: mvp
+      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5255,6 +5341,7 @@ paths:
       description: Una sesión aparece cuando al menos uno de sus escalamientos tiene `deliver_at <= now()` (la tabla de sesiones no tiene `deliver_at`).
       operationId: listGroundEmergencies
       x-status: mvp
+      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       parameters:
@@ -5299,6 +5386,7 @@ paths:
       summary: Detalle de una emergencia con evaluaciones y respuestas
       operationId: getGroundEmergency
       x-status: mvp
+      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       parameters:
@@ -5428,6 +5516,7 @@ paths:
       summary: Cumplimiento y aptitud (lo único de bienestar que ve admin)
       operationId: getCompliance
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -5505,6 +5594,7 @@ paths:
         confidenciales. `expected_rules_version` evita pisar un cambio ajeno (**409**).
       operationId: replaceIndicatorRules
       x-status: extra
+      x-status-impl: pending
       x-roles: [flight_surgeon, behavioral_health]
       x-hazards:
         [
@@ -5600,6 +5690,7 @@ paths:
       description: Alertas de bienestar, cuestionarios en precaución y solicitudes "Quiero hablar con alguien". Solo lo ya entregado en Tierra.
       operationId: getBehavioralInbox
       x-status: mvp
+      x-status-impl: pending
       x-roles: [behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -5656,6 +5747,7 @@ paths:
       description: Cada consulta queda registrada en `GET /admin/audit/confidential-access`.
       operationId: getBehavioralAstronaut
       x-status: mvp
+      x-status-impl: pending
       x-roles: [behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -5728,6 +5820,7 @@ paths:
       summary: Responde una solicitud de apoyo (viaja con retraso)
       operationId: replySupportRequest
       x-status: mvp
+      x-status-impl: pending
       x-roles: [behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -5770,6 +5863,7 @@ paths:
       summary: Acciones delegadas del comandante
       operationId: listDelegatedActions
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5816,6 +5910,7 @@ paths:
       description: Quién vio datos de bienestar, de quién y cuándo. Sin el contenido.
       operationId: listConfidentialAccess
       x-status: mvp
+      x-status-impl: pending
       x-roles: [admin, behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -7176,6 +7271,9 @@ components:
         indicators:
           type: array
           items: { $ref: '#/components/schemas/IndicatorStatus' }
+        checkin_completed:
+          type: boolean
+          description: 'Solo en brain: ¿completó hoy (día UTC) el check-in de bienestar? Sí/no, nunca el resultado.'
     BodyStatus:
       type: object
       required: [astronaut_id, generated_at, rules_version, zones]
@@ -7186,6 +7284,7 @@ components:
         zones:
           type: array
           items: { $ref: '#/components/schemas/ZoneStatus' }
+        environment: { $ref: '#/components/schemas/HabitatModuleStatus' }
     AttachmentUpload:
       type: object
       required: [file, client_uuid, kind]
@@ -7264,15 +7363,16 @@ components:
         generated_at: { $ref: '#/components/schemas/Timestamp' }
         modules:
           type: array
-          items:
-            type: object
-            required: [module_id, worst_level, indicators]
-            properties:
-              module_id: { type: string }
-              worst_level: { $ref: '#/components/schemas/Level' }
-              indicators:
-                type: array
-                items: { $ref: '#/components/schemas/HabitatIndicatorStatus' }
+          items: { $ref: '#/components/schemas/HabitatModuleStatus' }
+    HabitatModuleStatus:
+      type: object
+      required: [module_id, worst_level, indicators]
+      properties:
+        module_id: { type: string }
+        worst_level: { $ref: '#/components/schemas/Level' }
+        indicators:
+          type: array
+          items: { $ref: '#/components/schemas/HabitatIndicatorStatus' }
 
     # ---------------------------------------------------------------- extras de la app
     Routine:
