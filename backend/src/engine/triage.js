@@ -2,8 +2,9 @@
 
 /**
  * Evaluador del protocolo de triaje (reglas como datos).
- * Función pura, sin dependencias: la misma lógica corre en el servidor
- * y puede portarse tal cual a la app para funcionar sin conexión.
+ * Función pura: la misma lógica corre en el servidor y puede portarse tal cual
+ * a la app para funcionar sin conexión. Las condiciones se evalúan con
+ * ./conditions (el mismo evaluador que usa el semáforo de indicadores).
  *
  * evaluateAssessment(definition, answers, context) -> {
  *   status: 'completed' | 'incomplete' | 'stopped',
@@ -15,32 +16,32 @@
  * context: { solar_event_active, environment_alarm, ... }
  */
 
-function readOperand(atom, scope) {
-  if ('q' in atom) return scope.answers[atom.q];
-  if ('ctx' in atom) return scope.context[atom.ctx];
-  if ('field' in atom) return scope.fields[atom.field];
-  throw new Error(`Condición sin operando: ${JSON.stringify(atom)}`);
-}
+const { evalCondition } = require('./conditions');
 
-function testAtom(atom, scope) {
-  const left = readOperand(atom, scope);
-  switch (atom.op) {
-    case 'eq':
-      return left === atom.value;
-    case 'in':
-      return Array.isArray(atom.value) && atom.value.includes(left);
-    case 'has_any':
-      return Array.isArray(left) && left.some((v) => atom.value.includes(v));
-    default:
-      throw new Error(`Operador no soportado: ${atom.op}`);
-  }
+// Átomo del protocolo { q | ctx | field, op, value } -> ruta en el contexto de conditions.js.
+// El orden define la prioridad si un átomo trae más de un operando.
+const OPERAND_ROOTS = [
+  ['q', 'answers'],
+  ['ctx', 'ctx'],
+  ['field', 'results'],
+];
+
+function toCommon(cond) {
+  if (!cond) return { all: [] }; // condición nula = verdadera
+  if (Array.isArray(cond.all)) return { all: cond.all.map(toCommon) };
+  if (Array.isArray(cond.any)) return { any: cond.any.map(toCommon) };
+  const operand = OPERAND_ROOTS.find(([key]) => key in cond);
+  if (!operand) throw new Error(`Condición sin operando: ${JSON.stringify(cond)}`);
+  const [key, root] = operand;
+  return { field: `${root}.${cond[key]}`, op: cond.op, value: cond.value };
 }
 
 function testCondition(cond, scope) {
-  if (!cond) return true;
-  if (cond.all) return cond.all.every((c) => testCondition(c, scope));
-  if (cond.any) return cond.any.some((c) => testCondition(c, scope));
-  return testAtom(cond, scope);
+  return evalCondition(toCommon(cond), {
+    answers: scope.answers,
+    ctx: scope.context,
+    results: scope.fields,
+  });
 }
 
 function nextFor(question, value) {
