@@ -1,0 +1,79 @@
+openapi: 3.0.3
+info:
+  title: Astro Health API
+  version: 0.1.0
+  description: |
+    API de apoyo a la decisión para el monitoreo de salud de astronautas.
+
+    **Importante:** todos los datos de astronautas son SINTÉTICOS. Esta API es una
+    herramienta de apoyo a la decisión y **no** constituye un diagnóstico médico.
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Desarrollo local
+tags:
+  - name: Health
+    description: Estado del servicio
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Verifica el estado de la API y de la base de datos
+      description: Ejecuta `SELECT 1` contra PostgreSQL para comprobar la conexión.
+      operationId: getHealth
+      responses:
+        '200':
+          description: API y base de datos operativas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: ok
+                db: up
+                time: '2026-11-14T15:00:00.000Z'
+                version: 0.1.0
+        '503':
+          description: La base de datos no responde
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: error
+                db: down
+                time: '2026-11-14T15:00:00.000Z'
+                version: 0.1.0
+components:
+  schemas:
+    Health:
+      type: object
+      required: [status, db, time, version]
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+        db:
+          type: string
+          enum: [up, down]
+        time:
+          type: string
+          format: date-time
+        version:
+          type: string
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: NOT_FOUND
+            message:
+              type: string
+              example: 'Ruta no encontrada: GET /api/v1/foo'
+            details:
+              nullable: true
+              description: Información adicional del error (opcional)
