@@ -1,40 +1,26 @@
 'use strict';
 // Prueba de humo de la base de datos (después de `npm run db:reset`).
-// Se salta sola si no hay conexión a PostgreSQL. No usa src/config/env.js porque ese
-// módulo termina el proceso si falta el .env; aquí la ausencia de base no es un error.
+// Se salta sola si no hay .env o conexión a PostgreSQL. No usa src/config/env.js porque
+// ese módulo termina el proceso si falta el .env; aquí la ausencia de base no es un error.
+// Toma el advisory lock de las suites de BD para no correr durante un reset.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const path = require('node:path');
-require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true });
-const { Pool } = require('pg');
+const { openTestDb, SKIP_REASON: SKIP } = require('./helpers/db');
 
 const ORION_USER = '00000000-0000-4000-8000-000000000011';
 const ORION = '10000000-0000-4000-8000-000000000011';
 const ARES1 = '20000000-0000-4000-8000-000000000001';
-const SKIP = 'sin conexión a PostgreSQL (corre npm run db:reset para habilitarla)';
 
+let db = null;
 let pool = null;
 
 before(async () => {
-  const candidate = new Pool({
-    host: process.env.DB_HOST || 'localhost',
-    port: Number(process.env.DB_PORT || 5432),
-    database: process.env.DB_NAME || 'astro_health',
-    user: process.env.DB_USER || 'astro',
-    password: process.env.DB_PASSWORD,
-    connectionTimeoutMillis: 2000,
-    max: 2,
-  });
-  try {
-    await candidate.query('SELECT 1');
-    pool = candidate;
-  } catch {
-    await candidate.end().catch(() => {});
-  }
+  db = await openTestDb();
+  if (db) pool = db.pool;
 });
 
 after(async () => {
-  if (pool) await pool.end();
+  if (db) await db.close();
 });
 
 const one = async (sql) => (await pool.query(sql)).rows[0];
