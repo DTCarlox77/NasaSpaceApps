@@ -4724,10 +4724,11 @@ paths:
       tags: [Bienestar]
       summary: Cuestionarios breves (PHQ-2 y GAD-2)
       description: |
-        Texto de Pfizer Inc. (phqscreeners.com) en el idioma pedido, con su licencia y fuentes.
-        `official` indica si es la traducción oficial: el GAD-2 en español es una adaptación
-        (falta el GAD-7 "Spanish for Mexico"). Solo los 2 ítems de cada cuestionario breve
-        (nunca el PHQ-9 completo). Puntaje = item_1 + item_2 (0–6), corte en 3.
+        Texto oficial de Pfizer Inc. (phqscreeners.com) en el idioma pedido, con su licencia y
+        fuentes: español = Spanish for Mexico (PHQ-9 y GAD-7, ítems 1 y 2), inglés = PHQ-4.
+        `official` indica si el texto es la traducción oficial. Solo los 2 ítems de cada
+        cuestionario breve (nunca el PHQ-9 ni el GAD-7 completos). Puntaje = item_1 + item_2
+        (0–6), corte en 3.
       operationId: listWellbeingInstruments
       x-status: mvp
       x-status-impl: pending
@@ -4792,17 +4793,16 @@ paths:
                         name: 'GAD-2'
                         indicator_code: 'GAD2_SCORE'
                         lang: 'es'
-                        official: false
-                        language_version: 'Adaptación al español (no oficial)'
-                        note: 'Encabezado y opciones oficiales del PHQ en español de México; los 2 ítems son una adaptación propia del GAD-2 en inglés, pendiente del GAD-7 Spanish for Mexico.'
-                        prompt: 'Durante las últimas 2 semanas, ¿qué tan seguido le han afectado cualquiera de los siguientes problemas?'
+                        official: true
+                        language_version: 'Spanish for Mexico'
+                        prompt: 'Durante las últimas 2 semanas, ¿con qué frecuencia ha sentido molestias por los siguientes problemas?'
                         items:
                           - code: 'item_1'
-                            text: 'Se ha sentido nervioso(a), ansioso(a) o con los nervios de punta'
+                            text: 'Sentirse nervioso/a, intranquilo/a o con los nervios de punta'
                           - code: 'item_2'
-                            text: 'No ha podido dejar de preocuparse o controlar su preocupación'
+                            text: 'No poder dejar de preocuparse o no poder controlar la preocupación'
                         options:
-                          - label: 'Para nada'
+                          - label: 'Nunca'
                             value: 0
                           - label: 'Varios días'
                             value: 1
@@ -4810,8 +4810,12 @@ paths:
                             value: 2
                           - label: 'Casi todos los días'
                             value: 3
-                        license: 'Pfizer Inc. · phqscreeners.com · Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission required to reproduce, translate, display or distribute. Versiones: English (PHQ-4, ítems 1 y 2; https://www.phqscreeners.com/select-screener). Español: adaptación propia, no oficial (falta el GAD-7 Spanish for Mexico).'
+                        license: 'Pfizer Inc. · phqscreeners.com · Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission required to reproduce, translate, display or distribute. Versiones: English (PHQ-4, ítems 1 y 2; https://www.phqscreeners.com/select-screener) y Spanish for Mexico (GAD-7, ítems 1 y 2; https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/GAD7_Spanish%20for%20Mexico.pdf).'
                         sources:
+                          - id: 'pfizer_gad7_es_mx'
+                            url: 'https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/GAD7_Spanish%20for%20Mexico.pdf'
+                            title: 'Pfizer Inc. · phqscreeners.com · GAD-7 (Spanish for Mexico), ítems 1 y 2'
+                            language_version: 'Spanish for Mexico'
                           - id: 'pfizer_phq4_en'
                             url: 'https://www.phqscreeners.com/select-screener'
                             title: 'Pfizer Inc. · phqscreeners.com · PHQ-4 (English), ítems 1 y 2'
@@ -4884,8 +4888,12 @@ paths:
                             value: 2
                           - label: 'Nearly every day'
                             value: 3
-                        license: 'Pfizer Inc. · phqscreeners.com · Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission required to reproduce, translate, display or distribute. Versiones: English (PHQ-4, ítems 1 y 2; https://www.phqscreeners.com/select-screener). Español: adaptación propia, no oficial (falta el GAD-7 Spanish for Mexico).'
+                        license: 'Pfizer Inc. · phqscreeners.com · Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission required to reproduce, translate, display or distribute. Versiones: English (PHQ-4, ítems 1 y 2; https://www.phqscreeners.com/select-screener) y Spanish for Mexico (GAD-7, ítems 1 y 2; https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/GAD7_Spanish%20for%20Mexico.pdf).'
                         sources:
+                          - id: 'pfizer_gad7_es_mx'
+                            url: 'https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/GAD7_Spanish%20for%20Mexico.pdf'
+                            title: 'Pfizer Inc. · phqscreeners.com · GAD-7 (Spanish for Mexico), ítems 1 y 2'
+                            language_version: 'Spanish for Mexico'
                           - id: 'pfizer_phq4_en'
                             url: 'https://www.phqscreeners.com/select-screener'
                             title: 'Pfizer Inc. · phqscreeners.com · PHQ-4 (English), ítems 1 y 2'

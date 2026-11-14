@@ -135,12 +135,21 @@ test('PHQ-2 y GAD-2: texto por idioma, licencia de Pfizer y solo 2 ítems', asyn
       cutoff: 3,
     });
     assert.match(license, /No permission required to reproduce, translate, display or distribute/);
-    assert.ok(sources.some((s) => s.url.startsWith('https://www.phqscreeners.com/')));
-    // Nunca el ítem 9 del PHQ-9 (autolesión) ni otros ítems del PHQ-9.
+    assert.doesNotMatch(license, /adaptaci|no oficial/i);
+    // Los 4 textos son oficiales: es = Spanish for Mexico, en = English (PHQ-4).
+    assert.equal(d.official, true, `${code} es oficial`);
+    assert.equal(d.language_version, 'Spanish for Mexico');
+    assert.equal(d.translations.en.language_version, 'English');
+    assert.ok(
+      sources.some((s) => s.url === d.source_url),
+      `${code}: la URL del PDF en sources`,
+    );
+    // Nunca otros ítems: ni el 3–9 del PHQ-9 (el 9 es autolesión) ni el 3–7 del GAD-7.
     assert.doesNotMatch(JSON.stringify(d), /lastimarse|muerto|dormir|apetito|energía/i);
+    assert.doesNotMatch(JSON.stringify(d), /demasiado|relajarse|inquieto|irritable|miedo/i);
   }
   const byCode = Object.fromEntries(rows.map((r) => [r.code, r.definition]));
-  assert.equal(byCode.PHQ2.official, true, 'PHQ-2 es: Spanish for Mexico (oficial)');
-  assert.equal(byCode.PHQ2.language_version, 'Spanish for Mexico');
-  assert.equal(byCode.GAD2.official, false, 'GAD-2 es: adaptación, no oficial');
+  assert.match(byCode.PHQ2.source_url, /PHQ9_Spanish%20for%20Mexico\.pdf$/);
+  assert.match(byCode.GAD2.source_url, /GAD7_Spanish%20for%20Mexico\.pdf$/);
+  assert.equal(byCode.GAD2.options[0].label, 'Nunca', 'el GAD-2 usa las opciones del GAD-7');
 });

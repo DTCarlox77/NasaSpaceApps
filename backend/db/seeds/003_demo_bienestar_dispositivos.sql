@@ -47,8 +47,8 @@ ON CONFLICT DO NOTHING;
 -- · PHQ-2 es: ítems 1 y 2 del PHQ-9 "Spanish for Mexico" (oficial). NO se copia ningún otro
 --   ítem del PHQ-9: el 9 (autolesión) exige un protocolo de crisis que este módulo no tiene.
 -- · PHQ-2 en y GAD-2 en: PHQ-4 "English" (ítems 3–4 = PHQ-2; ítems 1–2 = GAD-2), oficial.
--- · GAD-2 es: ADAPTACIÓN, NO OFICIAL. Falta el GAD-7 "Spanish for Mexico"; el encabezado y
---   las opciones son los oficiales del PHQ en español de México (misma escala).
+-- · GAD-2 es: ítems 1 y 2 del GAD-7 "Spanish for Mexico" (oficial), con su propio encabezado y
+--   sus opciones ("Nunca"…), que difieren de las del PHQ-9. NO se copian los ítems 3–7.
 -- Puntaje = item_1 + item_2 (0–6); corte en 3 (reglas de PHQ2_SCORE y GAD2_SCORE).
 INSERT INTO instruments (code, version, name, indicator_code, definition, sources, license, is_active) VALUES
   ('PHQ2', 1, 'PHQ-2', 'PHQ2_SCORE',
@@ -99,17 +99,16 @@ INSERT INTO instruments (code, version, name, indicator_code, definition, source
   ('GAD2', 1, 'GAD-2', 'GAD2_SCORE',
    $json${
      "lang": "es",
-     "official": false,
-     "language_version": "Adaptación al español (no oficial)",
-     "source_url": null,
-     "note": "Encabezado y opciones oficiales del PHQ en español de México; los 2 ítems son una adaptación propia del GAD-2 en inglés, pendiente del GAD-7 Spanish for Mexico.",
-     "prompt": "Durante las últimas 2 semanas, ¿qué tan seguido le han afectado cualquiera de los siguientes problemas?",
+     "official": true,
+     "language_version": "Spanish for Mexico",
+     "source_url": "https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/GAD7_Spanish%20for%20Mexico.pdf",
+     "prompt": "Durante las últimas 2 semanas, ¿con qué frecuencia ha sentido molestias por los siguientes problemas?",
      "items": [
-       {"code": "item_1", "text": "Se ha sentido nervioso(a), ansioso(a) o con los nervios de punta"},
-       {"code": "item_2", "text": "No ha podido dejar de preocuparse o controlar su preocupación"}
+       {"code": "item_1", "text": "Sentirse nervioso/a, intranquilo/a o con los nervios de punta"},
+       {"code": "item_2", "text": "No poder dejar de preocuparse o no poder controlar la preocupación"}
      ],
      "options": [
-       {"value": 0, "label": "Para nada"},
+       {"value": 0, "label": "Nunca"},
        {"value": 1, "label": "Varios días"},
        {"value": 2, "label": "Más de la mitad de los días"},
        {"value": 3, "label": "Casi todos los días"}
@@ -135,10 +134,11 @@ INSERT INTO instruments (code, version, name, indicator_code, definition, source
      "scoring": {"method": "sum", "items": ["item_1", "item_2"], "min": 0, "max": 6, "cutoff": 3}
    }$json$::jsonb,
    $json$[
+     {"id": "pfizer_gad7_es_mx", "title": "Pfizer Inc. · phqscreeners.com · GAD-7 (Spanish for Mexico), ítems 1 y 2", "url": "https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/GAD7_Spanish%20for%20Mexico.pdf", "language_version": "Spanish for Mexico"},
      {"id": "pfizer_phq4_en", "title": "Pfizer Inc. · phqscreeners.com · PHQ-4 (English), ítems 1 y 2", "url": "https://www.phqscreeners.com/select-screener", "language_version": "English"},
      {"id": "gad2_kroenke", "title": "Kroenke et al. 2007, Ann Intern Med – Anxiety disorders in primary care (validación GAD-2)", "url": "https://pubmed.ncbi.nlm.nih.gov/17339617/"},
      {"id": "nasa_bhp_ops", "title": "NASA NTRS – BHP Operations at JSC (conferencias psicológicas privadas)", "url": "https://ntrs.nasa.gov/api/citations/20170003866/downloads/20170003866.pdf"}
    ]$json$::jsonb,
-   'Pfizer Inc. · phqscreeners.com · Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission required to reproduce, translate, display or distribute. Versiones: English (PHQ-4, ítems 1 y 2; https://www.phqscreeners.com/select-screener). Español: adaptación propia, no oficial (falta el GAD-7 Spanish for Mexico).',
+   'Pfizer Inc. · phqscreeners.com · Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission required to reproduce, translate, display or distribute. Versiones: English (PHQ-4, ítems 1 y 2; https://www.phqscreeners.com/select-screener) y Spanish for Mexico (GAD-7, ítems 1 y 2; https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/GAD7_Spanish%20for%20Mexico.pdf).',
    true)
 ON CONFLICT DO NOTHING;
