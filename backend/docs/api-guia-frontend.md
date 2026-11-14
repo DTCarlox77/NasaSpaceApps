@@ -1,6 +1,6 @@
 # Guía de la API para los frontends (app móvil y panel web)
 
-Contrato completo: [`docs/openapi.yaml`](openapi.yaml) (OpenAPI 3.0.3, v1). Si esta guía y el YAML difieren, manda el YAML.
+Contrato completo: [`docs/openapi.yaml`](openapi.yaml) (OpenAPI 3.0.3, v1.1). Si esta guía y el YAML difieren, manda el YAML. Los cambios desde v1 están en la [sección 8](#8-cambios-del-contrato-v11).
 
 > Datos sintéticos. La app es apoyo a la decisión, no un diagnóstico médico.
 
@@ -96,6 +96,7 @@ Cada operación del YAML trae `x-roles` (quién puede llamarla), `x-crew-role` (
 | `behavioral_health` | Panel | Detalle confidencial de bienestar (`/admin/behavioral/...`). Cada acceso queda auditado. |
 | `admin` | Panel | Cuentas, dispositivos, misiones y entornos; de bienestar, solo cumplimiento y aptitud `fit` / `not_confirmed`. |
 | Tableta sin sesión | App móvil | Solo emergencia, con `X-Device-Credential`. |
+| `service` | Sensores y simulador | Solo `POST /api/v1/habitat/readings`. Cualquier otra ruta responde 403. |
 
 La tripulación no ve nada del bienestar de los demás.
 
@@ -107,3 +108,9 @@ La tripulación no ve nada del bienestar de los demás.
 - `POST /crew/users/{id}/unlock`, `POST /crew/users/{id}/reset-pin`, `POST /crew/devices`
 - `GET /me/routines`, `GET /me/gamification`
 - `PUT /admin/indicators/{code}/rules`
+
+## 8. Cambios del contrato (v1.1)
+
+- **Rol `service`**: cuenta de servicio de los sensores y del simulador del hábitat. Solo puede llamar `POST /api/v1/habitat/readings` (`x-roles: [astronaut, service]`); cualquier otra ruta le responde 403. El simulador ya no usa una cuenta `admin`.
+- **`trigger_type: crew_event`**: nueva forma de activar el modo emergencia (un tripulante avisa, p. ej. por voz), además de `manual_button`, `missed_checkin`, `critical_reading` y `environment_alarm`. Si la app muestra el motivo de la emergencia, agrega este valor.
+- **`PATCH /api/v1/admin/assignments/{id}`**: `assigned_to` ya puede ser una fecha futura; la asignación sigue vigente hasta esa fecha. Antes respondía 400. Un periodo de comandante o de CMO que se solape con otro del mismo rol responde 409.

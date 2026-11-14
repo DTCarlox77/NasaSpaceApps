@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Astro Health API
-  version: 1.0.0
+  version: 1.1.0
   description: |
     API de apoyo a la decisión para el monitoreo de salud de astronautas.
 
@@ -16,7 +16,9 @@ info:
       emergencia aceptan además `X-Device-Credential` (tableta registrada sin sesión).
     - Extensiones en cada operación:
       - `x-roles`: roles que pueden llamarla (`astronaut`, `flight_surgeon`,
-        `behavioral_health`, `admin`). `public` = no requiere sesión.
+        `behavioral_health`, `admin`, `service`). `public` = no requiere sesión.
+        `service` = cuenta de servicio de los sensores del hábitat: **solo** puede llamar
+        `POST /habitat/readings`; cualquier otra ruta le responde 403.
       - `x-crew-role`: rol de tripulación exigido además del rol (`commander`,
         `crew_medical_officer`).
       - `x-status`: `mvp` o `extra`.
@@ -1386,10 +1388,9 @@ paths:
       tags: [Misión]
       summary: Termina una asignación o cambia el rol
       description: |
-        `assigned_to` debe ser **ahora o una fecha pasada**: `v_current_crew` y los índices de
-        "un comandante / un CMO vigente" consideran vigente solo `assigned_to IS NULL`, así que
-        una fecha futura sacaría al astronauta de la tripulación antes de tiempo. Una fecha
-        futura responde **400** `VALIDATION_ERROR`.
+        `assigned_to` puede ser una fecha pasada, actual o futura: la asignación es vigente
+        mientras `assigned_from <= now() < assigned_to` (`v_current_crew`). Un comandante o un
+        CMO no puede tener un periodo que se solape con otro del mismo rol en la misión (**409**).
       operationId: updateAssignment
       x-status: mvp
       x-roles: [admin]
@@ -3445,11 +3446,11 @@ paths:
       description: |
         Para el simulador y los sensores (`HAB_CO2`, `HAB_TEMP`, `HAB_HUMIDITY`, `HAB_NOISE`).
         Cada lectura se evalúa como en `POST /readings`. Idempotente por `client_uuid`. El
-        simulador usa una cuenta de servicio con rol `admin`; un astronauta puede registrar una
-        lectura manual.
+        simulador y los sensores usan una cuenta de servicio con rol `service` (vinculada a su
+        misión; no puede llamar ninguna otra ruta). Un astronauta puede registrar una lectura manual.
       operationId: createHabitatReadings
       x-status: mvp
-      x-roles: [astronaut, admin]
+      x-roles: [astronaut, service]
       x-hazards: [hostile_closed_env]
       requestBody:
         required: true
@@ -6302,7 +6303,8 @@ components:
       description: Cursor de la página siguiente; null = última página.
     Role:
       type: string
-      enum: [astronaut, flight_surgeon, behavioral_health, admin]
+      description: 'service = cuenta de servicio de los sensores del hábitat (solo POST /habitat/readings).'
+      enum: [astronaut, flight_surgeon, behavioral_health, admin, service]
     CrewRole:
       type: string
       enum: [commander, pilot, crew_medical_officer, flight_engineer, mission_specialist]
@@ -6340,8 +6342,8 @@ components:
       enum: [green, yellow, red, black]
     TriggerType:
       type: string
-      description: manual_button = botón manual; missed_checkin, critical_reading y environment_alarm = activación automática.
-      enum: [manual_button, missed_checkin, critical_reading, environment_alarm]
+      description: manual_button = botón manual; crew_event = un tripulante avisa (p. ej. por voz); missed_checkin, critical_reading y environment_alarm = activación automática.
+      enum: [manual_button, crew_event, missed_checkin, critical_reading, environment_alarm]
     EmergencyStatus:
       type: string
       enum: [active, closed, cancelled]
@@ -6550,8 +6552,15 @@ components:
             crew_role: { $ref: '#/components/schemas/CrewRole' }
         ground_mission_ids:
           type: array
-          description: Misiones a cuyo equipo en Tierra se agrega (no aplica a astronautas).
+          description: Misiones a cuyo equipo en Tierra se agrega (no aplica a astronautas ni a service).
           items: { $ref: '#/components/schemas/Uuid' }
+        service:
+          type: object
+          description: Obligatorio si role = service. Vincula la cuenta de los sensores con su misión.
+          required: [mission_id, description]
+          properties:
+            mission_id: { $ref: '#/components/schemas/Uuid' }
+            description: { type: string, minLength: 1, maxLength: 200 }
     AstronautProfile:
       type: object
       required: [id, user_id, call_sign, synthetic]
@@ -6745,7 +6754,7 @@ components:
         assigned_to:
           type: string
           format: date-time
-          description: Ahora o una fecha pasada (una futura responde 400).
+          description: Fin de la asignación (puede ser futuro; vigente hasta esa fecha).
         crew_role: { $ref: '#/components/schemas/CrewRole' }
     AssignmentPage:
       type: object
