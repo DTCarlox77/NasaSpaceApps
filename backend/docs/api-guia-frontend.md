@@ -33,7 +33,7 @@ curl -s http://localhost:4010/api/v1/me/body-status -H 'Authorization: Bearer de
 ## 2. Login, cambio obligatorio y refresh
 
 1. `POST /api/v1/auth/login` con `{ username, password, device_id }`.
-   - **200**: guarda `access_token` (1 h) y `refresh_token`. `context` trae la misión y el rol de tripulación; el astronauta nunca elige misión.
+   - **200**: guarda `access_token` (15 min, `JWT_ACCESS_TTL`) y `refresh_token` (7 días, `JWT_REFRESH_TTL`). `context` trae la misión y el rol de tripulación; el astronauta nunca elige misión.
    - **428 `PASSWORD_CHANGE_REQUIRED`**: llama a `POST /auth/change-password` con `Authorization: Bearer <error.details.password_change_token>`. Responde como un login completo.
    - **423 `ACCOUNT_LOCKED`**: muestra `error.details.locked_until`. Tras 5 intentos fallidos; lo desbloquea admin o el comandante.
    - **401 `INVALID_CREDENTIALS`**: mismo mensaje exista o no el usuario.

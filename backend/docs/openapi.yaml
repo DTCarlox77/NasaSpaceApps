@@ -25,6 +25,9 @@ info:
       - `x-hazards`: peligros RIDGE que atiende (`space_radiation`, `isolation_confinement`,
         `distance_from_earth`, `gravity_fields`, `hostile_closed_env`).
       - `x-sensitivity: confidential`: datos de bienestar (ver "Quién ve qué").
+    - Si la cuenta debe cambiar la contraseña (`must_change_password`), cualquier ruta salvo
+      `POST /auth/change-password` y `POST /auth/logout` responde **428** con un
+      `password_change_token` en `error.details`.
     - Idempotencia: lo que crea un dispositivo lleva `client_uuid`. La primera vez responde
       **201**; un duplicado responde **200** con el registro existente.
     - Lecturas: `measured_at` lo pone el dispositivo y `received_at` el servidor.
@@ -168,7 +171,7 @@ paths:
                   value:
                     access_token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDIifQ.demo
                     token_type: Bearer
-                    expires_in: 3600
+                    expires_in: 900
                     refresh_token: rt_51d0a7e3c2b94f18
                     must_change_password: false
                     offline_unlock_until: null
@@ -202,7 +205,7 @@ paths:
                     error:
                       code: INVALID_CREDENTIALS
                       message: Usuario o contraseña incorrectos.
-                      details: { attempts_left: 3 }
+                      details: null
         '403':
           description: Astronauta sin asignación vigente
           content:
@@ -262,7 +265,7 @@ paths:
                   value:
                     access_token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMTQifQ.demo
                     token_type: Bearer
-                    expires_in: 3600
+                    expires_in: 900
                     refresh_token: rt_c93e7d21a04b5f66
                     must_change_password: false
                     offline_unlock_until: '2026-11-21T09:00:00Z'
@@ -302,7 +305,26 @@ paths:
                       message: La contraseña debe tener al menos 10 caracteres y ser distinta de la actual.
                       details: { min_length: 10 }
         '401':
-          $ref: '#/components/responses/Unauthenticated'
+          description: La contraseña actual no coincide o la sesión no es válida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                wrongCurrent:
+                  summary: Contraseña actual incorrecta
+                  value:
+                    error:
+                      code: INVALID_CREDENTIALS
+                      message: Usuario o contraseña incorrectos.
+                      details: null
+                expired:
+                  summary: Token vencido o ya usado
+                  value:
+                    error:
+                      code: UNAUTHENTICATED
+                      message: La sesión ya no es válida. Inicia sesión de nuevo.
+                      details: null
 
   /api/v1/auth/refresh:
     post:
@@ -340,7 +362,7 @@ paths:
                   value:
                     access_token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMTEifQ.rotated
                     token_type: Bearer
-                    expires_in: 3600
+                    expires_in: 900
                     refresh_token: rt_0b7d4e2f9c1a8e53
         '400':
           $ref: '#/components/responses/ValidationError'
@@ -565,7 +587,7 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
         '409':
-          description: Usuario o call sign ya existen, rol de tripulación ocupado o asignación solapada
+          description: Usuario, correo o call sign ya existen (sin distinguir mayúsculas), rol de tripulación ocupado o asignación solapada
           content:
             application/json:
               schema:
@@ -585,6 +607,13 @@ paths:
                       code: CREW_ROLE_TAKEN
                       message: ARES-1 ya tiene un comandante vigente.
                       details: { crew_role: commander }
+                callSignTaken:
+                  summary: Call sign repetido (sin distinguir mayúsculas)
+                  value:
+                    error:
+                      code: CALL_SIGN_TAKEN
+                      message: El call sign NOVA ya existe.
+                      details: { field: astronaut.call_sign }
 
   /api/v1/admin/users/{id}/reset-password:
     post:
@@ -612,6 +641,8 @@ paths:
                     temporary_password: Temp-7730-qp
                     must_change_password: true
                     revoked_refresh_tokens: 2
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -639,6 +670,8 @@ paths:
               examples:
                 unlocked:
                   $ref: '#/components/examples/UserAdminLyra'
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -6021,7 +6054,7 @@ components:
       value:
         access_token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMTEiLCJyb2xlIjoiYXN0cm9uYXV0In0.demo
         token_type: Bearer
-        expires_in: 3600
+        expires_in: 900
         refresh_token: rt_8f2c1d0e9b7a4c3f
         must_change_password: false
         offline_unlock_until: '2026-11-21T16:00:00Z'
@@ -6395,7 +6428,8 @@ components:
             UNAUTHENTICATED (401), FORBIDDEN (403), NOT_FOUND (404), CONFLICT (409),
             ACCOUNT_LOCKED (423), PASSWORD_CHANGE_REQUIRED (428), RATE_LIMITED (429).
             Específicos: INVALID_CREDENTIALS, TOKEN_REUSE_DETECTED, NO_ACTIVE_ASSIGNMENT,
-            WEAK_PASSWORD, USERNAME_TAKEN, CREW_ROLE_TAKEN, ASSIGNMENT_OVERLAP, OUTAGE_OVERLAP,
+            WEAK_PASSWORD, USERNAME_TAKEN, EMAIL_TAKEN, CALL_SIGN_TAKEN, CREW_ROLE_TAKEN,
+            ASSIGNMENT_OVERLAP, OUTAGE_OVERLAP,
             SESSION_ALREADY_ACTIVE, INVALID_JSON, PAYLOAD_TOO_LARGE, INTERNAL_ERROR.
           example: NOT_FOUND
         message:
@@ -6552,7 +6586,7 @@ components:
             crew_role: { $ref: '#/components/schemas/CrewRole' }
         ground_mission_ids:
           type: array
-          description: Misiones a cuyo equipo en Tierra se agrega (no aplica a astronautas ni a service).
+          description: Misiones a cuyo equipo en Tierra se agrega (no aplica a astronautas ni a service). Si se omite, las misiones activas del equipo en Tierra del admin que crea la cuenta.
           items: { $ref: '#/components/schemas/Uuid' }
         service:
           type: object
