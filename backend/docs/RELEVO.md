@@ -29,7 +29,7 @@ Cierre del **tramo 1** (tareas 1–5), 2026-11-14, rama `backend`.
 - **Permisos**:
   - `src/middlewares/auth.js`: `authenticate`, `requireRole`, `requireCrewRole` y la lista blanca del rol `service`;
   - `src/services/accessPolicy.js`: `canAccess`, `enforceAccess` y la bitácora confidencial.
-- **Pruebas**: `node --test` → **295**. Pasan **262**: unitarias, matriz de permisos, derivados y catálogo. Las **33 de base de datos** (humo 4, autenticación 14, semáforo 15) se saltan hasta crear `astro_health_test` (paso 3 de "Cómo levantar el proyecto"). Las 18 de humo y autenticación pasaron en la tarea 4; **las 15 del semáforo todavía no se han ejecutado**.
+- **Pruebas**: `node --test` → **295 de 295**, sin saltadas, contra la base de pruebas `astro_health_test`. Incluyen la matriz de permisos, los derivados, el catálogo y las suites de base de datos (humo 4, autenticación 14, semáforo 15). Si la base de pruebas no existe, esas 33 se saltan con el comando para crearla.
 - **Escalamiento**: solo el mínimo. Las lecturas crean filas en `escalations`; la bandeja, el acuse y los mensajes son la tarea 6.
 
 ## Cómo levantar el proyecto
@@ -164,7 +164,6 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
 
 ## Pendientes
 
-- **Antes de integrar en `develop`**: crear `astro_health_test` y correr `node --test` hasta que pasen las 295, sin saltadas. Las 15 pruebas de integración del semáforo están escritas pero nunca se ejecutaron. Sus flujos sí se validaron a mano contra la base de desarrollo y con `prism proxy --errors`.
 - **Despliegue**: activar `app.set('trust proxy', 1)` detrás del proxy de Render/Railway, para que el rate limit vea la IP real del cliente.
 - **Tarea 9**: `responder_safe` es una pregunta de la sesión. El servicio debe copiar esa respuesta en las respuestas de cada evaluación antes de llamar a `evaluateAssessment`; si no, el resultado es `incomplete` con `pending: "responder_safe"`. Una respuesta `{ value: null }` cuenta como pendiente.
 - **PHQ-2 y GAD-2**: el seed 003 usa una **redacción adaptada** al español. La traducción oficial está detrás del botón "Agree" de https://www.phqscreeners.com/terms; falta el enlace directo al PDF en español para reemplazar los textos y la licencia.
