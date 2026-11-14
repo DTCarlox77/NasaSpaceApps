@@ -1,0 +1,13 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+
+# Cobertura y logs
+coverage/
+logs/
+*.log
+npm-debug.log*
