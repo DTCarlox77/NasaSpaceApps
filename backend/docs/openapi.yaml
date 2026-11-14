@@ -4723,66 +4723,181 @@ paths:
     get:
       tags: [Bienestar]
       summary: Cuestionarios breves (PHQ-2 y GAD-2)
+      description: |
+        Texto de Pfizer Inc. (phqscreeners.com) en el idioma pedido, con su licencia y fuentes.
+        `official` indica si es la traducción oficial: el GAD-2 en español es una adaptación
+        (falta el GAD-7 "Spanish for Mexico"). Solo los 2 ítems de cada cuestionario breve
+        (nunca el PHQ-9 completo). Puntaje = item_1 + item_2 (0–6), corte en 3.
       operationId: listWellbeingInstruments
       x-status: mvp
       x-status-impl: pending
       x-roles: [astronaut, behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
+      parameters:
+        - name: lang
+          in: query
+          description: Idioma del texto (por defecto es).
+          schema: { type: string, enum: [es, en], default: es }
       responses:
         '200':
-          description: Instrumentos (catálogo completo)
+          description: Instrumentos (catálogo completo) en el idioma pedido
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/InstrumentList'
               examples:
-                instruments:
-                  summary: PHQ-2 y GAD-2
+                es:
+                  summary: Español (por defecto)
                   value:
                     items:
-                      - code: PHQ2
-                        name: PHQ-2
-                        indicator_code: PHQ2_SCORE
-                        prompt: Durante las últimas 2 semanas, ¿con qué frecuencia te han molestado estos problemas?
+                      - code: 'PHQ2'
+                        name: 'PHQ-2'
+                        indicator_code: 'PHQ2_SCORE'
+                        lang: 'es'
+                        official: true
+                        language_version: 'Spanish for Mexico'
+                        prompt: 'Durante las últimas 2 semanas, ¿qué tan seguido le han afectado cualquiera de los siguientes problemas?'
                         items:
-                          - { code: item_1, text: Poco interés o placer en hacer cosas }
-                          - { code: item_2, text: 'Sentirte decaído, deprimido o sin esperanza' }
+                          - code: 'item_1'
+                            text: 'Poco interés o placer en hacer las cosas'
+                          - code: 'item_2'
+                            text: 'Se ha sentido decaído(a), deprimido(a), o sin esperanzas'
                         options:
-                          - { value: 0, label: Ningún día }
-                          - { value: 1, label: Varios días }
-                          - { value: 2, label: Más de la mitad de los días }
-                          - { value: 3, label: Casi todos los días }
+                          - label: 'Para nada'
+                            value: 0
+                          - label: 'Varios días'
+                            value: 1
+                          - label: 'Más de la mitad de los días'
+                            value: 2
+                          - label: 'Casi todos los días'
+                            value: 3
+                        license: 'Pfizer Inc. · phqscreeners.com · Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission required to reproduce, translate, display or distribute. Versiones: English (PHQ-4, ítems 3 y 4; https://www.phqscreeners.com/select-screener) y Spanish for Mexico (PHQ-9, ítems 1 y 2; https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/PHQ9_Spanish%20for%20Mexico.pdf).'
                         sources:
-                          - {
-                              id: phq2_nida,
-                              title: NIDA CDE – Patient Health Questionnaire-2 (PHQ-2),
-                              url: 'https://cde.nida.nih.gov/node/22',
-                            }
-                      - code: GAD2
-                        name: GAD-2
-                        indicator_code: GAD2_SCORE
-                        prompt: Durante las últimas 2 semanas, ¿con qué frecuencia te han molestado estos problemas?
+                          - id: 'pfizer_phq9_es_mx'
+                            url: 'https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/PHQ9_Spanish%20for%20Mexico.pdf'
+                            title: 'Pfizer Inc. · phqscreeners.com · PHQ-9 (Spanish for Mexico), ítems 1 y 2'
+                            language_version: 'Spanish for Mexico'
+                          - id: 'pfizer_phq4_en'
+                            url: 'https://www.phqscreeners.com/select-screener'
+                            title: 'Pfizer Inc. · phqscreeners.com · PHQ-4 (English), ítems 3 y 4'
+                            language_version: 'English'
+                          - id: 'phq2_nida'
+                            url: 'https://cde.nida.nih.gov/node/22'
+                            title: 'NIDA CDE – Patient Health Questionnaire-2 (PHQ-2)'
+                          - id: 'nasa_bhp_ops'
+                            url: 'https://ntrs.nasa.gov/api/citations/20170003866/downloads/20170003866.pdf'
+                            title: 'NASA NTRS – BHP Operations at JSC (conferencias psicológicas privadas)'
+                      - code: 'GAD2'
+                        name: 'GAD-2'
+                        indicator_code: 'GAD2_SCORE'
+                        lang: 'es'
+                        official: false
+                        language_version: 'Adaptación al español (no oficial)'
+                        note: 'Encabezado y opciones oficiales del PHQ en español de México; los 2 ítems son una adaptación propia del GAD-2 en inglés, pendiente del GAD-7 Spanish for Mexico.'
+                        prompt: 'Durante las últimas 2 semanas, ¿qué tan seguido le han afectado cualquiera de los siguientes problemas?'
                         items:
-                          - {
-                              code: item_1,
-                              text: 'Sentirte nervioso, ansioso o con los nervios de punta',
-                            }
-                          - {
-                              code: item_2,
-                              text: No poder dejar de preocuparte o no poder controlar la preocupación,
-                            }
+                          - code: 'item_1'
+                            text: 'Se ha sentido nervioso(a), ansioso(a) o con los nervios de punta'
+                          - code: 'item_2'
+                            text: 'No ha podido dejar de preocuparse o controlar su preocupación'
                         options:
-                          - { value: 0, label: Ningún día }
-                          - { value: 1, label: Varios días }
-                          - { value: 2, label: Más de la mitad de los días }
-                          - { value: 3, label: Casi todos los días }
+                          - label: 'Para nada'
+                            value: 0
+                          - label: 'Varios días'
+                            value: 1
+                          - label: 'Más de la mitad de los días'
+                            value: 2
+                          - label: 'Casi todos los días'
+                            value: 3
+                        license: 'Pfizer Inc. · phqscreeners.com · Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission required to reproduce, translate, display or distribute. Versiones: English (PHQ-4, ítems 1 y 2; https://www.phqscreeners.com/select-screener). Español: adaptación propia, no oficial (falta el GAD-7 Spanish for Mexico).'
                         sources:
-                          - {
-                              id: gad2_kroenke,
-                              title: Kroenke et al. 2007 – validación GAD-2,
-                              url: 'https://pubmed.ncbi.nlm.nih.gov/17339617/',
-                            }
+                          - id: 'pfizer_phq4_en'
+                            url: 'https://www.phqscreeners.com/select-screener'
+                            title: 'Pfizer Inc. · phqscreeners.com · PHQ-4 (English), ítems 1 y 2'
+                            language_version: 'English'
+                          - id: 'gad2_kroenke'
+                            url: 'https://pubmed.ncbi.nlm.nih.gov/17339617/'
+                            title: 'Kroenke et al. 2007, Ann Intern Med – Anxiety disorders in primary care (validación GAD-2)'
+                          - id: 'nasa_bhp_ops'
+                            url: 'https://ntrs.nasa.gov/api/citations/20170003866/downloads/20170003866.pdf'
+                            title: 'NASA NTRS – BHP Operations at JSC (conferencias psicológicas privadas)'
+                en:
+                  summary: English (?lang=en)
+                  value:
+                    items:
+                      - code: 'PHQ2'
+                        name: 'PHQ-2'
+                        indicator_code: 'PHQ2_SCORE'
+                        lang: 'en'
+                        official: true
+                        language_version: 'English'
+                        prompt: 'Over the last 2 weeks, how often have you been bothered by the following problems?'
+                        items:
+                          - code: 'item_1'
+                            text: 'Little interest or pleasure in doing things'
+                          - code: 'item_2'
+                            text: 'Feeling down, depressed, or hopeless'
+                        options:
+                          - label: 'Not at all'
+                            value: 0
+                          - label: 'Several days'
+                            value: 1
+                          - label: 'More than half the days'
+                            value: 2
+                          - label: 'Nearly every day'
+                            value: 3
+                        license: 'Pfizer Inc. · phqscreeners.com · Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission required to reproduce, translate, display or distribute. Versiones: English (PHQ-4, ítems 3 y 4; https://www.phqscreeners.com/select-screener) y Spanish for Mexico (PHQ-9, ítems 1 y 2; https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/PHQ9_Spanish%20for%20Mexico.pdf).'
+                        sources:
+                          - id: 'pfizer_phq9_es_mx'
+                            url: 'https://www.phqscreeners.com/images/sites/g/files/g10060481/f/201412/PHQ9_Spanish%20for%20Mexico.pdf'
+                            title: 'Pfizer Inc. · phqscreeners.com · PHQ-9 (Spanish for Mexico), ítems 1 y 2'
+                            language_version: 'Spanish for Mexico'
+                          - id: 'pfizer_phq4_en'
+                            url: 'https://www.phqscreeners.com/select-screener'
+                            title: 'Pfizer Inc. · phqscreeners.com · PHQ-4 (English), ítems 3 y 4'
+                            language_version: 'English'
+                          - id: 'phq2_nida'
+                            url: 'https://cde.nida.nih.gov/node/22'
+                            title: 'NIDA CDE – Patient Health Questionnaire-2 (PHQ-2)'
+                          - id: 'nasa_bhp_ops'
+                            url: 'https://ntrs.nasa.gov/api/citations/20170003866/downloads/20170003866.pdf'
+                            title: 'NASA NTRS – BHP Operations at JSC (conferencias psicológicas privadas)'
+                      - code: 'GAD2'
+                        name: 'GAD-2'
+                        indicator_code: 'GAD2_SCORE'
+                        lang: 'en'
+                        official: true
+                        language_version: 'English'
+                        prompt: 'Over the last 2 weeks, how often have you been bothered by the following problems?'
+                        items:
+                          - code: 'item_1'
+                            text: 'Feeling nervous, anxious or on edge'
+                          - code: 'item_2'
+                            text: 'Not being able to stop or control worrying'
+                        options:
+                          - label: 'Not at all'
+                            value: 0
+                          - label: 'Several days'
+                            value: 1
+                          - label: 'More than half the days'
+                            value: 2
+                          - label: 'Nearly every day'
+                            value: 3
+                        license: 'Pfizer Inc. · phqscreeners.com · Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission required to reproduce, translate, display or distribute. Versiones: English (PHQ-4, ítems 1 y 2; https://www.phqscreeners.com/select-screener). Español: adaptación propia, no oficial (falta el GAD-7 Spanish for Mexico).'
+                        sources:
+                          - id: 'pfizer_phq4_en'
+                            url: 'https://www.phqscreeners.com/select-screener'
+                            title: 'Pfizer Inc. · phqscreeners.com · PHQ-4 (English), ítems 1 y 2'
+                            language_version: 'English'
+                          - id: 'gad2_kroenke'
+                            url: 'https://pubmed.ncbi.nlm.nih.gov/17339617/'
+                            title: 'Kroenke et al. 2007, Ann Intern Med – Anxiety disorders in primary care (validación GAD-2)'
+                          - id: 'nasa_bhp_ops'
+                            url: 'https://ntrs.nasa.gov/api/citations/20170003866/downloads/20170003866.pdf'
+                            title: 'NASA NTRS – BHP Operations at JSC (conferencias psicológicas privadas)'
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
 
@@ -7003,6 +7118,8 @@ components:
         id: { type: string }
         title: { type: string }
         url: { type: string, format: uri }
+        language_version:
+          { type: string, description: 'Versión de idioma de la fuente (cuestionarios).' }
     Condition:
       type: object
       description: |
@@ -7859,11 +7976,37 @@ components:
         offer_support: { type: boolean, description: true = mostrar "Quiero hablar con alguien". }
     Instrument:
       type: object
-      required: [code, name, indicator_code, prompt, items, options, sources]
+      required:
+        [
+          code,
+          name,
+          indicator_code,
+          lang,
+          official,
+          language_version,
+          prompt,
+          items,
+          options,
+          license,
+          sources,
+        ]
       properties:
         code: { type: string, enum: [PHQ2, GAD2] }
         name: { type: string }
         indicator_code: { type: string }
+        lang: { type: string, enum: [es, en] }
+        official:
+          {
+            type: boolean,
+            description: 'true = traducción oficial de Pfizer; false = adaptación propia.',
+          }
+        language_version:
+          {
+            type: string,
+            description: 'Versión de idioma de la fuente, p. ej. Spanish for Mexico o English.',
+          }
+        note: { type: string, description: Aclaración cuando el texto no es oficial. }
+        license: { type: string }
         prompt: { type: string }
         items:
           type: array

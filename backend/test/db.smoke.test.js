@@ -107,3 +107,40 @@ test('no puede haber dos versiones activas de reglas para un indicador', async (
     );
   });
 });
+
+test('PHQ-2 y GAD-2: texto por idioma, licencia de Pfizer y solo 2 ítems', async (t) => {
+  if (!pool) return t.skip(SKIP);
+  const { rows } = await pool.query(
+    'SELECT code, definition, license, sources FROM instruments WHERE is_active ORDER BY code',
+  );
+  assert.deepEqual(
+    rows.map((r) => r.code),
+    ['GAD2', 'PHQ2'],
+  );
+  for (const { code, definition: d, license, sources } of rows) {
+    for (const text of [d, d.translations.en]) {
+      assert.equal(text.items.length, 2, `${code}: solo los 2 ítems del cuestionario breve`);
+      assert.deepEqual(
+        text.options.map((o) => o.value),
+        [0, 1, 2, 3],
+      );
+    }
+    assert.equal(d.lang, 'es');
+    assert.equal(d.translations.en.official, true, `${code} en es oficial (PHQ-4)`);
+    assert.deepEqual(d.scoring, {
+      method: 'sum',
+      items: ['item_1', 'item_2'],
+      min: 0,
+      max: 6,
+      cutoff: 3,
+    });
+    assert.match(license, /No permission required to reproduce, translate, display or distribute/);
+    assert.ok(sources.some((s) => s.url.startsWith('https://www.phqscreeners.com/')));
+    // Nunca el ítem 9 del PHQ-9 (autolesión) ni otros ítems del PHQ-9.
+    assert.doesNotMatch(JSON.stringify(d), /lastimarse|muerto|dormir|apetito|energía/i);
+  }
+  const byCode = Object.fromEntries(rows.map((r) => [r.code, r.definition]));
+  assert.equal(byCode.PHQ2.official, true, 'PHQ-2 es: Spanish for Mexico (oficial)');
+  assert.equal(byCode.PHQ2.language_version, 'Spanish for Mexico');
+  assert.equal(byCode.GAD2.official, false, 'GAD-2 es: adaptación, no oficial');
+});
