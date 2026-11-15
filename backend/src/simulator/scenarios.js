@@ -67,32 +67,54 @@ const reading = (ctx, callSign, code, values, inputMethod, ms, extra = {}) => ({
  * en high (≥ 250: crítico). Desde la primera lectura, el doble de la mediana diaria da
  * precaución a crew. Con `astronaut`, ese tripulante reporta náusea en el pico: crítico por
  * síntomas (orau_ars, ntrs_ars_spe).
+ *
+ * Al final, la dosis acumulada (RAD_DOSE_CUM) de cada tripulante: `radiation[callSign]` (la
+ * acumulada en la base antes del evento, la calcula el servicio) + la dosis de este evento.
+ * Sin ese dato, la dosis de carrera previa del perfil. El límite de carrera (600 mSv) es
+ * universal: no depende del sexo (NASA-STD-3001 Vol. 1 [V1 4030]).
  */
-function solarEvent(ctx, { crew, astronaut, intensity }) {
+function solarEvent(ctx, { crew, astronaut, intensity, radiation = {} }) {
   const profile = intensity === 'high' ? [15, 100, 170] : [8, 50, 85];
   const items = [];
   for (const { call_sign: callSign } of crew) {
     const factor = ctx.rng(callSign, 'factor').uniform(0.92, 1.08); // blindaje de cada puesto
+    const device = { device_id: `sim-dosimeter-${callSign.toLowerCase()}` };
+    let eventDose = 0;
     profile.forEach((dose, i) => {
       const ms = ctx.nowMs - (profile.length - 1 - i) * 45 * MIN_MS;
       const symptoms = astronaut === callSign && i === profile.length - 1 ? ['nausea'] : [];
+      const value = round(dose * factor, 2);
+      eventDose += value;
       items.push(
         reading(
           ctx,
           callSign,
           'RAD_DOSE_DAILY',
-          { value: round(dose * factor, 2), event_active: true, symptoms },
+          { value, event_active: true, symptoms },
           'sensor',
           ms,
-          { device_id: `sim-dosimeter-${callSign.toLowerCase()}` },
+          device,
         ),
       );
     });
+    const base = radiation[callSign] ?? P.profileFor(callSign).rad_prior_msv;
+    items.push(
+      reading(
+        ctx,
+        callSign,
+        'RAD_DOSE_CUM',
+        { value: round(base + eventDose, 2) },
+        'sensor',
+        ctx.nowMs,
+        device,
+      ),
+    );
   }
   return {
     items,
     notes: [
       'La suma del evento sigue mientras las lecturas tengan event_active: si lo disparas otra vez, la dosis del evento se acumula.',
+      'RAD_DOSE_CUM de cada tripulante suma la dosis del evento a su acumulada.',
     ],
   };
 }
@@ -266,7 +288,7 @@ function buildScenario(name, { now = new Date(), crew, ...input }) {
   if (name === 'crew_illness') params.contagion = Boolean(params.contagion);
   if (name !== 'co2_spike') delete params.module_id;
   const ctx = context({ name, now, params });
-  const { items, notes } = BUILDERS[name](ctx, { crew, ...params });
+  const { items, notes } = BUILDERS[name](ctx, { crew, radiation: input.radiation, ...params });
   return {
     name,
     params,

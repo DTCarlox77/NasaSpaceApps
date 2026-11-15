@@ -219,6 +219,28 @@ test('solar_event: RAD_DOSE_DAILY en caution y critical, con escalamientos', asy
     vega.map((r) => r.level),
     ['critical'],
   );
+  // La acumulada de cada tripulante sube con la dosis del evento (antes se quedaba igual).
+  const cum = await q(
+    `SELECT r.astronaut_id, (r.components->>'value')::float8 AS value, r.measured_at
+     FROM readings r WHERE r.indicator_code = 'RAD_DOSE_CUM' AND r.received_at >= $1`,
+    [since],
+  );
+  assert.equal(cum.length, 4);
+  for (const row of cum) {
+    const [before] = await q(
+      `SELECT (components->>'value')::float8 AS value FROM readings
+       WHERE astronaut_id = $1 AND indicator_code = 'RAD_DOSE_CUM' AND received_at < $2
+       ORDER BY measured_at DESC LIMIT 1`,
+      [row.astronaut_id, since],
+    );
+    const [event] = await q(
+      `SELECT sum((components->>'value')::float8) AS dose FROM readings
+       WHERE astronaut_id = $1 AND indicator_code = 'RAD_DOSE_DAILY' AND received_at >= $2`,
+      [row.astronaut_id, since],
+    );
+    assert.ok(Math.abs(row.value - (before.value + event.dose)) < 0.011, JSON.stringify(row));
+  }
+  assert.deepEqual(res.body.levels.RAD_DOSE_CUM, { normal: 4 });
 });
 
 test('crew_illness: BODY_TEMP en caution con escalamiento a crew', async (t) => {

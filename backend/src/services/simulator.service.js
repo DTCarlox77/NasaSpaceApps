@@ -352,19 +352,59 @@ function scenarioParams(name, body, ctx) {
   return params;
 }
 
+// ---------------------------------------------------------------- radiación
+
+const sumBefore = (events, ms) =>
+  events.reduce((s, e) => s + (new Date(e.measured_at).getTime() < ms ? e.value : 0), 0);
+
+/**
+ * La historia calcula RAD_DOSE_CUM solo con dosis normales: aquí se le suman las dosis de los
+ * eventos solares ya registrados antes de cada lectura, para que la acumulada no baje después
+ * de un solar_event. Sin eventos, los valores quedan igual (determinismo).
+ */
+async function withEventDoses(items, ctx) {
+  const state = await simulator.radiationState(ctx.crew.map((m) => m.astronaut_id));
+  return items.map((item) => {
+    if (item.type !== 'reading' || item.indicator_code !== 'RAD_DOSE_CUM') return item;
+    const { events } = state.get(ctx.byCallSign.get(item.call_sign).astronaut_id);
+    const extra = sumBefore(events, new Date(item.measured_at).getTime());
+    if (!extra) return item;
+    return { ...item, values: { value: Math.round((item.values.value + extra) * 100) / 100 } };
+  });
+}
+
+/** Acumulada de cada tripulante antes de un evento: la última + eventos posteriores. */
+async function cumulativeBase(ctx) {
+  const state = await simulator.radiationState(ctx.crew.map((m) => m.astronaut_id));
+  const base = {};
+  for (const member of ctx.crew) {
+    const { last, events } = state.get(member.astronaut_id);
+    if (!last) continue;
+    const since = new Date(last.measured_at).getTime();
+    const after = events.reduce(
+      (s, e) => s + (new Date(e.measured_at).getTime() > since ? e.value : 0),
+      0,
+    );
+    base[member.call_sign] = Math.round((last.value + after) * 100) / 100;
+  }
+  return base;
+}
+
 // ---------------------------------------------------------------- API
 
 /** Historia normal de `days` días que termina en `now`. Idempotente. */
 async function loadHistory({ body, now = new Date() } = {}) {
   const { days, seed } = historyParams(body);
   const ctx = await missionContext();
-  const { from, to, items } = generateHistory({
+  const history = generateHistory({
     seed,
     days,
     now,
     missionStartsAt: ctx.mission.starts_at,
     crew: ctx.crew,
   });
+  const { from, to } = history;
+  const items = await withEventDoses(history.items, ctx);
   const tally = await writeItems(items, ctx);
   return summarize(tally, {
     kind: 'history',
@@ -379,7 +419,8 @@ async function loadHistory({ body, now = new Date() } = {}) {
 async function runScenario({ name, body, now = new Date() } = {}) {
   const ctx = await missionContext();
   const params = scenarioParams(name, body, ctx);
-  const scenario = buildScenario(name, { now, crew: ctx.crew, ...params });
+  const radiation = name === 'solar_event' ? await cumulativeBase(ctx) : undefined;
+  const scenario = buildScenario(name, { now, crew: ctx.crew, radiation, ...params });
   if (scenario.params.astronaut && !ctx.byCallSign.has(scenario.params.astronaut)) {
     throw badRequest([
       {

@@ -51,4 +51,37 @@ async function escalationCounts(readingIds, db = pool) {
   return rows;
 }
 
-module.exports = { missionByCode, currentCrew, serviceUser, escalationCounts };
+/**
+ * Radiación vigente (sin corregidas) por astronauta: la última RAD_DOSE_CUM y las dosis de
+ * evento (RAD_DOSE_DAILY con event_active). Uso interno del simulador para que la acumulada
+ * incluya los eventos solares.
+ */
+async function radiationState(astronautIds, db = pool) {
+  const notSuperseded = `NOT EXISTS (SELECT 1 FROM readings s
+    WHERE s.recorded_by = r.recorded_by AND s.supersedes_uuid = r.client_uuid)`;
+  const [cumulative, events] = await Promise.all([
+    db.query(
+      `SELECT DISTINCT ON (r.astronaut_id) r.astronaut_id, (r.components->>'value')::float8 AS value,
+              r.measured_at
+       FROM readings r
+       WHERE r.astronaut_id = ANY($1::uuid[]) AND r.indicator_code = 'RAD_DOSE_CUM'
+         AND ${notSuperseded}
+       ORDER BY r.astronaut_id, r.measured_at DESC`,
+      [astronautIds],
+    ),
+    db.query(
+      `SELECT r.astronaut_id, (r.components->>'value')::float8 AS value, r.measured_at
+       FROM readings r
+       WHERE r.astronaut_id = ANY($1::uuid[]) AND r.indicator_code = 'RAD_DOSE_DAILY'
+         AND (r.components->>'event_active')::boolean IS TRUE AND ${notSuperseded}
+       ORDER BY r.measured_at`,
+      [astronautIds],
+    ),
+  ]);
+  const state = new Map(astronautIds.map((id) => [id, { last: null, events: [] }]));
+  for (const row of cumulative.rows) state.get(row.astronaut_id).last = row;
+  for (const row of events.rows) state.get(row.astronaut_id).events.push(row);
+  return state;
+}
+
+module.exports = { missionByCode, currentCrew, serviceUser, escalationCounts, radiationState };

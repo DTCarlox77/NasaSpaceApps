@@ -10,6 +10,7 @@ const { isUuid } = require('../src/utils/validate');
 const { generateHistory } = require('../src/simulator/history');
 const { buildScenario, SCENARIOS } = require('../src/simulator/scenarios');
 const { rngFor, uuidFor } = require('../src/simulator/random');
+const { profileFor } = require('../src/simulator/profiles');
 
 const NOW = new Date('2026-11-14T15:20:30Z');
 const MISSION_START = new Date('2026-09-30T12:00:00Z');
@@ -205,19 +206,40 @@ test('co2_spike: low pasa de 4.5 sin llegar a 10; high llega a 10', () => {
 test('solar_event: dosis del evento ≥ 125 (low) y ≥ 250 (high); náusea solo en el elegido', () => {
   const eventDose = (intensity, callSign) =>
     buildScenario('solar_event', { now: NOW, crew: CREW, intensity })
-      .items.filter((i) => i.call_sign === callSign)
+      .items.filter((i) => i.call_sign === callSign && i.indicator_code === 'RAD_DOSE_DAILY')
       .reduce((s, i) => s + i.values.value, 0);
   for (const { call_sign: cs } of CREW) {
     assert.ok(eventDose('low', cs) >= 125 && eventDose('low', cs) < 250, cs);
     assert.ok(eventDose('high', cs) >= 250, cs);
   }
   const withNausea = buildScenario('solar_event', { now: NOW, crew: CREW, astronaut: 'VEGA' });
-  const nausea = withNausea.items.filter((i) => i.values.symptoms.includes('nausea'));
+  const daily = withNausea.items.filter((i) => i.indicator_code === 'RAD_DOSE_DAILY');
+  const nausea = daily.filter((i) => i.values.symptoms.includes('nausea'));
   assert.deepEqual(
     nausea.map((i) => i.call_sign),
     ['VEGA'],
   );
-  assert.ok(withNausea.items.every((i) => i.values.event_active === true));
+  assert.ok(daily.every((i) => i.values.event_active === true));
+});
+
+test('solar_event: RAD_DOSE_CUM al final = acumulada previa + dosis del evento', () => {
+  const scenario = buildScenario('solar_event', {
+    now: NOW,
+    crew: CREW,
+    radiation: { ORION: 100 },
+  });
+  for (const { call_sign: cs } of CREW) {
+    const mine = scenario.items.filter((i) => i.call_sign === cs);
+    const cum = mine.filter((i) => i.indicator_code === 'RAD_DOSE_CUM');
+    assert.equal(cum.length, 1, cs);
+    assert.equal(mine[mine.length - 1], cum[0], `${cs}: la acumulada va después del pico`);
+    const event = mine
+      .filter((i) => i.indicator_code === 'RAD_DOSE_DAILY')
+      .reduce((s, i) => s + i.values.value, 0);
+    // Sin dato de la base, parte de la dosis de carrera previa del perfil.
+    const base = cs === 'ORION' ? 100 : profileFor(cs).rad_prior_msv;
+    assert.ok(Math.abs(cum[0].values.value - (base + event)) < 0.011, cs);
+  }
 });
 
 test('crew_illness: fiebre ≥ 38 (crítica en high) y contagio a un segundo tripulante', () => {
