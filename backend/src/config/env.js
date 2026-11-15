@@ -3,7 +3,11 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), quiet: true });
 
-const REQUIRED = ['PORT', 'DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
+// Con DATABASE_URL (Render, Railway) no hacen falta las DB_*; sin ella, sí.
+const hasDatabaseUrl = Boolean((process.env.DATABASE_URL || '').trim());
+const REQUIRED = hasDatabaseUrl
+  ? ['PORT']
+  : ['PORT', 'DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
 // Entornos donde se permite un JWT_SECRET de desarrollo si no se define uno.
 const DEV_LIKE = ['development', 'test'];
 const DEV_JWT_SECRET = 'dev-only-insecure-jwt-secret-no-usar-fuera-de-desarrollo';
@@ -51,6 +55,68 @@ function toDurationSeconds(name, fallback) {
 
 const nodeEnv = process.env.NODE_ENV || 'development';
 
+function toBoolean(name, fallback) {
+  const raw = (process.env[name] || '').trim().toLowerCase();
+  if (raw === '') return fallback;
+  if (['true', '1', 'yes'].includes(raw)) return true;
+  if (['false', '0', 'no'].includes(raw)) return false;
+  return fail(`${name} debe ser true o false, recibido: "${process.env[name]}"`);
+}
+
+/**
+ * SSL de PostgreSQL (DB_SSL):
+ * - false: sin SSL (por defecto con DB_*; la base local no lo usa);
+ * - no-verify: SSL sin verificar el certificado (por defecto con DATABASE_URL: Render y
+ *   Railway usan certificados que no están en la cadena de Node);
+ * - true: SSL verificando el certificado.
+ */
+function dbSsl() {
+  const raw = (process.env.DB_SSL || (hasDatabaseUrl ? 'no-verify' : 'false')).trim().toLowerCase();
+  if (raw === 'false') return false;
+  if (raw === 'no-verify') return { rejectUnauthorized: false };
+  if (raw === 'true') return { rejectUnauthorized: true };
+  return fail(`DB_SSL debe ser false, no-verify o true, recibido: "${process.env.DB_SSL}"`);
+}
+
+function dbConfig() {
+  const ssl = dbSsl();
+  if (hasDatabaseUrl) {
+    return Object.freeze({ connectionString: process.env.DATABASE_URL.trim(), ssl });
+  }
+  return Object.freeze({
+    host: process.env.DB_HOST,
+    port: toPort('DB_PORT'),
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    ssl,
+  });
+}
+
+/** CORS_ORIGIN: "*" o varias URLs separadas por coma (sin barra final). */
+function corsOrigin() {
+  const raw = (process.env.CORS_ORIGIN || '*').trim();
+  if (raw === '*') return '*';
+  const list = raw
+    .split(',')
+    .map((o) => o.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+  if (list.length === 0) return '*';
+  return list.length === 1 ? list[0] : list;
+}
+
+/** trust proxy: saltos de proxy delante de la app (Render/Railway = 1). */
+function trustProxy() {
+  const raw = (process.env.TRUST_PROXY || '').trim();
+  if (raw === '') return nodeEnv === 'production' ? 1 : false;
+  if (raw === 'false' || raw === '0') return false;
+  const hops = Number(raw);
+  if (!Number.isInteger(hops) || hops < 1) {
+    fail(`TRUST_PROXY debe ser false o un entero >= 1, recibido: "${raw}"`);
+  }
+  return hops;
+}
+
 function jwtSecret() {
   const value = (process.env.JWT_SECRET || '').trim();
   if (value) {
@@ -66,14 +132,11 @@ function jwtSecret() {
 const env = Object.freeze({
   nodeEnv,
   port: toPort('PORT'),
-  corsOrigin: process.env.CORS_ORIGIN || '*',
-  db: Object.freeze({
-    host: process.env.DB_HOST,
-    port: toPort('DB_PORT'),
-    database: process.env.DB_NAME,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-  }),
+  corsOrigin: corsOrigin(),
+  trustProxy: trustProxy(),
+  // Seed de demo (datos sintéticos) permitido en producción solo con DEMO_SEED=true.
+  demoSeed: toBoolean('DEMO_SEED', false),
+  db: dbConfig(),
   auth: Object.freeze({
     jwtSecret: jwtSecret(),
     accessTtlSeconds: toDurationSeconds('JWT_ACCESS_TTL', '15m'),

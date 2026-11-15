@@ -17,6 +17,9 @@ const openapiDocument = YAML.load(path.join(__dirname, '../docs/openapi.yaml'));
 
 const app = express();
 
+// Detrás del proxy de Render/Railway: req.ip es la IP real del cliente (rate limit, auditoría).
+if (env.trustProxy) app.set('trust proxy', env.trustProxy);
+
 app.use(helmet());
 app.use(cors({ origin: env.corsOrigin }));
 app.use(express.json({ limit: '5mb' }));
