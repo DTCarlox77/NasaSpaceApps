@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Astro Health API
-  version: 1.7.0
+  version: 1.8.0
   description: |
     API de apoyo a la decisión para el monitoreo de salud de astronautas.
 
@@ -59,6 +59,19 @@ info:
     `Prefer: code=423` o `Prefer: example=duplicate`.
 
     ## Cambios
+    **1.8.0** (panel de Tierra). Cambio aditivo y una restricción:
+    - Nuevo `GET /admin/escalations/{id}/messages` (`flight_surgeon`, `admin`): el hilo de un
+      escalamiento visto desde Tierra (`EscalationMessagePage`, el mismo esquema que el hilo a
+      bordo). Mismo alcance que el acuse y la respuesta: 404 si todavía no llegó a la bandeja; el
+      flight surgeon, solo de las misiones de su equipo; admin, de todas, salvo las alertas de
+      bienestar (403, como en el acuse). Lo que manda Tierra sale siempre con su `deliver_at`
+      (futuro, `null` = en cola sin enlace, o pasado); lo de a bordo, solo cuando ya llegó.
+    - `SLEEP_HOURS` sale de `GET /admin/dashboard/crew` para todos los roles: llega con el
+      check-in y su valor diría quién lo hizo y a qué hora (cumplimiento). La alerta crítica de
+      sueño (7 noches con 6 h o menos) sigue llegando al flight surgeon en `GET /admin/inbox`;
+      admin ya no la recibe (antes le llegaba con el valor en `reason`) y el acuse, la respuesta
+      y el hilo de esa alerta le responden 403.
+
     **1.7.0** (pantalla "Tripulación" de la app). Cambio aditivo:
     - Nuevo `GET /crew/status` (solo `astronaut` con asignación vigente; su misión): roster, la
       sesión de emergencia abierta de la misión (`id` y estado) y las alertas físicas escaladas
@@ -6212,7 +6225,9 @@ paths:
         valor, serie (hasta 10 puntos; valor principal = `value` o la sistólica) y tendencia
         (último valor frente a la media de los anteriores, ±5 %; menos de 2 puntos =
         `insufficient_data`). Más aptitud (`flight_surgeon` y `admin`) y cumplimiento (solo `admin`).
-        **Sin estado conductual**: las lecturas salen de `v_readings_standard`. `fitness` = apto
+        **Sin estado conductual**: las lecturas salen de `v_readings_standard`. **Sin
+        `SLEEP_HOURS`** (v1.8): llega con el check-in de bienestar y diría quién lo hizo y a qué
+        hora; no sale para ningún rol. `fitness` = apto
         para tarea crítica con una PVT de las últimas 12 h (si no, `not_confirmed`).
         `behavioral_health` → 403.
       operationId: getCrewDashboard
@@ -6287,6 +6302,8 @@ paths:
         (`deliver_at` futuro o null) no aparece todavía. `category`: `reading` (lectura),
         `emergency` (triaje), `wellbeing` (alerta de bienestar escalada al flight surgeon: solo
         estado; `admin` no la ve), `manual`. Lo confidencial (`behavioral_health`) nunca aparece.
+        `admin` tampoco recibe las alertas de `SLEEP_HOURS` (v1.8: llega con el check-in y su
+        `reason` lleva el valor); el flight surgeon sí recibe la crítica.
         Al leer la bandeja, lo que ya llegó pasa de `queued` a `delivered`.
       operationId: getGroundInbox
       x-status: mvp
@@ -6373,7 +6390,8 @@ paths:
       description: |
         Solo sobre lo que ya está en la bandeja (`deliver_at <= now()`); antes responde **404**.
         Idempotente: un segundo acuse devuelve el primero (y no retrocede un `responded`).
-        **409** si el escalamiento está cerrado.
+        **409** si el escalamiento está cerrado. **403** si el rol no puede verlo (admin: alertas
+        de bienestar y de `SLEEP_HOURS`).
       operationId: ackEscalation
       x-status: mvp
       x-roles: [flight_surgeon, admin]
@@ -6405,6 +6423,72 @@ paths:
           $ref: '#/components/responses/Conflict'
 
   /api/v1/admin/escalations/{id}/messages:
+    get:
+      tags: [Tierra]
+      summary: Hilo de un escalamiento visto desde Tierra
+      description: |
+        El hilo del escalamiento para el panel (v1.8). Mismo alcance que el acuse y la respuesta:
+        **404** si todavía no llegó a la bandeja (`deliver_at` futuro o null) o no es de Tierra
+        (lo confidencial es de `behavioral_health`); **403** si el rol no puede verlo (el flight
+        surgeon, fuera de las misiones de su equipo; admin, las alertas de bienestar y de
+        `SLEEP_HOURS`). Lo que manda Tierra (`to_crew`) sale siempre, con su `deliver_at`:
+        futuro = en camino a bordo, `null` = en cola sin enlace, pasado = entregado. Lo que manda
+        la tripulación (`to_earth`) sale solo cuando ya llegó (`deliver_at <= now()`), igual que
+        la bandeja. Un escalamiento cerrado se puede leer (no responder: 409 en el POST). Orden:
+        `created_at` ascendente.
+      operationId: listGroundEscalationMessages
+      x-status: mvp
+      x-roles: [flight_surgeon, admin]
+      x-hazards: [distance_from_earth]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Página de mensajes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EscalationMessagePage'
+              examples:
+                thread:
+                  summary: Pregunta de a bordo, respuesta en camino y otra en cola
+                  value:
+                    items:
+                      - id: '61000000-0000-4000-8000-000000000303'
+                        escalation_id: '60000000-0000-4000-8000-000000000212'
+                        direction: 'to_earth'
+                        author_id: '00000000-0000-4000-8000-000000000013'
+                        author_role: 'astronaut'
+                        body: '¿La dejamos en el refugio o la llevamos a la litera?'
+                        created_at: '2026-11-14T08:07:00Z'
+                        deliver_at: '2026-11-14T08:08:30Z'
+                      - id: '61000000-0000-4000-8000-000000000301'
+                        escalation_id: '60000000-0000-4000-8000-000000000212'
+                        direction: 'to_crew'
+                        author_id: '00000000-0000-4000-8000-000000000002'
+                        author_role: 'flight_surgeon'
+                        body: 'Recibido. Mantener a LYRA en el refugio y repetir signos vitales cada 15 min.'
+                        created_at: '2026-11-14T08:11:00Z'
+                        deliver_at: '2026-11-14T08:12:30Z'
+                      - id: '61000000-0000-4000-8000-000000000302'
+                        escalation_id: '60000000-0000-4000-8000-000000000212'
+                        direction: 'to_crew'
+                        author_id: '00000000-0000-4000-8000-000000000002'
+                        author_role: 'flight_surgeon'
+                        body: 'Seguimos atentos. Reporten SpO₂ de LYRA cuando vuelva el enlace.'
+                        created_at: '2026-11-14T18:30:00Z'
+                        deliver_at: null
+                    next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     post:
       tags: [Tierra]
       summary: Responde a la tripulación (viaja con retraso)
@@ -6471,7 +6555,8 @@ paths:
       description: |
         Hilo visto a bordo: los mensajes de Tierra (`to_crew`) solo cuando ya se entregaron
         (`deliver_at <= now()`); los enviados desde a bordo (`to_earth`), siempre. Lo ve el
-        astronauta del escalamiento (y el CMO si es físico); otro tripulante → 403.
+        astronauta del escalamiento (y el CMO si es físico); otro tripulante → 403. El panel usa
+        `GET /admin/escalations/{id}/messages`.
       operationId: listEscalationMessages
       x-status: mvp
       x-roles: [astronaut]
