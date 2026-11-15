@@ -10,6 +10,7 @@
  * decide qué se muestra.
  */
 import type { GroundRole, Role } from '../api/types.ts';
+import { GLOBAL_ROLE_INFO } from './roles.ts';
 
 export type SectionId = 'crew' | 'alerts' | 'emergencies' | 'behavioral' | 'compliance' | 'demo';
 
@@ -105,10 +106,11 @@ export const SECTIONS: readonly Section[] = [
   },
 ];
 
+/** Nombre visible del rol de Tierra (mismo texto que la etiqueta RoleBadge, nav/roles.ts). */
 export const ROLE_LABELS: Record<GroundRole, string> = {
-  admin: 'Control de misión',
-  flight_surgeon: 'Flight surgeon',
-  behavioral_health: 'Salud conductual',
+  admin: GLOBAL_ROLE_INFO.admin.label,
+  flight_surgeon: GLOBAL_ROLE_INFO.flight_surgeon.label,
+  behavioral_health: GLOBAL_ROLE_INFO.behavioral_health.label,
 };
 
 const isGround = (role: Role | null | undefined): role is GroundRole =>

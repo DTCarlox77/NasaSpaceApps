@@ -14,7 +14,7 @@ import { Loading, QueryError, UpdatedAgo } from '../../components/QueryStatus.ts
 import { dateClock, timeAgo } from '../../lib/time.ts';
 import { useNow } from '../../lib/useNow.ts';
 import { useMission } from '../../mission/useMission.ts';
-import { ROLE_LABELS } from '../../nav/access.ts';
+import { RoleBadge } from '../../components/RoleBadge.tsx';
 import { AUDIT_POLL_MS } from './behavioral.ts';
 import { BehavioralTabs, ConfidentialNote } from './common.tsx';
 import './behavioral.css';
@@ -70,9 +70,7 @@ export function ConfidentialAuditPage() {
                 <td>
                   <strong>{a.actor_username ?? a.actor_user_id}</strong>
                   <br />
-                  <span className="muted small">
-                    {ROLE_LABELS[a.actor_role as keyof typeof ROLE_LABELS] ?? a.actor_role}
-                  </span>
+                  <RoleBadge role={a.actor_role} plain />
                 </td>
                 <td>{a.call_sign ?? a.astronaut_id}</td>
                 <td>

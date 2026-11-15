@@ -6,7 +6,8 @@
 import { Suspense, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { useAuth } from '../auth/context.ts';
-import { canSee, ROLE_LABELS, sectionsFor } from '../nav/access.ts';
+import { canSee, sectionsFor } from '../nav/access.ts';
+import { RoleBadge } from '../components/RoleBadge.tsx';
 import { useUnacknowledgedCount } from '../features/alerts/useInbox.ts';
 import { Button } from '../components/Button.tsx';
 import { DemoRibbon } from '../components/DemoRibbon.tsx';
@@ -86,10 +87,9 @@ export function AppShell() {
         <LinkStatus />
         <span className="shell-synthetic">Datos sintéticos · Apoyo a la decisión, no diagnóstico</span>
         <div className="shell-user">
-          <span>
+          <span className="shell-user-name">
             <strong>{auth.user?.full_name}</strong>
-            <br />
-            <span className="muted">{auth.role ? ROLE_LABELS[auth.role] : ''}</span>
+            {auth.role ? <RoleBadge role={auth.role} /> : null}
           </span>
           <Button variant="ghost" onClick={() => void onSignOut()} loading={leaving}>
             Cerrar sesión

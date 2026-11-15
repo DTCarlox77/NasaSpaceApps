@@ -38,6 +38,15 @@
   --color-info: #5fc6f5;
   --color-info-bg: #0d2433;
 
+  /* Roles (siempre con texto; no son colores del semáforo) */
+  --color-role-admin: #7fb3ff;
+  --color-role-surgeon: #c3a6ff;
+  --color-role-behavioral: #ff9fd0;
+  --color-role-astronaut: #9fe3d3;
+  --color-role-commander: #ffd479;
+  --color-role-cmo: #8fe0a8;
+  --color-role-crew: #b9c6d4;
+
   /* Tipografía del sistema */
   --font-sans:
     system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;

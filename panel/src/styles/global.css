@@ -524,3 +524,62 @@ details summary {
   margin: 0;
   padding: 0;
 }
+
+/* ---------------------------------------------------------------- etiquetas de rol */
+
+.role-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.125rem var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid currentColor;
+  background: var(--color-surface-raised);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.role-badge.has-tooltip {
+  cursor: help;
+}
+
+.role-admin { color: var(--color-role-admin); }
+.role-surgeon { color: var(--color-role-surgeon); }
+.role-behavioral { color: var(--color-role-behavioral); }
+.role-astronaut { color: var(--color-role-astronaut); }
+.role-commander { color: var(--color-role-commander); }
+.role-cmo { color: var(--color-role-cmo); }
+.role-crew,
+.role-service,
+.role-unknown { color: var(--color-role-crew); }
+
+/* Tooltip de una línea: al pasar el mouse o al enfocar la etiqueta con el teclado. */
+.role-tooltip {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  width: max-content;
+  max-width: 22rem;
+  white-space: normal;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow);
+  color: var(--color-text);
+  font-weight: 400;
+  font-size: var(--text-xs);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 120ms ease-in;
+}
+
+.role-badge.has-tooltip:hover .role-tooltip,
+.role-badge.has-tooltip:focus-visible .role-tooltip,
+.role-badge.has-tooltip:focus .role-tooltip {
+  visibility: visible;
+  opacity: 1;
+}
