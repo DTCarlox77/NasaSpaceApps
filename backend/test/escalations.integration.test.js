@@ -632,6 +632,65 @@ test('dashboard: semáforo físico con tendencia y sin datos confidenciales', as
   );
 });
 
+test('SLEEP_HOURS: fuera del dashboard de Tierra; su alerta crítica llega al flight surgeon, no a admin', async (t) => {
+  if (skip(t)) return;
+  // El sueño llega con el check-in: ni el flight surgeon ni admin ven su valor en el dashboard.
+  await postReading('lyra', 'SLEEP_HOURS', { value: 7.5 });
+  await postReading('lyra', 'HEART_RATE', { value: 64 });
+  for (const who of ['reyes', 'admin']) {
+    const res = await api(who, 'get', `/admin/dashboard/crew?mission_id=${ARES1}`);
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.ok(!JSON.stringify(res.body).includes('SLEEP_HOURS'), `${who}: sin SLEEP_HOURS`);
+    const lyra = res.body.astronauts.find((a) => a.call_sign === 'LYRA');
+    assert.ok(
+      lyra.indicators.some((i) => i.code === 'HEART_RATE'),
+      `${who}: el resto sigue`,
+    );
+  }
+
+  // 7 noches seguidas con 6 h o menos (una por día UTC) → crítico, escala al flight surgeon.
+  let last = null;
+  for (let daysAgo = 6; daysAgo >= 0; daysAgo -= 1) {
+    last = await postReading(
+      'vega',
+      'SLEEP_HOURS',
+      { value: 5.5 },
+      { measured_at: new Date(Date.now() - daysAgo * 24 * 3600 * 1000).toISOString() },
+    );
+    assert.equal(last.status, 201, JSON.stringify(last.body));
+  }
+  assert.equal(last.body.evaluation.level, 'critical');
+  const [ground] = await q(
+    "SELECT id FROM escalations WHERE source_id = $1 AND level = 'flight_surgeon'",
+    [last.body.reading.id],
+  );
+  assert.ok(ground, 'la alerta crítica de sueño sigue escalando al flight surgeon');
+  await travel('escalations', ground.id, DELAY + 1);
+
+  const fs = (await inbox('reyes', '?limit=200')).items.find((i) => i.id === ground.id);
+  assert.ok(fs, 'el flight surgeon la recibe en la bandeja');
+  assert.equal(fs.evaluation.code, 'SLEEP_HOURS');
+  assert.equal((await groundThread('reyes', ground.id)).status, 200);
+
+  // admin: ni la alerta ni su valor en `reason`, en ningún filtro; tampoco por id.
+  for (const query of [
+    '?limit=200',
+    '?category=reading&limit=200',
+    '?status=delivered&limit=200',
+  ]) {
+    const items = (await inbox('admin', query)).items;
+    assert.ok(!items.some((i) => i.id === ground.id), `admin ${query}`);
+    assert.ok(!JSON.stringify(items).includes('SLEEP_HOURS'), `admin ${query}: sin SLEEP_HOURS`);
+  }
+  assert.equal((await api('admin', 'post', `/admin/escalations/${ground.id}/ack`)).status, 403);
+  assert.equal((await groundThread('admin', ground.id)).status, 403);
+  const replied = await api('admin', 'post', `/admin/escalations/${ground.id}/messages`, {
+    body: 'No debería poder responder.',
+  });
+  assert.equal(replied.status, 403);
+  assert.equal((await api('reyes', 'post', `/admin/escalations/${ground.id}/ack`)).status, 200);
+});
+
 // ---------------------------------------------------------------- administración de la misión
 
 test('misiones y entornos: alta, lista, cambio y 409', async (t) => {

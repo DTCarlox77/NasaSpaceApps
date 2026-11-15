@@ -22,10 +22,13 @@
  *                          //           'crew_status' (pantalla "Tripulación": roster, emergencia
  *                          //           abierta y alertas físicas escaladas a bordo, sin valores) |
  *                          //           'crew_physical' (semáforo físico de un tripulante en esa
- *                          //           pantalla: solo el oficial médico)
+ *                          //           pantalla: solo el oficial médico) |
+ *                          //           'ground_dashboard' (semáforo físico del dashboard de
+ *                          //           Tierra, GET /admin/dashboard/crew)
  *     emergency_active,    // opcional: hay una emergencia activa del triaje en la misión
  *     share_with_cmo,      // opcional: privacy_preferences.share_with_cmo del dueño
- *     indicator_code,      // opcional: indicador del dato (lo usa crew_physical)
+ *     indicator_code,      // opcional: indicador del dato (lo usan las vistas de la tripulación,
+ *                          //           el dashboard de Tierra y las alertas de una lectura)
  *   }
  */
 const { pool } = require('../config/db');
@@ -47,14 +50,16 @@ const VIEWS = [
   'operational',
   'crew_status',
   'crew_physical',
+  'ground_dashboard',
 ];
 const CREW_VIEWS = ['crew_status', 'crew_physical'];
-// Indicadores estándar que nadie a bordo ve de otro en la pantalla "Tripulación": ni en el
-// semáforo del CMO (crew_physical) ni en las alertas escaladas a bordo (crew_status).
-// SLEEP_HOURS llega con el check-in: su lectura o su alerta dirían quién hizo su check-in y a
-// qué hora (cumplimiento, que solo ve admin). El escalamiento no cambia: el dueño ve la suya y
-// el flight surgeon recibe la crítica en Tierra.
-const CREW_PHYSICAL_HIDDEN = ['SLEEP_HOURS'];
+// Indicadores estándar que llegan con el check-in de bienestar: hoy SLEEP_HOURS. Su lectura o su
+// alerta dirían quién hizo su check-in y a qué hora (cumplimiento) y traen un valor del check-in.
+// - A bordo, nadie los ve de otro tripulante (crew_physical ni crew_status).
+// - En Tierra, nunca en el semáforo del dashboard (ground_dashboard), para ningún rol.
+// - admin no los recibe por ninguna vía (bandeja, hilo, acuse ni respuesta).
+// La alerta crítica no cambia: el dueño ve la suya y el flight surgeon la recibe en Tierra.
+const CHECKIN_INDICATORS = ['SLEEP_HOURS'];
 
 function assertResource(resource) {
   if (!resource || typeof resource !== 'object') throw new TypeError('resource inválido');
@@ -92,18 +97,29 @@ function canAccess(actor, resource) {
   // Pantalla "Tripulación" (GET /crew/status): solo la tripulación vigente de la misión y solo
   // lectura. crew_status = roster, emergencia abierta y alertas físicas escaladas a bordo, sin
   // valores; crew_physical = semáforo físico de cada tripulante (también el propio), solo el
-  // oficial médico (CMO). En las dos vistas, nunca los indicadores de CREW_PHYSICAL_HIDDEN, ni
+  // oficial médico (CMO). En las dos vistas, nunca los indicadores de CHECKIN_INDICATORS, ni
   // bienestar ni nada confidencial. El comandante no ve crew_physical: sus permisos delegados
   // son de acceso, no médicos. Tierra y service → no (tienen el panel).
   if (CREW_VIEWS.includes(view)) {
     if (actor.role !== 'astronaut' || action !== 'read' || confidential) return false;
     if (!sameMission || habitat) return false;
-    if (CREW_PHYSICAL_HIDDEN.includes(resource.indicator_code)) return false;
+    if (CHECKIN_INDICATORS.includes(resource.indicator_code)) return false;
     if (view === 'crew_physical') {
       return category === 'physical' && actor.crew_role === 'crew_medical_officer';
     }
     return category === 'physical' || category === 'emergency';
   }
+
+  // Dashboard de Tierra (GET /admin/dashboard/crew): semáforo físico para flight_surgeon y admin
+  // (con las reglas de su rol, abajo), nunca los indicadores que llegan con el check-in.
+  if (view === 'ground_dashboard') {
+    if (actor.role !== 'flight_surgeon' && actor.role !== 'admin') return false;
+    if (category !== 'physical' || CHECKIN_INDICATORS.includes(resource.indicator_code)) {
+      return false;
+    }
+  }
+  // admin no recibe nada de los indicadores del check-in (alerta, valor en `reason`, hilo).
+  if (actor.role === 'admin' && CHECKIN_INDICATORS.includes(resource.indicator_code)) return false;
 
   switch (actor.role) {
     case 'service':

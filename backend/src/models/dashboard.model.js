@@ -22,9 +22,10 @@ async function currentCrew(missionId, db = pool) {
 
 /**
  * Últimas `perIndicator` lecturas vigentes (no corregidas) por astronauta e indicador físico,
- * con su nivel. Orden: astronauta, indicador y measured_at ascendente.
+ * con su nivel. Solo los indicadores de `codes` (los que canAccess deja ver en el dashboard).
+ * Orden: astronauta, indicador y measured_at ascendente.
  */
-async function recentPhysicalReadings({ missionId, astronautIds, perIndicator }, db = pool) {
+async function recentPhysicalReadings({ missionId, astronautIds, codes, perIndicator }, db = pool) {
   const { rows } = await db.query(
     `SELECT astronaut_id, indicator_code, components, measured_at, level FROM (
        SELECT r.astronaut_id, r.indicator_code, r.components, r.measured_at, e.level,
@@ -34,12 +35,13 @@ async function recentPhysicalReadings({ missionId, astronautIds, perIndicator },
        LEFT JOIN reading_evaluations e ON e.reading_id = r.id
        WHERE r.mission_id = $1 AND r.astronaut_id = ANY($2::uuid[])
          AND r.body_zone <> 'environment'
+         AND r.indicator_code = ANY($4::text[])
          AND NOT EXISTS (SELECT 1 FROM v_readings_standard s
                          WHERE s.recorded_by = r.recorded_by AND s.supersedes_uuid = r.client_uuid)
      ) x
      WHERE rn <= $3
      ORDER BY astronaut_id, indicator_code, measured_at`,
-    [missionId, astronautIds, perIndicator],
+    [missionId, astronautIds, perIndicator, codes],
   );
   return rows;
 }

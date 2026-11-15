@@ -7,12 +7,15 @@
  * (fitness: flight_surgeon y admin; compliance: solo admin); si no, null.
  * `fitness` = aptitud para tarea crítica con una PVT reciente (WELLBEING_FITNESS_MAX_AGE_H,
  * tarea 10): sin PVT reciente, not_confirmed. Igual que GET /admin/compliance.
+ * Indicadores: canAccess decide por indicador (vista ground_dashboard) y de la base solo se
+ * leen los permitidos. Sin SLEEP_HOURS para nadie: llega con el check-in (v1.8).
  */
 const { LEVEL_ORDER } = require('../engine/conditions');
 const dashboard = require('../models/dashboard.model');
 const { loadActor, canAccess, enforceAccess } = require('./accessPolicy');
 const { resolveMission } = require('./missionScope');
 const { fitnessByAstronaut } = require('./wellbeing.service');
+const catalog = require('./catalog.service');
 const { forbidden } = require('../utils/httpError');
 
 const SERIES_POINTS = 10;
@@ -95,11 +98,28 @@ async function crewDashboard({ userId, missionId }) {
     });
 
   const ids = crew.map((m) => m.astronaut_id);
+  // Indicadores del semáforo que el actor puede ver de cada tripulante (canAccess por indicador).
+  const standard = ids.length ? await catalog.standardIndicators() : [];
+  const visibleBy = new Map(
+    ids.map((id) => [
+      id,
+      new Set(
+        standard
+          .filter((i) =>
+            canAccess(actor, { ...physical(id), view: 'ground_dashboard', indicator_code: i.code }),
+          )
+          .map((i) => i.code),
+      ),
+    ]),
+  );
+  const codes = [...new Set([...visibleBy.values()].flatMap((set) => [...set]))];
+
   const [readings, checkins, fitness] = ids.length
     ? await Promise.all([
         dashboard.recentPhysicalReadings({
           missionId: mission.id,
           astronautIds: ids,
+          codes,
           perIndicator: SERIES_POINTS,
         }),
         dashboard.checkinDays7d(ids),
@@ -109,6 +129,7 @@ async function crewDashboard({ userId, missionId }) {
 
   const byAstronaut = new Map(ids.map((id) => [id, new Map()]));
   for (const row of readings) {
+    if (!visibleBy.get(row.astronaut_id).has(row.indicator_code)) continue;
     const byCode = byAstronaut.get(row.astronaut_id);
     if (!byCode.has(row.indicator_code)) byCode.set(row.indicator_code, []);
     byCode.get(row.indicator_code).push(row);

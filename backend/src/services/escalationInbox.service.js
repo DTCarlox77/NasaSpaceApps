@@ -26,6 +26,7 @@ const escalations = require('../models/escalations.model');
 const { loadActor, canAccess, enforceAccess } = require('./accessPolicy');
 const { resolveMission } = require('./missionScope');
 const delivery = require('./escalationDelivery.service');
+const catalog = require('./catalog.service');
 
 // Filtro `category` del contrato → source_type de la BD.
 const CONTRACT_CATEGORY_SOURCES = {
@@ -51,6 +52,8 @@ const groundResource = (esc) => ({
   sensitivity: esc.is_confidential ? 'confidential' : 'standard',
   category: esc.category,
   action: 'read',
+  // Si viene de una lectura, su indicador (canAccess decide por indicador: SLEEP_HOURS).
+  indicator_code: esc.indicator_code ?? undefined,
   view:
     esc.category === 'behavioral'
       ? 'escalated_alert'
@@ -169,9 +172,27 @@ async function inbox({ userId, query }) {
   // Plazos vencidos del hombre muerto (la instancia pudo dormirse): antes de leer la bandeja.
   await require('./emergency.service').runTriageSweep();
   await delivery.promoteDelivered(mission.id);
+  // Alertas de una lectura: canAccess por indicador (admin no recibe las de SLEEP_HOURS, que
+  // llega con el check-in y trae su valor en `reason`).
+  const hiddenCodes = categories.includes('physical')
+    ? (await catalog.standardIndicators())
+        .filter(
+          (i) =>
+            !canAccess(actor, {
+              astronaut_id: '*',
+              mission_id: mission.id,
+              sensitivity: 'standard',
+              category: 'physical',
+              action: 'read',
+              indicator_code: i.code,
+            }),
+        )
+        .map((i) => i.code)
+    : [];
   const rows = await escalations.inboxPage({
     missionId: mission.id,
     categories,
+    hiddenCodes,
     sourceTypes: query.category ? CONTRACT_CATEGORY_SOURCES[query.category] : null,
     status: query.status || null,
     after,
