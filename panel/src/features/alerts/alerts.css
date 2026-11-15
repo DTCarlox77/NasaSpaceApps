@@ -10,34 +10,8 @@
   min-width: 12rem;
 }
 
-/* ---------------------------------------------------------------- prioridad (símbolo + texto) */
-
-.priority-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 0.125rem var(--space-2);
-  border-radius: 999px;
-  border: 1px solid;
-  font-size: var(--text-xs);
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.priority-emergency {
-  color: var(--color-critical);
-  background: var(--color-critical-bg);
-}
-
-.priority-urgent {
-  color: var(--color-caution);
-  background: var(--color-caution-bg);
-}
-
-.priority-routine {
-  color: var(--color-info);
-  background: var(--color-info-bg);
-}
+/* La prioridad (.priority-badge) y el estado a bordo (.delivery) están en styles/global.css:
+   también los usan Emergencias y Salud conductual. */
 
 /* ---------------------------------------------------------------- lista + detalle */
 
@@ -144,18 +118,6 @@
 
 .sent-body {
   white-space: pre-wrap;
-}
-
-.delivery {
-  font-weight: 600;
-}
-
-.delivery-pending {
-  color: var(--color-caution);
-}
-
-.delivery-delivered {
-  color: var(--color-normal);
 }
 
 @media (max-width: 64rem) {

@@ -20,16 +20,24 @@ const AlertsPage = lazy(() =>
 const AstronautDetailPage = lazy(() =>
   import('./features/crew/AstronautDetailPage.tsx').then((m) => ({ default: m.AstronautDetailPage })),
 );
+const EmergenciesPage = lazy(() =>
+  import('./features/emergencies/EmergenciesPage.tsx').then((m) => ({ default: m.EmergenciesPage })),
+);
+const EmergencyDetailPage = lazy(() =>
+  import('./features/emergencies/EmergencyDetailPage.tsx').then((m) => ({ default: m.EmergencyDetailPage })),
+);
 
 /** Pantallas ya implementadas; el resto sigue como placeholder de su fase. */
 const PAGES: Partial<Record<SectionId, ReactNode>> = {
   crew: <CrewDashboardPage />,
   alerts: <AlertsPage />,
+  emergencies: <EmergenciesPage />,
 };
 
 /** Rutas hijas de una sección (detalle), protegidas con el mismo rol que la sección. */
 const SUBROUTES: { section: SectionId; path: string; element: ReactNode }[] = [
   { section: 'crew', path: '/tripulacion/:astronautId', element: <AstronautDetailPage /> },
+  { section: 'emergencies', path: '/emergencias/:emergencyId', element: <EmergencyDetailPage /> },
 ];
 
 /** Rutas del panel (también las usan las pruebas con un router en memoria). */

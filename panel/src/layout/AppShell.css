@@ -233,3 +233,29 @@
   font-weight: 700;
   text-align: center;
 }
+
+/* Aviso global de emergencia abierta: ocupa su propia línea; símbolo + texto, no solo color. */
+.emergency-alert {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-critical-bg);
+  border: 1px solid var(--color-critical);
+  border-left-width: 6px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+
+.emergency-alert-icon {
+  color: var(--color-critical);
+  font-size: var(--text-lg);
+}
+
+.emergency-alert-link {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--color-text);
+}

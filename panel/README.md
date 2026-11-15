@@ -96,7 +96,9 @@ Un astronauta (`a.ortega`, …) se rechaza: "Este panel es para el equipo en Tie
 - **Cabecera**: estado del enlace con `GET /missions/current` cada 30 s (activo con su retraso, o sin enlace hasta hh:mm; próximo corte; entorno y gravedad).
 - **Dashboard** (`/tripulacion`, cada 30 s): semáforo físico por tripulante, sparkline y tendencia de la API, aptitud y, solo para admin, cumplimiento. El detalle está en `/tripulacion/:astronautId`. Si llega algo fuera del semáforo físico, no se muestra y se avisa.
 - **Alertas** (`/alertas`, cada 15 s): bandeja por prioridad, filtros, "Cargar más", acuse y respuesta a bordo con su estado según `deliver_at`. De bienestar solo se ve el estado. El panel no puede leer el hilo (en el contrato es solo del astronauta): muestra lo enviado en la sesión.
-- **Carga por ruta**: el dashboard (con Recharts) y la bandeja se cargan al abrirlos.
+- **Emergencias** (`/emergencias`, flight surgeon y admin): lista con estado, inicio, quién la abrió (manual o automática y motivo), tripulantes evaluados y peor categoría de triaje; filtro por estado. Detalle en `/emergencias/:id`: línea de tiempo vertical, orden de atención con la categoría (color + texto) y el bloque de radiación, último latido frente al umbral del hombre muerto del contrato, preguntas de la tripulación con "Responder en Alertas" y reporte al cierre. Admin ve solo el estado operativo (si la API mandara algo clínico, no se muestra). Sondeo cada 10 s con una emergencia abierta y 30 s si no. "Triaje autónomo a bordo · protocolo, no diagnóstico".
+- **Aviso global**: con una emergencia abierta, la cabecera lo dice (flight surgeon y admin) con enlace al detalle.
+- **Carga por ruta**: el dashboard (con Recharts), la bandeja y Emergencias se cargan al abrirlos.
 
 ## Estructura
 

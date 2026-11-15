@@ -1,6 +1,7 @@
 /**
- * Marco del panel: cabecera (misión, estado del enlace, usuario y rol, cerrar sesión), barra
- * lateral solo con las secciones del rol y el contenido.
+ * Marco del panel: cabecera (misión, estado del enlace, usuario y rol, cerrar sesión, aviso de
+ * emergencia abierta y, en modo demo, la cinta "sin servidor"), barra lateral solo con las
+ * secciones del rol y el contenido.
  */
 import { Suspense, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
@@ -11,6 +12,7 @@ import { Button } from '../components/Button.tsx';
 import { DemoRibbon } from '../components/DemoRibbon.tsx';
 import { Loading } from '../components/QueryStatus.tsx';
 import { useMission } from '../mission/useMission.ts';
+import { EmergencyAlert } from './EmergencyAlert.tsx';
 import { LinkStatus } from './LinkStatus.tsx';
 import './AppShell.css';
 
@@ -93,6 +95,7 @@ export function AppShell() {
             Cerrar sesión
           </Button>
         </div>
+        <EmergencyAlert />
       </header>
       <nav className="shell-sidebar" aria-label="Secciones">
         <ul>

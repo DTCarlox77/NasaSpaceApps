@@ -52,6 +52,23 @@ export function formatDuration(totalSeconds: number): string {
   return pair(Math.floor(s / DAY), 'd', Math.floor((s % DAY) / HOUR), 'h');
 }
 
+/** hh:mm si `iso` es del mismo día que `now`; si no, dd/mm hh:mm. */
+export function dayClock(iso: string | null | undefined, now: number): string {
+  if (!iso) return '';
+  const ms = toMs(iso);
+  if (Number.isNaN(ms)) return '';
+  return new Date(ms).toDateString() === new Date(now).toDateString() ? clockTime(iso) : dateClock(iso);
+}
+
+/** "hace 15 s" / "hace 2 min 5 s" (con segundos, para latidos y plazos cortos). */
+export function secondsAgo(iso: string | null | undefined, now: number): string {
+  if (!iso) return '';
+  const ms = toMs(iso);
+  if (Number.isNaN(ms)) return '';
+  const diff = Math.round((now - ms) / 1000);
+  return diff >= 0 ? `hace ${formatDuration(diff)}` : `en ${formatDuration(-diff)}`;
+}
+
 /** Retraso del enlace: en segundos hasta 2 min ("90 s"); después, como duración ("5 min"). */
 export function formatDelay(seconds: number): string {
   return seconds < 120 ? `${Math.max(0, Math.round(seconds))} s` : formatDuration(seconds);

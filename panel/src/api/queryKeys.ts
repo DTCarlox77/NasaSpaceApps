@@ -21,4 +21,9 @@ export const queryKeys = {
   sentMessages: (missionId: string, escalationId: string) =>
     [MISSION_DATA, missionId, 'sent-messages', escalationId] as const,
   indicatorCatalog: () => ['catalog', 'indicators'] as const,
+  emergencies: (missionId: string, status: string) =>
+    [MISSION_DATA, missionId, 'emergencies', status] as const,
+  /** Aviso global de la cabecera (primera página sin filtro). */
+  emergenciesOpen: (missionId: string) => [MISSION_DATA, missionId, 'emergencies-open'] as const,
+  emergency: (missionId: string, id: string) => [MISSION_DATA, missionId, 'emergency', id] as const,
 };

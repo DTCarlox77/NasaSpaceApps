@@ -154,7 +154,13 @@ describe('dashboard de tripulación', () => {
     expect(screen.getByText('Ver los 2 puntos en tabla')).toBeInTheDocument();
     await waitFor(() => expect(calls.some((c) => pathOf(c) === '/admin/dashboard/crew')).toBe(true));
     const paths = new Set(calls.map(pathOf));
-    expect([...paths].filter((p) => p.startsWith('/admin/')).sort()).toEqual(['/admin/dashboard/crew', '/admin/inbox']);
+    // La página solo usa el dashboard; /admin/inbox (contador) y /admin/emergencies (aviso de
+    // emergencia abierta) son de la cabecera, en todas las pantallas.
+    expect([...paths].filter((p) => p.startsWith('/admin/')).sort()).toEqual([
+      '/admin/dashboard/crew',
+      '/admin/emergencies',
+      '/admin/inbox',
+    ]);
   });
 
   it('formatReading: presión como sistólica/diastólica y sin componentes que no son escalares', () => {
