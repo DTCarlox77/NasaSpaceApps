@@ -50,9 +50,18 @@ import {
   type MockUser,
 } from './fixtures/people.ts';
 import { crewDashboard } from './fixtures/readings.ts';
-import { getState, type MockState } from './state.ts';
+import {
+  addMessage,
+  addSupportMessage,
+  getState,
+  patchBehavioralEscalation,
+  patchEscalation,
+  patchSupportRequest,
+  persistState,
+  type MockState,
+} from './state.ts';
 
-export { resetMockState } from './state.ts';
+export { forgetMockState, resetMockState } from './state.ts';
 
 // ---------------------------------------------------------------- configuración
 
@@ -187,11 +196,9 @@ function guardGround(user: MockUser, item: InboxItem): void {
   if (user.role === 'admin' && adminBlocked(item)) forbidden(['flight_surgeon']);
 }
 
-function acknowledge(item: { status: string; acknowledged_at?: string | null; acknowledged_by?: string | null }, user: MockUser, now: number) {
-  if (!item.acknowledged_at) {
-    item.acknowledged_at = iso(now);
-    item.acknowledged_by = user.id;
-  }
+/** Campos del acuse si todavía no lo había (el primero se conserva: idempotente). */
+function ackFields(item: { acknowledged_at?: string | null }, user: MockUser, now: number) {
+  return item.acknowledged_at ? {} : { acknowledged_at: iso(now), acknowledged_by: user.id };
 }
 
 // ---------------------------------------------------------------- emergencias
@@ -504,8 +511,10 @@ const ROUTES: Route[] = [
       const item = groundEscalation(ctx.state, ctx.params.id as string, ctx.now);
       guardGround(me(ctx), item);
       if (item.status === 'closed') conflict('El escalamiento está cerrado.');
-      if (item.status === 'delivered' || item.status === 'queued') item.status = 'acknowledged';
-      acknowledge(item, me(ctx), ctx.now);
+      patchEscalation(ctx.state, item, {
+        ...(item.status === 'delivered' || item.status === 'queued' ? { status: 'acknowledged' as const } : {}),
+        ...ackFields(item, me(ctx), ctx.now),
+      });
       const ack: EscalationAck = {
         id: item.id,
         status: item.status,
@@ -549,9 +558,8 @@ const ROUTES: Route[] = [
         created_at: iso(ctx.now),
         deliver_at: iso(ctx.now + DELAY_S * 1000),
       };
-      ctx.state.messages.push(message);
-      acknowledge(item, user, ctx.now);
-      item.status = 'responded';
+      addMessage(ctx.state, message);
+      patchEscalation(ctx.state, item, { ...ackFields(item, user, ctx.now), status: 'responded' });
       return json(201, message);
     },
   },
@@ -707,10 +715,12 @@ const ROUTES: Route[] = [
         created_at: iso(ctx.now),
         deliver_at: iso(ctx.now + DELAY_S * 1000),
       };
-      ctx.state.supportMessages.push(message);
+      addSupportMessage(ctx.state, message);
       // Responder también cuenta como acuse.
-      if (request.status === 'open') request.status = 'acknowledged';
-      acknowledge(request, me(ctx), ctx.now);
+      patchSupportRequest(ctx.state, request, {
+        ...(request.status === 'open' ? { status: 'acknowledged' as const } : {}),
+        ...ackFields(request, me(ctx), ctx.now),
+      });
       return json(201, message);
     },
   },
@@ -721,8 +731,7 @@ const ROUTES: Route[] = [
     handle: (ctx) => {
       const request = supportRequest(ctx.state, ctx.params.id as string, ctx.now);
       if (request.status === 'closed') conflict('La solicitud está cerrada.');
-      request.status = 'acknowledged';
-      acknowledge(request, me(ctx), ctx.now);
+      patchSupportRequest(ctx.state, request, { status: 'acknowledged', ...ackFields(request, me(ctx), ctx.now) });
       const ack: SupportRequestAck = {
         id: request.id,
         status: request.status,
@@ -739,9 +748,7 @@ const ROUTES: Route[] = [
     handle: (ctx) => {
       const request = supportRequest(ctx.state, ctx.params.id as string, ctx.now);
       if (request.status !== 'closed') {
-        request.status = 'closed';
-        request.closed_at = iso(ctx.now);
-        request.closed_by = me(ctx).id;
+        patchSupportRequest(ctx.state, request, { status: 'closed', closed_at: iso(ctx.now), closed_by: me(ctx).id });
       }
       return json(200, closedItem(request));
     },
@@ -753,8 +760,10 @@ const ROUTES: Route[] = [
     handle: (ctx) => {
       const escalation = behavioralEscalation(ctx.state, ctx.params.id as string, ctx.now);
       if (escalation.status === 'closed') conflict('El escalamiento está cerrado.');
-      if (escalation.status === 'delivered') escalation.status = 'acknowledged';
-      acknowledge(escalation, me(ctx), ctx.now);
+      patchBehavioralEscalation(ctx.state, escalation, {
+        ...(escalation.status === 'delivered' ? { status: 'acknowledged' as const } : {}),
+        ...ackFields(escalation, me(ctx), ctx.now),
+      });
       const ack: EscalationAck = {
         id: escalation.id,
         status: escalation.status,
@@ -771,9 +780,7 @@ const ROUTES: Route[] = [
     handle: (ctx) => {
       const escalation = behavioralEscalation(ctx.state, ctx.params.id as string, ctx.now);
       if (escalation.status !== 'closed') {
-        escalation.status = 'closed';
-        escalation.closed_at = iso(ctx.now);
-        escalation.closed_by = me(ctx).id;
+        patchBehavioralEscalation(ctx.state, escalation, { status: 'closed', closed_at: iso(ctx.now), closed_by: me(ctx).id });
       }
       return json(200, closedItem(escalation));
     },
@@ -844,7 +851,7 @@ export function handleMockRequest(request: MockRequest, now: number = Date.now()
       if (!user) return fail(401, 'UNAUTHENTICATED', 'Falta el token de acceso o no es válido.');
       if (!found.route.roles.includes(user.role)) return forbidden(found.route.roles);
     }
-    return found.route.handle({
+    const response = found.route.handle({
       method,
       query: new URLSearchParams(search),
       params: found.params,
@@ -853,6 +860,9 @@ export function handleMockRequest(request: MockRequest, now: number = Date.now()
       state,
       now,
     });
+    // Lo que escribe el usuario sobrevive a recargar la página (persistence.ts).
+    if (method !== 'GET') persistState(state);
+    return response;
   } catch (err) {
     if (err instanceof MockHttpError) {
       return json(err.status, { error: { code: err.code, message: err.message, details: err.details } });
