@@ -26,6 +26,16 @@ async function reply(req, res) {
     .json(await inboxService.reply({ userId: req.auth.userId, id: req.params.id, body: req.body }));
 }
 
+async function groundMessages(req, res) {
+  res.json(
+    await inboxService.groundMessages({
+      userId: req.auth.userId,
+      id: req.params.id,
+      query: req.query,
+    }),
+  );
+}
+
 async function crewMessages(req, res) {
   res.json(
     await inboxService.crewMessages({
@@ -36,4 +46,4 @@ async function crewMessages(req, res) {
   );
 }
 
-module.exports = { crewDashboard, inbox, ack, reply, crewMessages };
+module.exports = { crewDashboard, inbox, ack, reply, groundMessages, crewMessages };

@@ -12,6 +12,7 @@ router.get('/admin/dashboard/crew', authenticate(), ground, ctrl.crewDashboard);
 router.get('/admin/inbox', authenticate(), ground, ctrl.inbox);
 router.post('/admin/escalations/:id/ack', authenticate(), ground, ctrl.ack);
 router.post('/admin/escalations/:id/messages', authenticate(), ground, ctrl.reply);
+router.get('/admin/escalations/:id/messages', authenticate(), ground, ctrl.groundMessages);
 router.get(
   '/escalations/:id/messages',
   authenticate(),

@@ -226,21 +226,24 @@ async function insertMessage({ escalationId, missionId, direction, authorId, bod
 }
 
 /**
- * Hilo visto a bordo: lo que viene de Tierra solo si ya llegó (deliver_at <= now());
- * lo que salió de a bordo (to_earth) siempre.
+ * Hilo de un escalamiento visto desde un lado del enlace: lo que ese lado mandó, siempre (con
+ * su deliver_at: futuro, NULL = en cola sin enlace, o pasado); lo que viene del otro lado,
+ * solo si ya llegó (deliver_at <= now()).
+ * - A bordo (`own = 'to_earth'`): las respuestas de Tierra cuando se entregan.
+ * - En Tierra (`own = 'to_crew'`): las preguntas de a bordo cuando llegan.
  */
-async function crewThreadPage({ escalationId, after, limit }, db = pool) {
-  const params = [escalationId, limit + 1];
+async function threadPage({ escalationId, own, after, limit }, db = pool) {
+  const params = [escalationId, limit + 1, own];
   let cursorSql = '';
   if (after) {
     params.push(after.c, after.id);
-    cursorSql = 'AND (m.created_at, m.id) > ($3::timestamptz, $4::uuid)';
+    cursorSql = 'AND (m.created_at, m.id) > ($4::timestamptz, $5::uuid)';
   }
   const { rows } = await db.query(
     `SELECT ${MESSAGE_COLUMNS}
      FROM escalation_messages m LEFT JOIN users u ON u.id = m.author_id
      WHERE m.escalation_id = $1
-       AND (m.direction = 'to_earth' OR m.deliver_at <= now())
+       AND (m.direction = $3::message_direction OR m.deliver_at <= now())
        ${cursorSql}
      ORDER BY m.created_at, m.id
      LIMIT $2`,
@@ -248,6 +251,12 @@ async function crewThreadPage({ escalationId, after, limit }, db = pool) {
   );
   return rows;
 }
+
+/** Hilo visto a bordo (GET /escalations/{id}/messages). */
+const crewThreadPage = (args, db = pool) => threadPage({ ...args, own: 'to_earth' }, db);
+
+/** Hilo visto en Tierra (GET /admin/escalations/{id}/messages). */
+const groundThreadPage = (args, db = pool) => threadPage({ ...args, own: 'to_crew' }, db);
 
 // ---------------------------------------------------------------- recálculo por cortes
 
@@ -342,5 +351,6 @@ module.exports = {
   markResponded,
   insertMessage,
   crewThreadPage,
+  groundThreadPage,
   recomputePending,
 };
