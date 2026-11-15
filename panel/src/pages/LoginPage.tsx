@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../auth/context.ts';
+import { canOpenPath } from '../nav/access.ts';
 import { Banner } from '../components/Banner.tsx';
 import { Button } from '../components/Button.tsx';
 import { Field } from '../components/Field.tsx';
@@ -16,7 +17,8 @@ export function LoginPage() {
 
   if (auth.status === 'authenticated' && auth.role) {
     const from = (location.state as { from?: string } | null)?.from;
-    return <Navigate to={from ?? '/'} replace />;
+    // Vuelve a donde estaba solo si su rol puede verlo (otra persona pudo entrar después).
+    return <Navigate to={from && canOpenPath(auth.role, from) ? from : '/'} replace />;
   }
 
   async function onSubmit(event: FormEvent) {
