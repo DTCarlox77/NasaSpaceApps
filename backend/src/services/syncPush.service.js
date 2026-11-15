@@ -189,7 +189,8 @@ async function provisionalCritical(entry, sex) {
 async function plan(entries, sex) {
   const valid = entries.filter((e) => !e.failure);
   for (const e of valid) {
-    e.rank = e.item.priority === 'emergency' ? 0 : (await provisionalCritical(e, sex)) ? 1 : 2;
+    const emergency = e.item.priority === 'emergency' || e.handler.priority === 'emergency';
+    e.rank = emergency ? 0 : (await provisionalCritical(e, sex)) ? 1 : 2;
   }
   const byUuid = new Map(valid.map((e) => [e.item.client_uuid, e]));
   for (const e of valid) {
@@ -197,9 +198,13 @@ async function plan(entries, sex) {
     if (original && original !== e) original.rank = Math.min(original.rank, e.rank);
   }
   const time = (e) => Date.parse(e.measuredAt || e.item.created_at);
+  // Entre los de emergencia, primero el tipo (sesión antes que evaluación, respuestas,
+  // completar y cerrar): dos tabletas con relojes distintos no los desordenan.
+  const order = (e) => (e.rank === 0 ? e.handler.order : 0);
   return valid.sort(
     (a, b) =>
       a.rank - b.rank ||
+      order(a) - order(b) ||
       time(a) - time(b) ||
       (a.supersedes ? 1 : 0) - (b.supersedes ? 1 : 0) ||
       a.index - b.index,
@@ -231,6 +236,10 @@ async function processEntry(entry, { userId, receivedMs }) {
     entity: item.entity,
     clientUuid: item.client_uuid,
   });
+  // Acciones que cambian estado (completar, cerrar, latido): un reintento no se vuelve a ejecutar.
+  if (prior && prior.payload_hash === entry.hash && entry.handler.idempotentBySync) {
+    return { status: 'duplicate', serverId: prior.server_id };
+  }
   if (prior && prior.payload_hash !== entry.hash) {
     return {
       status: 'conflict',

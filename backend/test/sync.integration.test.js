@@ -174,8 +174,7 @@ test('push: un item malo no tumba el lote (resultado por item)', async (t) => {
     { client_uuid: randomUUID(), entity: 'triage_x', created_at: iso(ago(5)), payload: {} },
     {
       client_uuid: randomUUID(),
-      entity: 'emergency_session',
-      priority: 'emergency',
+      entity: 'support_request', // del contrato, todavía sin servicio (tarea 10)
       created_at: iso(ago(5)),
       payload: {},
     },

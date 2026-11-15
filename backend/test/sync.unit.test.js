@@ -70,7 +70,10 @@ test('registro de tipos: los del contrato sin servicio y los desconocidos se rec
   ]) {
     assert.ok(entityFor(name).handler, name);
   }
-  assert.equal(entityFor('emergency_answer').error.code, 'ENTITY_NOT_SUPPORTED');
+  // Emergencia (tarea 9): con servicio y prioridad emergency.
+  for (const name of ['emergency_session', 'emergency_assessment', 'emergency_answer']) {
+    assert.equal(entityFor(name).handler.priority, 'emergency', name);
+  }
   assert.equal(entityFor('support_request').error.code, 'ENTITY_NOT_SUPPORTED');
   assert.equal(entityFor('triage_answer').error.code, 'UNKNOWN_ENTITY');
 });

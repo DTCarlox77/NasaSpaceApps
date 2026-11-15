@@ -5,7 +5,11 @@
  * body que el endpoint en línea, sin client_uuid) y llama al servicio real: así una lectura
  * que llega por sync se valida, se evalúa y escala igual que en línea.
  *
- * Extensible: registerEntity('triage_answer', { when, handle }) para el triaje (tarea 9).
+ * Extensible: registerEntity(nombre, { when, handle, priority, order, idempotentBySync }).
+ * - priority: 'emergency' → se procesa antes que todo, aunque el item diga normal;
+ * - order: orden entre los de emergencia (sesión → evaluación → respuestas → completar → cerrar);
+ * - idempotentBySync: un reintento con el mismo contenido es duplicate sin volver a ejecutar
+ *   (acciones que cambian estado y no tienen client_uuid propio en la base).
  * Un tipo sin handler responde rejected (ENTITY_NOT_SUPPORTED o UNKNOWN_ENTITY), sin tumbar
  * el lote.
  *
@@ -27,18 +31,15 @@ const recorder = require('./wellbeingRecorder');
 const ENTITIES = new Map();
 
 /** when(payload) → measured_at del dispositivo (para ordenar, el reloj y late_sync). */
-function registerEntity(name, { when, handle }) {
-  ENTITIES.set(name, { when, handle });
+function registerEntity(
+  name,
+  { when, handle, priority = 'normal', order = 100, idempotentBySync = false },
+) {
+  ENTITIES.set(name, { when, handle, priority, order, idempotentBySync });
 }
 
 // Tipos del contrato que todavía no tienen servicio: rejected con un código claro.
-const PENDING = new Set([
-  'emergency_session',
-  'emergency_assessment',
-  'emergency_answer',
-  'emergency_heartbeat',
-  'support_request',
-]);
+const PENDING = new Set(['support_request']);
 
 const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const measuredAt = (payload) => payload.measured_at;
@@ -288,6 +289,159 @@ registerEntity('wellbeing_screening', {
     } catch (err) {
       throw renameFields(err, names);
     }
+  },
+});
+
+// ---------------------------------------------------------------- emergencia (tarea 9)
+// Prioridad emergency (antes que todo), idempotentes por client_uuid. Las referencias
+// (session_id, assessment_id) aceptan el id del servidor o el client_uuid: sin conexión la
+// app solo conoce los suyos. Una sesión creada sin conexión cuando ya había otra abierta en
+// la misión se fusiona con ella (merged_into); sus evaluaciones van a la principal.
+
+const lazy = {
+  common: () => require('./emergencyCommon'),
+  emergency: () => require('./emergency.service'),
+  triage: () => require('./triageAssessment.service'),
+  model: () => require('../models/emergency.model'),
+};
+const emergencyActor = (userId) => lazy.common().userActor(userId);
+const sessionRef = (payload) => payload.session_id ?? payload.session_client_uuid;
+
+const emergencyEntity = (name, order, spec) =>
+  registerEntity(name, { priority: 'emergency', order, ...spec });
+
+emergencyEntity('emergency_session', 10, {
+  when: (p) => p.started_at,
+  async handle({ userId, item, payload }) {
+    const { status, body } = await lazy.emergency().createSession({
+      actor: await emergencyActor(userId),
+      input: { ...payload, client_uuid: item.client_uuid },
+    });
+    const own = await lazy.model().findSessionByClientUuid(item.client_uuid);
+    return {
+      status: status === 201 ? 'accepted' : 'duplicate',
+      serverId: own ? own.id : body.session.id,
+      result: {
+        session_id: body.session.id,
+        status: body.session.status,
+        joined: body.joined,
+        merged_into: own && own.merged_into ? own.merged_into : null,
+      },
+    };
+  },
+});
+
+emergencyEntity('emergency_confirm', 15, {
+  idempotentBySync: true,
+  when: (p) => p.confirmed_at,
+  async handle({ userId, payload }) {
+    const out = await lazy.emergency().confirmOk({
+      actor: await emergencyActor(userId),
+      id: sessionRef(payload),
+      input: payload,
+    });
+    return {
+      status: 'accepted',
+      serverId: out.session.id,
+      result: { session_id: out.session.id, status: out.session.status },
+    };
+  },
+});
+
+emergencyEntity('emergency_assessment', 20, {
+  when: (p) => p.started_at,
+  async handle({ userId, item, payload }) {
+    const { status, body } = await lazy.triage().createAssessment({
+      actor: await emergencyActor(userId),
+      sessionId: sessionRef(payload),
+      input: { ...payload, client_uuid: item.client_uuid },
+    });
+    return {
+      status: status === 201 ? 'accepted' : 'duplicate',
+      serverId: body.id,
+      result: { assessment_id: body.id, session_id: body.session_id, status: body.status },
+    };
+  },
+});
+
+emergencyEntity('emergency_answer', 30, {
+  when: (p) => p.answered_at,
+  async handle({ userId, item, payload }) {
+    const out = await lazy.triage().putOneAnswer({
+      actor: await emergencyActor(userId),
+      clientUuid: item.client_uuid,
+      payload,
+    });
+    return {
+      status: out.accepted ? 'accepted' : 'duplicate',
+      serverId: out.assessment_id,
+      result: { assessment_id: out.assessment_id, preview: out.preview },
+    };
+  },
+});
+
+emergencyEntity('emergency_complete', 40, {
+  idempotentBySync: true,
+  when: (p) => p.completed_at,
+  async handle({ userId, payload }) {
+    const ref = payload.assessment_id ?? payload.assessment_client_uuid;
+    const found = await lazy
+      .model()
+      .findAssessmentByRef(lazy.common().refParam(ref, 'payload.assessment_id'));
+    const out = await lazy.triage().completeAssessment({
+      actor: await emergencyActor(userId),
+      id: ref,
+      input: payload,
+    });
+    return {
+      status: found && found.status === 'completed' ? 'duplicate' : 'accepted',
+      serverId: found ? found.id : null,
+      result: out,
+    };
+  },
+});
+
+emergencyEntity('emergency_heartbeat', 45, {
+  idempotentBySync: true,
+  when: (p) => p.sent_at,
+  async handle({ userId, payload }) {
+    const out = await lazy.emergency().heartbeat({
+      actor: await emergencyActor(userId),
+      id: sessionRef(payload),
+      input: payload,
+    });
+    return { status: 'accepted', serverId: out.session_id, result: out };
+  },
+});
+
+emergencyEntity('emergency_question', 50, {
+  when: (p) => p.asked_at,
+  async handle({ userId, item, payload }) {
+    const { status, body } = await lazy.emergency().askEarth({
+      actor: await emergencyActor(userId),
+      id: sessionRef(payload),
+      input: { ...payload, client_uuid: item.client_uuid },
+    });
+    return { status: status === 201 ? 'accepted' : 'duplicate', serverId: body.id, result: body };
+  },
+});
+
+emergencyEntity('emergency_close', 90, {
+  idempotentBySync: true,
+  when: (p) => p.closed_at,
+  async handle({ userId, payload }) {
+    const ref = sessionRef(payload);
+    const found = await lazy.common().resolveSession(ref);
+    const out = await lazy.emergency().closeSession({
+      actor: await emergencyActor(userId),
+      id: ref,
+      input: payload,
+    });
+    return {
+      status: ['closed', 'cancelled'].includes(found.status) ? 'duplicate' : 'accepted',
+      serverId: out.session.id,
+      result: { session_id: out.session.id, status: out.session.status },
+    };
   },
 });
 
