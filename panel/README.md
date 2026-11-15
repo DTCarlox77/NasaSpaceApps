@@ -46,6 +46,23 @@ Abre http://localhost:5173. El puerto es fijo (`strictPort`): ese origen está p
 
 Con el mock, cualquier usuario "entra" con el ejemplo del contrato. Para ver el cambio de contraseña obligatorio sin tocar cuentas reales, pide el 428 al mock: `curl -X POST http://localhost:4010/api/v1/auth/login -H "Prefer: code=428" ...`, o mira la prueba `src/test/login.test.tsx`.
 
+## Modo demo sin servidor (`VITE_DATA_MODE=mock`)
+
+Para que **todo el flujo se vea en la demo** sin depender de Render ni de un backend local:
+
+```powershell
+$env:VITE_DATA_MODE = 'mock'; npm run dev
+```
+
+(o pon `VITE_DATA_MODE=mock` en `panel/.env.local`). `VITE_DATA_MODE` vale `api` (por defecto) o `mock`; cualquier otro valor muestra "Falta configurar el panel".
+
+- El cliente HTTP (`src/api/http.ts`) **no sale a la red**: delega en el adaptador `src/api/mock/`, que responde por método + ruta del contrato con los **mismos esquemas JSON y los mismos códigos de error**. Las pantallas y los hooks son idénticos en los dos modos. `VITE_API_URL` no hace falta y el panel no llama a `/health` (no hay servidor que despertar).
+- **Usuarios**: `mission.control` (admin), `dr.reyes` (flight surgeon) y `bh.salas` (salud conductual), con **cualquier contraseña no vacía**. Un astronauta (`a.ortega`, `k.mensah`, `l.tanaka`, `m.silva`) se rechaza igual que hoy.
+- **Mismas reglas de acceso que la API**: 403 a admin y flight surgeon en todo lo conductual; 403 a admin en hilo, acuse y respuesta de las alertas de bienestar, de `SLEEP_HOURS` y de `category=emergency`; `compliance` null para el flight surgeon; la nota privada del check-in no existe.
+- **Datos fijos** (`src/api/mock/fixtures/`, sintéticos y con fechas relativas a "ahora"): misión ARES-1 con retraso de 90 s; ORION (a.ortega, comandante), VEGA (k.mensah, oficial médico), LYRA (l.tanaka) y ATLAS (m.silva); 14 días de lecturas con precauciones y una crítica; alertas de todas las categorías (una sincronizada tarde y otra que llega a Tierra ~2 min después de abrir); una emergencia abierta (evento solar), una cerrada con reporte y una cancelada; bienestar para salud conductual.
+- **Escrituras en memoria**: acuses, respuestas y cierres se guardan hasta recargar la página; cada mensaje a bordo vuelve con `deliver_at` = ahora + 90 s.
+- La cabecera muestra la cinta fija **"Modo demo sin servidor · datos sintéticos"**.
+
 ## Usuarios demo (equipo en Tierra)
 
 Contraseña de todos: **`Demo2026!`** (datos sintéticos).

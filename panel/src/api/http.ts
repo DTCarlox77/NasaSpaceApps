@@ -8,8 +8,11 @@
  *   (promesa compartida), guarda los DOS tokens (rotativo) y reintenta una vez la original.
  *   Si el refresh responde 401 (TOKEN_REUSE_DETECTED u otro) → fin de sesión.
  * - Red caída o timeout → NetworkError: NO cierra la sesión.
+ * - VITE_DATA_MODE=mock: no sale a la red. `transport()` delega en el adaptador de src/api/mock/,
+ *   que responde por método + ruta del contrato con un Response igual al del backend; el resto
+ *   (errores, refresh, timeout) es el mismo código en los dos modos.
  */
-import { apiBase } from '../config/env.ts';
+import { apiBase, isMockMode } from '../config/env.ts';
 import * as storage from '../auth/storage.ts';
 import type { ErrorBody, TokenPair } from './types.ts';
 
@@ -57,6 +60,22 @@ function isErrorBody(value: unknown): value is { error: ErrorBody } {
   return !!error && typeof error === 'object' && typeof (error as ErrorBody).code === 'string';
 }
 
+interface TransportInit {
+  method: string;
+  headers: Record<string, string>;
+  body?: string;
+  signal: AbortSignal;
+}
+
+/** La red, o el adaptador del modo demo (cargado aparte: no pesa en el modo api). */
+async function transport(path: string, init: TransportInit): Promise<Response> {
+  if (isMockMode()) {
+    const { mockTransport } = await import('./mock/server.ts');
+    return mockTransport(path, init);
+  }
+  return fetch(`${apiBase()}${path}`, init);
+}
+
 async function send(path: string, options: RequestOptions, bearer: string | null): Promise<Response> {
   const controller = new AbortController();
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -72,7 +91,7 @@ async function send(path: string, options: RequestOptions, bearer: string | null
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
   if (bearer) headers.Authorization = `Bearer ${bearer}`;
   try {
-    return await fetch(`${apiBase()}${path}`, {
+    return await transport(path, {
       method: options.method ?? 'GET',
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),

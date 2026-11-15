@@ -8,6 +8,7 @@ import { useAuth } from '../auth/context.ts';
 import { canSee, ROLE_LABELS, sectionsFor } from '../nav/access.ts';
 import { useUnacknowledgedCount } from '../features/alerts/useInbox.ts';
 import { Button } from '../components/Button.tsx';
+import { DemoRibbon } from '../components/DemoRibbon.tsx';
 import { Loading } from '../components/QueryStatus.tsx';
 import { useMission } from '../mission/useMission.ts';
 import { LinkStatus } from './LinkStatus.tsx';
@@ -72,6 +73,7 @@ export function AppShell() {
         Saltar al contenido
       </a>
       <header className="shell-header">
+        <DemoRibbon />
         <div className="shell-brand">
           <span className="shell-brand-mark" aria-hidden="true">
             ◎

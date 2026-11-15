@@ -4,6 +4,7 @@ import { useAuth } from '../auth/context.ts';
 import { canOpenPath } from '../nav/access.ts';
 import { Banner } from '../components/Banner.tsx';
 import { Button } from '../components/Button.tsx';
+import { DemoRibbon, DemoUsersHint } from '../components/DemoRibbon.tsx';
 import { Field } from '../components/Field.tsx';
 
 export function LoginPage() {
@@ -43,6 +44,7 @@ export function LoginPage() {
   return (
     <div className="center-screen">
       <section className="card" aria-labelledby="login-title">
+        <DemoRibbon />
         <header className="card-header">
           <p className="eyebrow">Control de misión · Panel de Tierra</p>
           <h1 id="login-title">Iniciar sesión</h1>
@@ -75,6 +77,7 @@ export function LoginPage() {
           </Button>
         </form>
         <p className="synthetic-note">Datos sintéticos · Apoyo a la decisión, no diagnóstico</p>
+        <DemoUsersHint />
       </section>
     </div>
   );

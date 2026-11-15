@@ -1,10 +1,12 @@
 /**
  * Despertar del servidor: al abrir el panel, GET /api/v1/health (timeout 60 s). En Render el
  * plan gratuito se duerme y el primer pedido tarda ~50 s. Una vez por carga de la página.
+ * En modo demo sin servidor (VITE_DATA_MODE=mock) no hay servidor que despertar: no llama a /health.
  */
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { getHealth, WAKE_TIMEOUT_MS } from '../api/health.ts';
 import { HttpError, NetworkError } from '../api/http.ts';
+import { isMockMode } from '../config/env.ts';
 import { Banner } from '../components/Banner.tsx';
 import { Button } from '../components/Button.tsx';
 import { Spinner } from '../components/Spinner.tsx';
@@ -24,7 +26,7 @@ function failureMessage(err: unknown): string {
 }
 
 export function WakeGate({ children }: { children: ReactNode }) {
-  const [phase, setPhase] = useState<Phase>(isAwake() ? 'ready' : 'waking');
+  const [phase, setPhase] = useState<Phase>(isAwake() || isMockMode() ? 'ready' : 'waking');
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
