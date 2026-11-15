@@ -1,6 +1,8 @@
 import type { ConfirmOkOutcome, DeliveryResult, EmergencyReport, EmergencySessionInfo } from '@/domain/entities/EmergencyReport';
 import type { EmergencyReportRepository } from '@/domain/repositories/EmergencyReportRepository';
 import { newUuid } from '@/domain/usecases/uuid';
+import type { LocalTriageSession } from '@/domain/entities/Triage';
+import { triageLocalDataSource } from '../datasources/local/triageLocalDataSource';
 import type { ApiSessionWithRoster } from '../datasources/remote/apiTypes';
 import { emergencyRemoteDataSource } from '../datasources/remote/emergencyRemoteDataSource';
 import { HttpError } from '../datasources/remote/httpClient';
@@ -29,12 +31,36 @@ function toInfo(res: ApiSessionWithRoster): EmergencySessionInfo {
 export class EmergencyReportRepositoryImpl implements EmergencyReportRepository {
   constructor(private readonly remote = emergencyRemoteDataSource) {}
 
+  /** Guarda la sesión en el dispositivo para el triaje (también sin conexión o en modo demo). */
+  private remember(report: EmergencyReport, patch: Partial<LocalTriageSession> & Pick<LocalTriageSession, 'ref' | 'status'>) {
+    const session: LocalTriageSession = {
+      serverId: null,
+      clientUuid: report.id,
+      startedAt: report.createdAt,
+      context: report.solarEventActive !== undefined ? { solar_event_active: report.solarEventActive } : {},
+      responderSafe: report.responderSafe ?? null,
+      responderSafeAnswer: null,
+      protocolVersion: null,
+      joined: false,
+      mergedInto: null,
+      demo: false,
+      ...patch,
+    };
+    return triageLocalDataSource.saveSession(session).catch(() => {});
+  }
+
   async submit(report: EmergencyReport): Promise<DeliveryResult> {
-    if (!apiEnabled() || report.severity !== 'critical') return { status: 'local', report };
+    if (report.severity !== 'critical') return { status: 'local', report };
+    if (!apiEnabled()) {
+      // Modo demo: el triaje funciona igual, todo en el dispositivo.
+      await this.remember(report, { ref: report.id, status: 'demo', demo: true });
+      return { status: 'local', report };
+    }
     const session = await serverSession();
     const payload: Record<string, unknown> = {
       trigger_type: 'manual_button',
       started_at: report.createdAt,
+      ...(report.solarEventActive !== undefined ? { context: { solar_event_active: report.solarEventActive } } : {}),
       ...(report.responderSafe !== undefined ? { responder_safe: { value: report.responderSafe } } : {}),
     };
     // Sin sesión (SOS desde el login) no hay token: se encola y la sube la próxima sesión (guía §12).
@@ -48,6 +74,7 @@ export class EmergencyReportRepositoryImpl implements EmergencyReportRepository 
         send: () => Promise.reject(new HttpError('no session')),
         queueOnAnyError: true,
       });
+      await this.remember(report, { ref: report.id, status: 'queued' });
       return { status: 'queued', report, reason: 'no session' };
     }
     const res = await sendOrQueue({
@@ -59,7 +86,28 @@ export class EmergencyReportRepositoryImpl implements EmergencyReportRepository 
       send: () => this.remote.openSession({ client_uuid: report.id, ...payload }),
       queueOnAnyError: true,
     });
-    if (res.kind === 'queued') return { status: 'queued', report, reason: 'offline' };
+    if (res.kind === 'queued') {
+      await this.remember(report, { ref: report.id, status: 'queued' });
+      return { status: 'queued', report, reason: 'offline' };
+    }
+    const s = res.value.session;
+    const joined = !!res.value.joined;
+    await this.remember(report, {
+      ref: s.id,
+      serverId: s.id,
+      status: s.status,
+      startedAt: s.started_at,
+      context: s.context ?? (report.solarEventActive !== undefined ? { solar_event_active: report.solarEventActive } : {}),
+      responderSafe: s.responder_safe ?? report.responderSafe ?? null,
+      // Al unirte a una sesión abierta, tu propia respuesta "¿estás a salvo?" vale para ti en este dispositivo.
+      responderSafeAnswer:
+        joined && report.responderSafe !== undefined && report.responderSafe !== s.responder_safe
+          ? { clientUuid: newUuid(), questionCode: 'responder_safe', answer: { value: report.responderSafe }, source: 'tap', answeredAt: report.createdAt }
+          : null,
+      protocolVersion: s.protocol?.version ?? null,
+      missionCode: s.mission_code,
+      joined,
+    });
     return { status: 'sent', report, session: toInfo(res.value) };
   }
 

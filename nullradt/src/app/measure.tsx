@@ -40,8 +40,11 @@ interface MeasureResult {
   value: number;
   secondaryValue?: number;
   status: HealthStatus;
-  /** 'sending' = esperando al servidor · 'evaluated' = resultado del servidor · 'queued' = en la cola · 'local' = demo. */
-  outcome: 'sending' | 'evaluated' | 'queued' | 'local' | 'error';
+  /**
+   * 'sending' = esperando al servidor · 'evaluated' = resultado del servidor · 'queued' = en la cola, sin evaluar ·
+   * 'device' = en la cola y calculado en el dispositivo (reglas del servidor, pendiente de confirmar) · 'local' = demo.
+   */
+  outcome: 'sending' | 'evaluated' | 'queued' | 'device' | 'local' | 'error';
   /** Fuente del umbral local (solo demo). */
   source?: SourceRef;
   recommendation?: string | null;
@@ -155,27 +158,32 @@ export default function MeasureScreen() {
 
   /**
    * Con API: POST /readings. El semáforo y la recomendación son los del servidor (se muestran tal cual).
-   * Sin conexión queda en la cola de sync y se muestra "sin evaluar" hasta que el servidor responda.
+   * Sin conexión queda en la cola de sync: se evalúa en el dispositivo con las reglas guardadas (GET /rules) y el
+   * mismo motor, marcado "pendiente de confirmar"; si no se puede (sin reglas o con derivados), "sin evaluar".
    */
   const submitToServer = async (r: SimulatedReading, takenAt: string) => {
     setResult({ value: r.value, secondaryValue: r.secondaryValue, status: 'unevaluated', outcome: 'sending' });
     setPhase('result');
     try {
       const out = await container.submitReading.execute({ indicatorId: id, value: r.value, secondaryValue: r.secondaryValue, source: 'wearable', takenAt });
-      const status = out.status === 'evaluated' ? out.level : 'unevaluated';
+      // Sin conexión: el dispositivo evalúa con las reglas guardadas (mismo motor); el servidor confirma al sincronizar.
+      const device = out.status === 'queued' ? out.device : null;
+      const status = out.status === 'evaluated' ? out.level : (device?.level ?? 'unevaluated');
+      const recommendation = out.status === 'evaluated' ? out.recommendation : (device?.recommendation ?? null);
       addReading(userId, {
         indicatorId: id,
         status,
         clientUuid: out.clientUuid,
-        recommendation: out.status === 'evaluated' ? out.recommendation : null,
+        recommendation,
+        provisional: !!device,
         reading: { value: r.value, secondaryValue: r.secondaryValue, takenAt, source: 'wearable', synced: out.status === 'evaluated' },
       });
       setResult({
         value: r.value,
         secondaryValue: r.secondaryValue,
         status,
-        outcome: out.status,
-        recommendation: out.status === 'evaluated' ? out.recommendation : null,
+        outcome: device ? 'device' : out.status,
+        recommendation,
         escalation: out.status === 'evaluated' && out.escalationId ? out.escalation : undefined,
         emergency: out.status === 'evaluated' ? out.emergency : null,
       });
@@ -282,13 +290,16 @@ export default function MeasureScreen() {
                   <AppText color="textMuted">{t(`measure.units.${id}`)}</AppText>
                 </View>
                 {/* Con API: la recomendación del servidor tal cual. Demo: texto local. */}
-                {result.outcome === 'evaluated' && result.recommendation ? (
+                {(result.outcome === 'evaluated' || result.outcome === 'device') && result.recommendation ? (
                   <AppText align="center" style={{ color: colors.status[result.status].text }}>{result.recommendation}</AppText>
                 ) : result.outcome === 'local' ? (
                   <AppText align="center" style={{ color: colors.status[result.status].text }}>{t(`measure.result.${result.status}`)}</AppText>
-                ) : result.outcome !== 'sending' && result.outcome !== 'evaluated' ? (
+                ) : result.outcome !== 'sending' && result.outcome !== 'evaluated' && result.outcome !== 'device' ? (
                   <AppText align="center" color="textSecondary">{t(`measure.outcome.${result.outcome}`)}</AppText>
                 ) : null}
+                {result.outcome === 'device' && (
+                  <AppText variant="caption" align="center" color="textMuted">{t('measure.outcome.device')}</AppText>
+                )}
               </Card>
 
               {result.emergency && <AreYouOkCard sessionId={result.emergency.sessionId} deadlineAt={result.emergency.deadlineAt} />}

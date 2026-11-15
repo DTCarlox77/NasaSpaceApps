@@ -7,6 +7,11 @@ export type SyncEntity =
   | 'support_request'
   | 'emergency_session'
   | 'emergency_confirm'
+  | 'emergency_assessment'
+  | 'emergency_answer'
+  | 'emergency_complete'
+  | 'emergency_heartbeat'
+  | 'emergency_question'
   | 'emergency_close';
 
 export type SyncPriority = 'emergency' | 'normal';
@@ -83,5 +88,7 @@ export interface PullSummary {
   messages: DeliveredMessage[];
   /** Estado del enlace con Tierra (null si el servidor no lo informa). */
   link: { status: 'up' | 'outage'; outageEndsAt: string | null; commDelaySeconds: number } | null;
+  /** Versiones de reglas y protocolo: `changed` = hay que volver a bajarlas (GET /rules, GET /emergency/protocol). */
+  versions: { rulesVersion: number; rulesChanged: boolean; protocolVersion: number; protocolChanged: boolean } | null;
   serverTime: string;
 }

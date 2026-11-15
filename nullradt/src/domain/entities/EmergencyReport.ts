@@ -15,6 +15,11 @@ export interface EmergencyReport {
   note?: string;
   /** ¿Quien activa está a salvo? (contrato: `responder_safe`). */
   responderSafe?: boolean;
+  /**
+   * Contexto de la sesión (`EmergencyContext.solar_event_active`): con evento solar el protocolo activa su
+   * módulo de radiación. Lo declara quien abre la emergencia; el servidor no lo infiere en una apertura manual.
+   */
+  solarEventActive?: boolean;
   /** Toda la demo usa datos sintéticos. */
   synthetic: boolean;
 }

@@ -55,12 +55,30 @@ function applyPushResult(r: PushItemResult) {
         body: i18n.t(res.joined ? 'alert.joinedBody' : 'sync.emergencySentBody'),
       });
       break;
+    case 'emergency_complete':
+      // Una evaluación de triaje hecha sin conexión llegó al servidor: su clasificación manda.
+      showToast({
+        level: res.matches_device === false ? 'caution' : 'info',
+        title: i18n.t('triage.sync.confirmedTitle'),
+        body: i18n.t(res.matches_device === false ? 'triage.result.mismatch' : 'triage.sync.confirmedBody'),
+      });
+      break;
     case 'pvt_run':
       if (str(res.fitness)) {
         showToast({ level: 'info', title: i18n.t('tests.pvt.syncedTitle'), body: i18n.t(`tests.pvt.fitness.${res.fitness === 'fit' ? 'fit' : 'not_confirmed'}`) });
       }
       break;
   }
+}
+
+/** Emergencias (triaje): sesión, evaluación, respuestas, completar, preguntas y cierre → estado local del triaje. */
+async function applyTriageResults(results: PushItemResult[]) {
+  let changed = false;
+  for (const r of results) {
+    if (!r.item.entity.startsWith('emergency_')) continue;
+    changed = (await container.applyTriagePushResult.execute(r.item, r.status, r.result).catch(() => false)) || changed;
+  }
+  return changed;
 }
 
 let running: Promise<void> | null = null;
@@ -81,6 +99,7 @@ export function runSync(): Promise<void> {
     try {
       const { push, pull } = await container.syncNow.execute(session.userId);
       push.results.forEach(applyPushResult);
+      const triageChanged = await applyTriageResults(push.results);
 
       if (pull) {
         for (const e of pull.evaluations) {
@@ -96,8 +115,16 @@ export function runSync(): Promise<void> {
         store.finish({
           link: pull.link,
           messages: fromEarth,
-          changed: push.results.length > 0 || pull.evaluations.length > 0 || pull.escalations.length > 0,
+          changed: push.results.length > 0 || pull.evaluations.length > 0 || pull.escalations.length > 0 || triageChanged,
         });
+        // Protocolo de triaje y reglas para trabajar sin conexión: se recargan si cambiaron (o si faltan).
+        await container.refreshOfflineData
+          .execute({
+            protocolChanged: pull.versions?.protocolChanged,
+            protocolVersion: pull.versions?.protocolVersion,
+            rulesChanged: pull.versions?.rulesChanged,
+          })
+          .catch(() => {});
       } else if (push.results.length) {
         store.finish({ changed: true });
       }

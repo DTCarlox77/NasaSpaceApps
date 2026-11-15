@@ -55,6 +55,8 @@ export interface Reading {
   source?: MeasurementSource;
   /** false = guardado solo en el dispositivo, pendiente de sincronizar. */
   synced: boolean;
+  /** true = nivel calculado en el dispositivo sin conexión (reglas del servidor), pendiente de confirmar. */
+  provisional?: boolean;
 }
 
 /**

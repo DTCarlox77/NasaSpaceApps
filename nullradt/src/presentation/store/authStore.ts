@@ -57,12 +57,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   verifyPassword: async (credentials, enableBiometric) => {
     const session = await container.signIn.execute(credentials, enableBiometric);
     set({ session, biometricEnabled: enableBiometric });
+    // Al iniciar sesión: protocolo de triaje y reglas para poder evaluar sin conexión.
+    if (!session.demo) void container.refreshOfflineData.execute({ force: true }).catch(() => {});
     return session;
   },
 
   changePassword: async (changeToken, currentPassword, newPassword) => {
     const session = await container.changePassword.execute(changeToken, currentPassword, newPassword);
     set({ session });
+    if (!session.demo) void container.refreshOfflineData.execute({ force: true }).catch(() => {});
     return session;
   },
 

@@ -90,7 +90,8 @@ Errores: siempre `{ error: { code, message, details } }`; la app programa contra
 | Hablar con alguien (nueva, `/support`) | `POST /wellbeing/support-requests`; respuestas por `GET /sync/pull` (`channel: support`). |
 | Cuestionario (nueva, `/screening`) | `GET /wellbeing/instruments?lang=`, `POST /wellbeing/screenings`. Nunca muestra el puntaje. |
 | Tests → Reflejos | `POST /wellbeing/pvt-runs` (`lapses` = respuestas ≥ 355 ms, `mean_rt_ms`, `false_starts`, `trials`, `duration_s`, `device_id`, `before_critical_task`). Muestra **Apto / No confirmado** y el `message`. Stroop, memoria y visión siguen locales. |
-| Emergencia (agitar / botón) | `POST /emergency/sessions` (`manual_button`, `client_uuid`, `started_at`, `responder_safe`); `joined: true` = te uniste a la abierta. `GET /emergency/sessions/{id}` para refrescar. Cancelar (falsa alarma) solo comandante u oficial médico: `POST /emergency/sessions/{id}/close`. |
+| Emergencia (agitar / botón) | `POST /emergency/sessions` (`manual_button`, `client_uuid`, `started_at`, `context.solar_event_active`, `responder_safe`); `joined: true` = te uniste a la abierta. `GET /emergency/sessions/{id}` para refrescar. Cancelar (falsa alarma) solo comandante u oficial médico: `POST /emergency/sessions/{id}/close`. Botón **"Evaluar a la tripulación (triaje)"** → `/triage/[sessionId]` (§10). |
+| Triaje (nueva, `/triage/[sessionId]` y `/triage/[sessionId]/assess/[astronautId]`) | `GET /emergency/protocol`, `GET /emergency/sessions/{id}`, `POST …/assessments` → `PUT /emergency/assessments/{id}/answers` → `POST …/complete`, `POST …/heartbeat`, `POST …/questions`, `POST …/close`. Ver §10. |
 | Tripulación | Roster: `GET /missions/current` + `GET /missions/{id}/crew`. Salud: solo `GET /crew/status` (404 → "Disponible pronto"). |
 | Perfil | Rol de tripulación y usuario del servidor; con API no se cambia de misión. |
 | Más → Sincronizar | Fuerza `push` + `pull` y dice cuántos registros quedan. |
@@ -117,6 +118,8 @@ Errores: siempre `{ error: { code, message, details } }`; la app programa contra
 | PVT (reflejos) | Servidor (`/pvt-runs`) | Endpoint confidencial. |
 | PHQ-2 / GAD-2 | Servidor | Endpoint confidencial; puntaje nunca vuelve. |
 | Emergencia crítica | Servidor (`/emergency/sessions`) | Endpoint de triaje. |
+| Evaluaciones de triaje, respuestas, latido, preguntas a Tierra | Servidor (`/emergency/*`); copia local mientras no sube | Endpoints del triaje. La copia local (`nullradt-triage-state-v1`) se borra al cerrar sesión. |
+| Protocolo de triaje (`GET /emergency/protocol`) y reglas (`GET /rules`) | Dispositivo (caché) | Para evaluar sin conexión. No son datos personales: sobreviven al cierre de sesión. |
 | **Alerta de precaución** | **Dispositivo** | No es una emergencia y el contrato no tiene endpoint para ella; mandarla como emergencia sería falso. |
 | Nota escrita en la alerta | No se envía | `EmergencySessionCreate` no tiene ese campo. |
 | Presión ocular, calcio urinario, fuerza de agarre | Dispositivo ("sin evaluar") | No están en el catálogo. |
@@ -129,9 +132,9 @@ Errores: siempre `{ error: { code, message, details } }`; la app programa contra
 
 - Cada registro lleva un `client_uuid` (UUID v4) generado **una vez** al crearlo; se reintenta siempre con el mismo.
 - Patrón: se intenta el endpoint en línea; sin red, 5xx o 429 → a la cola con el mismo body (sin `client_uuid`). 4xx → se muestra el error (no se encola), salvo emergencias, que se encolan ante cualquier error.
-- Entidades: `reading`, `wellbeing_checkin`, `pvt_run`, `wellbeing_screening`, `support_request`, `emergency_session`, `emergency_confirm`, `emergency_close`.
-- Push (`POST /sync/push`): lotes de ≤ 500, emergencias primero (sesión → confirmación → cierre) y luego por antigüedad. Resultados por posición: `accepted`/`duplicate` → se sacan (y se aplica `result`: evaluación, mensaje, racha, `deliver_at`…); `conflict` → se sacan y se avisa; `rejected` → se sacan y se avisa (`FUTURE_TIMESTAMP` pide revisar la hora), salvo `ENTITY_NOT_SUPPORTED`, que se queda. Error del lote → se conserva y se reintenta.
-- Pull (`GET /sync/pull`) con cursor guardado por usuario, repitiendo mientras `has_more`: `evaluations` reemplazan el "sin evaluar" de las lecturas encoladas; `messages` de `support` van al hilo de la solicitud y los de `escalation` se avisan; se guarda el estado del enlace.
+- Entidades: `reading`, `wellbeing_checkin`, `pvt_run`, `wellbeing_screening`, `support_request`, `emergency_session`, `emergency_confirm`, `emergency_assessment`, `emergency_answer`, `emergency_complete`, `emergency_heartbeat`, `emergency_question`, `emergency_close`.
+- Push (`POST /sync/push`): lotes de ≤ 500, emergencias primero en el mismo orden que el servidor (`syncEntities.js`: sesión → "estoy bien" → evaluación → respuestas → completar → latido → preguntas → cierre) y luego por antigüedad. Resultados por posición: `accepted`/`duplicate` → se sacan (y se aplica `result`: evaluación, mensaje, racha, `deliver_at`…); `conflict` → se sacan y se avisa; `rejected` → se sacan y se avisa (`FUTURE_TIMESTAMP` pide revisar la hora), salvo `ENTITY_NOT_SUPPORTED`, que se queda. Error del lote → se conserva y se reintenta.
+- Pull (`GET /sync/pull`) con cursor guardado por usuario, repitiendo mientras `has_more`: `evaluations` reemplazan el "sin evaluar" (o lo calculado en el dispositivo, §13) de las lecturas encoladas; `protocol.changed` → `GET /emergency/protocol` y `rules.changed` → `GET /rules?since_version=` (§11, §13); `messages` de `support` van al hilo de la solicitud y los de `escalation` se avisan; se guarda el estado del enlace.
 - Cuándo: al entrar a la app, al reconectar la red, al volver a primer plano, cada 3 min, tras enviar algo en cola, desde Más → Sincronizar y en la tarea de segundo plano (~15 min).
 - Una emergencia creada **sin sesión** (SOS desde el login) se encola y la sube la próxima sesión que inicie.
 
@@ -148,13 +151,161 @@ Errores: siempre `{ error: { code, message, details } }`; la app programa contra
 
 > La base de Render es compartida: no abras emergencias de prueba sin avisar (la app sí puede hacerlo; ciérralas como falsa alarma con ORION o VEGA).
 
-## 10. Pendientes
+## 10. Triaje (guía §10)
+
+**No diagnostica ni receta.** Usa SOLO el protocolo del servidor (`GET /emergency/protocol`, v2): sin preguntas,
+umbrales ni textos clínicos propios. Lo que no cubre el protocolo → "Pregunta a Tierra". Sin LLM ni servicios en
+la nube: todo funciona sin conexión.
+
+**Entrada.** La alerta crítica (`alert.tsx`, botón o agitar) abre o une la sesión y muestra **"Evaluar a la
+tripulación (triaje)"** → `/triage/[sessionId]` (id del servidor, o el `client_uuid` si la sesión quedó en cola o
+es modo demo). La alerta ahora pregunta también *"¿Hay un evento solar o alarma de radiación activa?"*: es
+`context.solar_event_active` del contrato (`EmergencyContext`); en una apertura manual el servidor no lo infiere y
+sin él el protocolo omite su módulo de radiación. "¿Estás bien?" (`AreYouOkCard`) no cambió.
+
+**`/triage/[sessionId]` (sesión).**
+1. Carga en dos fases: primero lo guardado en el dispositivo (instantáneo, también sin enlace) y luego
+   `GET /emergency/sessions/{id}` (tope 8 s). Muestra estado, hora, misión, versión del protocolo (o "copia de
+   respaldo"), "sin enlace", "te uniste" y evento solar.
+2. **`responder_safe` primero.** Si es `false` (`next_step: secure_self`) → tarjeta "Ponte a salvo" con el texto
+   del protocolo y "Ya estoy a salvo"; si es `null` (activación automática) se pregunta con la pregunta
+   `responder_safe` del protocolo. La respuesta dada en el dispositivo viaja con cada evaluación (el servidor la
+   copia a la sesión). Hasta que sea `true` no se puede evaluar.
+3. **A quién evaluar:** `roster` del servidor (con su `priority_reason`); sin enlace, la tripulación vigente guardada
+   (`GET /missions/{id}/crew`, se guarda al iniciar sesión); en demo, la tripulación de la maqueta. Cada uno con su
+   clasificación vigente (la última completada; reevaluar = evaluación nueva, la anterior no se borra).
+4. **Orden de atención:** `attention_order` del servidor con su `reason`. Sin enlace (o con evaluaciones que aún no
+   suben) se calcula en la tableta con la regla `attention_order` **del protocolo** (categorías en su orden,
+   radiación probable antes que posible, los no evaluados después de los rojos), marcado "pendiente de confirmar"
+   y sin motivo en texto (el motivo lo da el servidor).
+5. **Pregunta a Tierra:** `POST /emergency/sessions/{id}/questions` (`client_uuid`, `body`, `asked_at`), con texto o
+   dictado (`VoiceNoteInput`). Estado por `deliver_at`: futuro = "En camino, llega a las hh:mm"; `null` o en cola =
+   "Pendiente de envío: sin enlace"; pasado = "Entregada a las hh:mm".
+6. **Cerrar** (`closed` = atendida, `cancelled` = falsa alarma): solo comandante u oficial médico
+   (`canCloseEmergency`, por `crew_role`), manteniendo presionado. Sin enlace queda en cola.
+7. **Latido:** `POST /emergency/sessions/{id}/heartbeat` (`sent_at`, `device_id`) cada 30 s mientras una pantalla de
+   triaje está enfocada y la sesión activa. Sin enlace se guarda **un solo** latido por sesión en la cola (el último).
+8. Al entrar se pide el permiso de micrófono (una vez); si lo niegan, todo funciona con botones.
+
+**`/triage/[sessionId]/assess/[astronautId]` (evaluación).**
+- Una pregunta a la vez: la `pending` de `evaluateAssessment(definition, respuestas, session.context)` con el
+  protocolo de **la versión de la sesión** (`session.protocol.version`; si no está guardada, `?version=N`; sin red,
+  la activa guardada o la copia de respaldo). Botones según el tipo: sí/no → `{ value: bool }`, número →
+  `{ value: n }`, opción → `{ choice: "código" }`, varias → `{ choice: [...] }` ("Ninguno" no va con otras, igual
+  que valida el servidor). Las etiquetas de las opciones son las palabras del propio protocolo.
+- Si el tripulante no responde, la v2 solo pregunta signos observables (`vomiting_observed`,
+  `time_to_vomiting_observed`, `consciousness_level`): la app no agrega preguntas, solo sigue `pending`.
+- "Atrás" quita la última respuesta del recorrido. Se guarda el borrador (se puede "Continuar").
+- Al terminar: clasificación **local en pantalla** y envío **POST assessments → PUT answers → POST complete** con
+  `device_result` (`status`, `triage_category`, `radiation_flag`, `rules_version`). Solo se mandan las respuestas del
+  recorrido final. **Manda el servidor:** cuando llega su resultado se muestra el suyo; si `matches_device` es
+  `false`, se muestra el del servidor, "La tableta calculó otra cosa" y en qué difiere (`mismatch_fields`).
+  Avisos: tripulación = inmediato a bordo; Tierra = por `deliver_at`.
+- **Sin conexión** (o si la sesión sigue en la cola): todo a la cola existente con `priority: "emergency"` y
+  referencias por `client_uuid` (`session_id`, `assessment_id`) (guía §3 y §10). La clasificación local se ve igual,
+  marcada "pendiente de confirmar por el servidor". Al sincronizar, el `result` del `emergency_complete` reemplaza la
+  clasificación local (y avisa con un toast).
+- Errores 4xx (sesión cerrada, respuestas fuera del protocolo) se muestran con "Reintentar"; no se encolan.
+- Modo demo: el triaje funciona completo en el dispositivo (sin Tierra, sin latido).
+
+Archivos: `src/app/triage/…`, `src/presentation/features/triage/*` (UI, voz, textos), `domain/entities/Triage.ts`,
+`domain/usecases/TriageUseCases.ts` y `triageLocal.ts`, `data/repositories/TriageRepositoryImpl.ts`,
+`data/datasources/local/triageLocalDataSource.ts`, `emergencyRemoteDataSource.ts`.
+
+## 11. Motor compartido (mismo evaluador que el backend)
+
+- `src/core/engine/conditions.js` y `src/core/engine/triage.js` son copia **TAL CUAL** (byte a byte) de
+  `backend/src/engine/` en **`origin/backend` @ `d511109`** (último cambio del motor en el backend: `2403e85`,
+  "style: aplica prettier al backend"). JS puro, sin dependencias. Los `.d.ts` de al lado solo describen su forma
+  para TypeScript; **no se editan los `.js`**.
+- Copia de respaldo: `src/data/datasources/local/fallback/triage-protocol-v2.json` = protocolo v2 de
+  `backend/db/seeds/004_protocolo_triaje_v2.sql` (mismo commit), marcado `"fallback": true`. Solo se usa si la
+  app nunca pudo bajar `GET /emergency/protocol` (primer arranque sin red).
+- Protocolo guardado por versión (AsyncStorage `nullradt-triage-protocols-v1`): se baja al iniciar sesión, cuando
+  el pull dice `protocol.changed` o la versión activa no coincide, y `?version=N` para una sesión con otra versión.
+- **Mantenerlo sincronizado** cuando el backend cambie el motor o el protocolo:
+  ```bash
+  git fetch origin backend
+  node scripts/sync-engine.mjs          # copia conditions.js, triage.js y regenera el respaldo v2
+  node scripts/triage-parity.mjs        # debe quedar en verde
+  ```
+  y anota aquí el nuevo commit. `sync-engine.mjs` acepta `--ref <commit>`.
+- **Prueba de paridad** `node scripts/triage-parity.mjs` (Node, sin dependencias, sin red): 6 escenarios de
+  `backend/test/triage.v2.test.js` y `triage.test.js` con el evaluador de la app → lo que exigen esas pruebas. Si
+  hay git y `origin/backend`, además corre los mismos escenarios con el evaluador del backend (leído con
+  `git show`, sin escribir archivos) y exige el resultado completo idéntico, y avisa si las copias ya no son
+  iguales a las del backend.
+
+## 12. Voz (sin internet)
+
+Flujo por pregunta: **lee** el texto con `speak()` (`src/core/speech/speech.ts`: voces del sistema instaladas,
+descarta las `network`; tono `critical`), reemplazando `{call_sign}`; en preguntas de opción lee también las
+opciones. Luego **escucha unos segundos** y compara lo dicho, sin IA, con un vocabulario cerrado
+(`src/core/speech/closedVocabulary.ts` + `presentation/features/triage/triageLexicon.ts`): texto normalizado
+(minúsculas, sin acentos ni signos), sinónimos es/en de sí/no ("sí, si, afirmativo, correcto, yes…" / "no,
+negativo…"; "no sé" no cuenta como "no"), las opciones del protocolo con sinónimos simples, números en cifra o en
+palabras, y los comandos **"repetir"**, **"botones"**, **"atrás"**. Siempre confirma: *"Entendí: X. ¿Correcto?"*
+→ "sí" registra la respuesta con `source: "voice"`, "no" vuelve a preguntar. Si no entiende **2 veces**, lo dice
+en voz alta y pasa a botones. **Los botones están siempre visibles**; un toque registra `source: "tap"`
+(el contrato admite `voice`). Botones "Repetir" y "Responder por voz" / "Solo botones".
+
+Idioma: el de la app. El protocolo trae los textos en español; en inglés se usa una traducción por
+`question_code` **solo si el texto del servidor es exactamente el que se tradujo** (si el servidor lo cambia, se
+lee el texto del protocolo): una traducción nunca cambia el significado.
+
+| | Expo Go | Development build |
+|---|---|---|
+| Leer las preguntas en voz alta (`expo-speech`, offline) | Sí | Sí |
+| Escuchar sola después de leer (`expo-speech-recognition`, on-device si `getOfflineSupport` lo permite, `contextualStrings` con las opciones) | No (el módulo nativo no está en Expo Go) | **Sí** |
+| Responder por voz | Android: con un toque en "Responder por voz" se abre el reconocedor del sistema (`dictateWithSystem`); sin red funciona solo si el teléfono tiene el paquete de idioma offline. iOS: solo botones | Sí, también sin red con el modelo del idioma instalado (Android 13+: Laboratorio de voz → descargar modelo; iOS: dictado en el dispositivo) |
+| Permiso de micrófono | `expo-audio` | `expo-speech-recognition` |
+
+**Development build (Android, desde Windows), lo más rápido:**
+- En la nube (EAS, no necesita Android Studio):
+  ```bash
+  npx expo install expo-dev-client
+  npx eas-cli@latest login
+  npx eas-cli@latest build --platform android --profile development
+  ```
+  Instala el APK con el QR/enlace que da EAS y luego `npx expo start` (abre el development build, no Expo Go).
+  Para un APK independiente sin Metro (demo), un perfil con `"distribution": "internal"` y
+  `npx eas-cli@latest build --platform android --profile preview`.
+- Local (con Android Studio y el SDK instalados; el plugin fija el NDK `28.2.13676358`):
+  `npx expo install expo-dev-client` y `npx expo run:android --device` con el teléfono por USB (depuración USB).
+  No se versiona `android/` (CNG).
+- `expo-dev-client` todavía **no** está en `package.json` (no se agregó en este cambio): sin él, arranca con
+  `npx expo start --dev-client`.
+
+## 13. Evaluación sin conexión de las lecturas
+
+- `GET /rules` se guarda con su versión (AsyncStorage `nullradt-rules-v1`), al iniciar sesión y cuando el pull dice
+  `rules.changed` (pide solo lo nuevo con `since_version`).
+- Sin conexión, una lectura nueva de Medir se evalúa con `evaluateIndicator` de `conditions.js` (mismo motor) y esas
+  reglas, con el mismo contexto que el servidor (`ruleContext`: componentes de la lectura + `sex` del perfil).
+  Se muestra el nivel y la recomendación **de la regla** con "Calculado en el dispositivo con las reglas del
+  servidor, pendiente de confirmar al sincronizar" (y en Cuerpo: "calculado en el dispositivo, pendiente de
+  confirmar"). Al sincronizar, la evaluación del servidor (push o pull) la reemplaza.
+- **No se adivina:** si alguna regla del indicador usa un campo **derivado** del catálogo (`derived_fields`, que el
+  servidor calcula con el historial en `derived.js`: p. ej. `SLEEP_HOURS`, `RAD_DOSE_*`, `BODY_MASS`,
+  `EXERCISE_MIN`), si no hay reglas o catálogo guardados, o si el indicador es confidencial, la lectura queda
+  **"sin evaluar"**. Las 5 que mide la app (FC, PA, SpO₂, FR, temperatura) no usan derivados.
+- La alerta automática ("¿Estás bien?") la sigue abriendo solo el servidor.
+
+## 14. Tripulación
+
+El semáforo de cada compañero se muestra según `physical !== null` de `GET /crew/status`, **no** por el nombre del
+rol (el backend usa `crew_medical_officer`). Ya era así; se verificó contra el contrato (`CrewRole` en
+`openapi.yaml`). La guía de la rama `backend` (@ `d511109`) no tiene §13. Cerrar una emergencia sí depende del rol
+(`commander` o `crew_medical_officer`), como exige el contrato (`x-crew-role`).
+
+## 15. Pendientes
 
 - `GET /crew/status` aún responde 404 en Render: la app muestra "Disponible pronto". La forma esperada está en `apiTypes.ts` (`ApiCrewStatus`).
-- Evaluación **sin conexión** con las reglas de `GET /rules` y el mismo motor del servidor (`conditions.js`): hoy una lectura sin red queda "sin evaluar" hasta sincronizar (no se inventan umbrales).
-- Flujo de triaje completo (`/emergency/sessions/{id}/assessments`, respuestas, `complete`, latido, preguntas a Tierra) y "¿Estás bien?" a partir del pull: la app solo abre/une la sesión, muestra su estado y confirma "estoy bien" desde Medir.
-- PIN sin conexión (`PUT /me/offline-pin`), credencial de tableta (`X-Device-Credential`) y acciones del comandante (`/crew/...`).
+- Triaje: `prefill` del roster (respuestas sugeridas desde lecturas) todavía no se usa (todo se contesta); "¿Estás bien?" a partir del pull (el contrato no trae sesiones en `/sync/pull`).
+- Triaje sin nadie con sesión: credencial de tableta (`X-Device-Credential`, guía §12). Hoy el triaje necesita sesión iniciada (o modo demo).
+- PIN sin conexión (`PUT /me/offline-pin`) y acciones del comandante (`/crew/...`).
 - Tarjeta del entorno del módulo (`environment` de body-status / `GET /habitat/status`).
 - Hilo de mensajes de una alerta (`GET /escalations/{id}/messages`) y bandeja de mensajes de Tierra en pantalla (hoy llegan como aviso).
 - La pantalla Medir sigue usando valores simulados del "equipo" (no hay entrada manual de números).
 - La cola usa AsyncStorage (como la cola anterior), no SQLite.
+- Web (`expo start --web`) no es objetivo: las animaciones de entrada y la intro de marca bloquean la interfaz; el triaje se probó en Node con el código real (ver el mensaje del commit) y compila para Android.

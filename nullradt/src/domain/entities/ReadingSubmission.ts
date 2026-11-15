@@ -33,7 +33,15 @@ export type ReadingOutcome =
       escalationId: string | null;
       emergency: AutoEmergency | null;
     }
-  /** Sin conexión: quedó en la cola; el servidor la evaluará al sincronizar ("sin evaluar" mientras tanto). */
-  | { status: 'queued'; clientUuid: string }
+  /**
+   * Sin conexión: quedó en la cola; el servidor la evaluará al sincronizar y su resultado manda.
+   * `device` = lo calculado en el dispositivo con las reglas guardadas (GET /rules) y el mismo motor del
+   * servidor, "pendiente de confirmar"; null = "sin evaluar" (sin reglas guardadas o la regla usa derivados).
+   */
+  | {
+      status: 'queued';
+      clientUuid: string;
+      device: { level: HealthStatus; recommendation: string | null; escalation: EscalationLevel } | null;
+    }
   /** Modo demo sin servidor o indicador sin código en el catálogo: solo en el dispositivo. */
   | { status: 'local'; clientUuid: string };

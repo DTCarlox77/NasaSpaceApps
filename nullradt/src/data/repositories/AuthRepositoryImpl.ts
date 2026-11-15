@@ -3,6 +3,7 @@ import { InvalidCredentialsError, type Credentials, type Session } from '@/domai
 import type { AuthRepository, SessionRepository } from '@/domain/repositories/AuthRepository';
 import { healthCacheDataSource } from '../datasources/local/healthCacheDataSource';
 import { sessionSecureDataSource } from '../datasources/local/sessionSecureDataSource';
+import { triageLocalDataSource } from '../datasources/local/triageLocalDataSource';
 import { crewMockDataSource } from '../datasources/mock/crewMockDataSource';
 import { sessionMockDataSource } from '../datasources/mock/sessionMockDataSource';
 import { authRemoteDataSource } from '../datasources/remote/authRemoteDataSource';
@@ -59,8 +60,9 @@ export class SessionRepositoryImpl implements SessionRepository {
     return this.local.load();
   }
   async clear() {
-    // Datos de salud personales en caché: se borran al cerrar sesión (la cola de sync se conserva por dueño).
-    await Promise.all([this.local.clear(), healthCacheDataSource.clear().catch(() => {})]);
+    // Datos de salud en caché (propios y del triaje de la tripulación): se borran al cerrar sesión
+    // (la cola de sync se conserva por dueño; los protocolos y reglas no son datos personales y se quedan).
+    await Promise.all([this.local.clear(), healthCacheDataSource.clear().catch(() => {}), triageLocalDataSource.clear()]);
   }
   isBiometricEnabled() {
     return this.local.isBiometricEnabled();

@@ -3,7 +3,9 @@ import type { HealthIndicator, IndicatorId, Reading } from '@/domain/entities/He
 import type { ReadingInput, ReadingOutcome } from '@/domain/entities/ReadingSubmission';
 import type { HealthRepository, HealthSnapshot } from '@/domain/repositories/HealthRepository';
 import { newUuid } from '@/domain/usecases/uuid';
+import { evaluateReadingOffline } from '@/domain/usecases/evaluateReadingOffline';
 import { healthCacheDataSource } from '../datasources/local/healthCacheDataSource';
+import { rulesLocalDataSource, type StoredRules } from '../datasources/local/rulesLocalDataSource';
 import { sessionSecureDataSource } from '../datasources/local/sessionSecureDataSource';
 import { healthMockDataSource } from '../datasources/mock/healthMockDataSource';
 import type { ApiIndicator, ApiIndicatorList, ApiIndicatorStatus } from '../datasources/remote/apiTypes';
@@ -81,7 +83,32 @@ export class HealthRepositoryImpl implements HealthRepository {
     private readonly remote = healthRemoteDataSource,
     private readonly cache = healthCacheDataSource,
     private readonly mock = healthMockDataSource,
+    private readonly rules = rulesLocalDataSource,
   ) {}
+
+  /** GET /rules?since_version=<guardada>: solo las reglas nuevas; se mezclan por indicador. */
+  async refreshRules(opts: { onlyIfMissing?: boolean } = {}): Promise<boolean> {
+    if (!(await serverSession())) return false;
+    try {
+      const stored = await this.rules.get();
+      if (opts.onlyIfMissing && stored) return true;
+      const bundle = await this.remote.getRules(stored?.rulesVersion);
+      const next: StoredRules = {
+        rulesVersion: bundle.rules_version,
+        catalogVersion: bundle.catalog_version,
+        indicators: { ...(stored?.indicators ?? {}) },
+        fetchedAt: new Date().toISOString(),
+      };
+      for (const ind of bundle.indicators) next.indicators[ind.code] = { rules_version: ind.rules_version, rules: ind.rules };
+      await this.rules.set(next);
+      // El catálogo (derived_fields) se relee con las reglas nuevas.
+      if (!stored || stored.catalogVersion !== bundle.catalog_version) this.catalog = null;
+      await this.getCatalog();
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   /** Catálogo del servidor (memoria → red → caché en disco). */
   private async getCatalog(): Promise<ApiIndicatorList | null> {
@@ -194,7 +221,30 @@ export class HealthRepositoryImpl implements HealthRepository {
       payload,
       send: () => this.remote.createReading({ client_uuid: clientUuid, ...payload }),
     });
-    if (res.kind === 'queued') return { status: 'queued', clientUuid };
+    if (res.kind === 'queued') {
+      // Sin conexión: mismo motor (conditions.js) y reglas guardadas; el servidor confirma al sincronizar.
+      const rules = await this.rules.get();
+      const device = evaluateReadingOffline({
+        code,
+        values: payload.values as Record<string, unknown>,
+        sex: session.sex,
+        rules: rules?.indicators[code],
+        derivedFields: meta ? (meta.derived_fields ?? []).map((d) => d.name) : null,
+        sensitivity: meta?.sensitivity,
+      });
+      return {
+        status: 'queued',
+        clientUuid,
+        device:
+          device && device.level !== 'unrated'
+            ? {
+                level: STATUS_FROM_LEVEL[device.level] ?? 'unevaluated',
+                recommendation: device.recommendation ?? null,
+                escalation: ESCALATION_FROM_API[device.escalation ?? 'self_care'] ?? 'self',
+              }
+            : null,
+      };
+    }
     const { evaluation, escalation_id, emergency } = res.value;
     return {
       status: 'evaluated',

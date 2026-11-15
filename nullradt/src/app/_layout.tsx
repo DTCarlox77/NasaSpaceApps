@@ -67,6 +67,9 @@ function RootNavigator() {
           <Stack.Screen name="tests/memory" />
           <Stack.Screen name="support" />
           <Stack.Screen name="screening" />
+          {/* Triaje: necesita la sesión (Bearer) o el modo demo; el latido mantiene viva la sesión de emergencia. */}
+          <Stack.Screen name="triage/[sessionId]/index" />
+          <Stack.Screen name="triage/[sessionId]/assess/[astronautId]" options={{ gestureEnabled: false }} />
         </Stack.Protected>
         <Stack.Protected guard={status === 'signedOut' || status === 'locked'} redirectTo="/">
           <Stack.Screen name="login" options={{ animation: 'fade' }} />

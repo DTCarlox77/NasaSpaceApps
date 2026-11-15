@@ -25,8 +25,18 @@ export class CrewRepositoryImpl implements CrewRepository {
     return apiEnabled() ? [] : this.mock.list();
   }
 
-  async getRoster(): Promise<Roster | null> {
+  private async cachedRoster(): Promise<Roster | null> {
+    try {
+      const raw = await AsyncStorage.getItem(ROSTER_KEY);
+      return raw ? (JSON.parse(raw) as Roster) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async getRoster(opts: { cachedOnly?: boolean } = {}): Promise<Roster | null> {
     if (!(await serverSession())) return null;
+    if (opts.cachedOnly) return this.cachedRoster();
     try {
       const current = await this.remote.currentMission();
       const crew = await this.remote.crew(current.mission.id);
@@ -48,12 +58,7 @@ export class CrewRepositoryImpl implements CrewRepository {
       await AsyncStorage.setItem(ROSTER_KEY, JSON.stringify(roster)).catch(() => {});
       return roster;
     } catch {
-      try {
-        const raw = await AsyncStorage.getItem(ROSTER_KEY);
-        return raw ? (JSON.parse(raw) as Roster) : null;
-      } catch {
-        return null;
-      }
+      return this.cachedRoster();
     }
   }
 

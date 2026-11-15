@@ -133,7 +133,7 @@ function IndicatorCard({ indicator, onDetails, onMeasure }: { indicator: HealthI
           </View>
           <AppText variant="caption" color="textMuted">
             {r
-              ? [timeAgo(r.takenAt, t), r.source ? t(`health.source.${r.source}`) : null, r.synced ? null : t('health.onDevice')].filter(Boolean).join(' · ')
+              ? [timeAgo(r.takenAt, t), r.source ? t(`health.source.${r.source}`) : null, r.synced ? null : t('health.onDevice'), r.provisional ? t('health.pendingConfirm') : null].filter(Boolean).join(' · ')
               : t('body.noReadings')}
           </AppText>
         </View>

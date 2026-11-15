@@ -51,6 +51,8 @@ export interface ApiIndicator {
   sensitivity: 'standard' | 'confidential';
   rules_version: number;
   sources: ApiSource[];
+  /** Campos que el servidor calcula con el historial (derived.js). La app no los calcula sin conexión. */
+  derived_fields?: { name: string; type?: string; how?: string }[];
 }
 
 export interface ApiIndicatorList {
@@ -156,13 +158,119 @@ export interface ApiEmergencySession {
   next_step: 'start_assessments' | 'secure_self';
   started_at: string;
   mission_code?: string;
+  protocol?: { id: number; code: string; version: number };
+  context?: Record<string, unknown>;
+  responder_safe?: boolean | null;
+  merged_into?: string | null;
+  heartbeat?: { dead_man_switch_seconds?: number; last_heartbeat_at?: string | null; expires_at?: string | null; lapsed_at?: string | null };
 }
 
-/** SessionWithRoster: solo lo que la app muestra (la app no tiene flujo de triaje todavía). */
+export type ApiTriageCategory = 'green' | 'yellow' | 'red' | 'black';
+export type ApiRadiationFlag = 'none' | 'possible' | 'probable';
+
+/** RosterEntry: a quién evaluar (primero quien tiene un riesgo conocido). */
+export interface ApiRosterEntry {
+  astronaut_id: string;
+  call_sign?: string;
+  crew_role?: string | null;
+  sequence_no?: number;
+  priority_reason?: string | null;
+  prefill?: Record<string, unknown>;
+}
+
+/** AttentionEntry: orden de atención con su motivo (lo calcula el servidor). */
+export interface ApiAttentionEntry {
+  position: number;
+  astronaut_id: string;
+  call_sign: string;
+  status: 'assessed' | 'in_progress' | 'unassessed';
+  assessment_id?: string | null;
+  triage_category?: ApiTriageCategory | null;
+  radiation_flag?: ApiRadiationFlag | null;
+  matches_device?: boolean | null;
+  reason: string;
+}
+
+/** Assessment del contrato. */
+export interface ApiAssessment {
+  id: string;
+  client_uuid: string;
+  session_id: string;
+  astronaut_id: string;
+  call_sign?: string;
+  status: 'in_progress' | 'completed' | 'unreachable';
+  triage_category?: ApiTriageCategory | null;
+  radiation_flag?: ApiRadiationFlag | null;
+  computed_by?: 'device' | 'server' | null;
+  rules_version?: number | null;
+  started_at: string;
+  completed_at?: string | null;
+  matches_device?: boolean | null;
+}
+
+/** SessionWithRoster (GET /emergency/sessions/{id} y POST /emergency/sessions). */
 export interface ApiSessionWithRoster {
   session: ApiEmergencySession;
-  roster?: { astronaut_id: string; call_sign?: string }[];
+  roster?: ApiRosterEntry[];
+  assessments?: ApiAssessment[];
+  attention_order?: ApiAttentionEntry[];
   joined?: boolean;
+}
+
+/** TriageProtocol (GET /emergency/protocol). `definition` se evalúa con evaluateAssessment. */
+export interface ApiTriageProtocol {
+  id: number;
+  code: string;
+  version: number;
+  name: string;
+  is_active: boolean;
+  sources: { id: string; title: string; url: string; publisher?: string }[];
+  definition: import('@/core/engine/triage').TriageDefinition;
+}
+
+/** AssessmentResult (PUT answers → preview; POST complete). */
+export interface ApiAssessmentResult {
+  status: 'completed' | 'incomplete' | 'stopped';
+  triage_category?: ApiTriageCategory | null;
+  radiation_flag?: ApiRadiationFlag;
+  priority?: string;
+  escalations: { level: string; priority: string; escalation_id?: string; deliver_at?: string | null }[];
+  path: string[];
+  pending?: string;
+  reason?: string;
+  computed_by: 'server' | 'device';
+  rules_version: number;
+  matches_device?: boolean | null;
+  mismatch_fields?: string[];
+  next?: ApiRosterEntry | null;
+  attention_order?: ApiAttentionEntry[];
+}
+
+/** EmergencyQuestion (POST /emergency/sessions/{id}/questions). */
+export interface ApiEmergencyQuestion {
+  id: string;
+  session_id: string;
+  escalation_id: string;
+  direction: string;
+  body: string;
+  created_at: string;
+  deliver_at: string | null;
+}
+
+export interface ApiHeartbeatResponse {
+  session_id: string;
+  status: string;
+  received_at: string;
+  dead_man_switch_seconds: number;
+  expires_at: string;
+}
+
+/** RulesBundle (GET /rules?since_version=): reglas para evaluar sin conexión con conditions.js. */
+export interface ApiRulesBundle {
+  catalog_version: number;
+  rules_version: number;
+  up_to_date: boolean;
+  indicators: { code: string; rules_version: number; rules: import('@/core/engine/conditions').IndicatorRule[] }[];
 }
 
 export interface ApiSyncItemResult {
@@ -186,6 +294,8 @@ export interface ApiSyncPullResponse {
   cursor: string;
   has_more: boolean;
   server_time: string;
+  rules?: { rules_version: number; changed: boolean };
+  protocol?: { code: string; version: number; changed: boolean };
   mission: { comm_delay_seconds: number; link: { status: 'up' | 'outage'; outage_ends_at?: string | null } } | null;
   evaluations: {
     reading_id: string;

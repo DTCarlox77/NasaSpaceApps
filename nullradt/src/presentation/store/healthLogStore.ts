@@ -12,6 +12,11 @@ export interface LocalReading {
   clientUuid?: string;
   /** Recomendación del servidor (tal cual). */
   recommendation?: string | null;
+  /**
+   * true = nivel calculado en el dispositivo sin conexión (reglas de GET /rules y el mismo motor del servidor),
+   * pendiente de confirmar: el resultado del servidor lo reemplaza al sincronizar.
+   */
+  provisional?: boolean;
 }
 
 /** Alerta enviada / recibida por la tripulación (simulada en el modo demo, sin backend). */
@@ -54,7 +59,7 @@ export const useHealthLogStore = create<HealthLogState>()(
               list.map((l) => {
                 if (l.clientUuid !== clientUuid) return l;
                 changed = true;
-                return { ...l, status, recommendation: recommendation ?? l.recommendation, reading: { ...l.reading, synced: true } };
+                return { ...l, status, recommendation: recommendation ?? l.recommendation, provisional: false, reading: { ...l.reading, synced: true } };
               }),
             ]),
           );
@@ -89,7 +94,7 @@ export function applyLocalReadings(indicators: HealthIndicator[], local: LocalRe
     const last = mine[mine.length - 1]!;
     return {
       ...ind,
-      latest: last.reading,
+      latest: { ...last.reading, provisional: !!last.provisional },
       status: last.status,
       recommendation: last.recommendation ?? (fromServer ? null : ind.recommendation),
       trend: [...ind.trend, ...mine.map((m) => m.reading.value)].slice(-10),

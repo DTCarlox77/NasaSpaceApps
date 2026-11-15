@@ -9,6 +9,7 @@ export interface SendEmergencyReportInput {
   missionDay?: number;
   note?: string;
   responderSafe?: boolean;
+  solarEventActive?: boolean;
 }
 
 export class SendEmergencyReport {

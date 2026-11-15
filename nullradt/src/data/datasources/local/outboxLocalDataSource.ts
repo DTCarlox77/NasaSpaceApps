@@ -39,6 +39,10 @@ export const outboxLocalDataSource = {
       await writeAll(all);
     });
   },
+  /** Reemplaza los items que cumplen `match` por `item` (p. ej. un solo latido en cola por sesión). */
+  replace(match: (i: OutboxItem) => boolean, item: OutboxItem): Promise<void> {
+    return serialized(async () => writeAll([...(await readAll()).filter((i) => !match(i)), item]));
+  },
   remove(clientUuids: string[]): Promise<void> {
     if (!clientUuids.length) return Promise.resolve();
     const drop = new Set(clientUuids);

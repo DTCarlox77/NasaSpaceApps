@@ -15,7 +15,17 @@ const MAX_PULL_PAGES = 10;
 
 /** Emergencias antes que todo (aunque el item diga `normal`), luego por antigüedad. */
 const isEmergency = (i: OutboxItem) => i.priority === 'emergency' || i.entity.startsWith('emergency_');
-const EMERGENCY_ORDER = ['emergency_session', 'emergency_confirm', 'emergency_close'];
+// Mismo orden que el servidor (syncEntities.js): sesión → "estoy bien" → evaluación → respuestas → completar → latido → preguntas → cierre.
+const EMERGENCY_ORDER = [
+  'emergency_session',
+  'emergency_confirm',
+  'emergency_assessment',
+  'emergency_answer',
+  'emergency_complete',
+  'emergency_heartbeat',
+  'emergency_question',
+  'emergency_close',
+];
 function byPriority(a: OutboxItem, b: OutboxItem) {
   const ea = isEmergency(a) ? 0 : 1;
   const eb = isEmergency(b) ? 0 : 1;
@@ -90,7 +100,7 @@ export class SyncRepositoryImpl implements SyncRepository {
 
   async pull(ownerId: string): Promise<PullSummary | null> {
     if (!apiEnabled()) return null;
-    const summary: PullSummary = { evaluations: [], escalations: [], messages: [], link: null, serverTime: new Date().toISOString() };
+    const summary: PullSummary = { evaluations: [], escalations: [], messages: [], link: null, versions: null, serverTime: new Date().toISOString() };
     let cursor = await this.state.getCursor(ownerId);
     try {
       for (let page = 0; page < MAX_PULL_PAGES; page++) {
@@ -128,6 +138,15 @@ export class SyncRepositoryImpl implements SyncRepository {
             deliverAt: m.deliver_at,
           })),
         );
+        if (res.rules && res.protocol) {
+          // `changed` en cualquier página = hay que volver a bajarlas.
+          summary.versions = {
+            rulesVersion: res.rules.rules_version,
+            rulesChanged: res.rules.changed || !!summary.versions?.rulesChanged,
+            protocolVersion: res.protocol.version,
+            protocolChanged: res.protocol.changed || !!summary.versions?.protocolChanged,
+          };
+        }
         if (res.mission) {
           summary.link = {
             status: res.mission.link.status,

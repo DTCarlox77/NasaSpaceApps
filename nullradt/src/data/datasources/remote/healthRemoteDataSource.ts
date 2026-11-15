@@ -1,4 +1,4 @@
-import type { ApiBodyStatus, ApiIndicatorList, ApiReadingCreated, ApiReadingPage } from './apiTypes';
+import type { ApiBodyStatus, ApiIndicatorList, ApiReadingCreated, ApiReadingPage, ApiRulesBundle } from './apiTypes';
 import { getJson, HttpError, postJson } from './httpClient';
 
 /**
@@ -24,6 +24,12 @@ export const healthRemoteDataSource = {
     const q = `code=${encodeURIComponent(code)}&from=${encodeURIComponent(fromIso)}&limit=${limit}`;
     const res = await getJson<ApiReadingPage>(`/me/readings?${q}`);
     return res ?? { items: [], next_cursor: null };
+  },
+  /** GET /rules?since_version=: reglas nuevas o cambiadas (sin `since_version`, todas). */
+  async getRules(sinceVersion?: number): Promise<ApiRulesBundle> {
+    const res = await getJson<ApiRulesBundle>(`/rules${sinceVersion ? `?since_version=${sinceVersion}` : ''}`);
+    if (!res || !Array.isArray(res.indicators)) throw new HttpError('invalid response');
+    return res;
   },
   async createReading(body: Record<string, unknown>): Promise<ApiReadingCreated> {
     const res = await postJson<ApiReadingCreated>('/readings', body);

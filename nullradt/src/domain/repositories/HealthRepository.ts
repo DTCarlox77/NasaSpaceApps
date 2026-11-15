@@ -15,4 +15,9 @@ export interface HealthRepository {
    * en la cola de sync con su `client_uuid`. Sin API o sin código en el catálogo: solo local.
    */
   submitReading(input: ReadingInput): Promise<ReadingOutcome>;
+  /**
+   * GET /rules (solo lo nuevo desde la versión guardada) para evaluar sin conexión. false = sin conexión.
+   * `onlyIfMissing` = no hace nada si ya hay reglas guardadas.
+   */
+  refreshRules(opts?: { onlyIfMissing?: boolean }): Promise<boolean>;
 }

@@ -194,7 +194,11 @@
     "falseAlarmNote": "Falsa alarma (cancelada desde la app)",
     "closeForbiddenTitle": "No permitido",
     "closeForbidden": "Solo el comandante o el oficial médico pueden cerrar la emergencia.",
-    "closeErrorTitle": "No se pudo cancelar"
+    "closeErrorTitle": "No se pudo cancelar",
+    "solarEvent": "¿Hay un evento solar o alarma de radiación activa?",
+    "solarEventHint": "Con evento solar, el protocolo agrega su módulo de radiación.",
+    "startTriage": "Evaluar a la tripulación (triaje)",
+    "triageHint": "El protocolo te guía pregunta por pregunta, con voz y botones."
   },
   "voice": {
     "start": "Dictar con voz",
@@ -751,7 +755,8 @@
       "manual": "Manual",
       "camera": "Con cámara"
     },
-    "onDevice": "En el dispositivo"
+    "onDevice": "En el dispositivo",
+    "pendingConfirm": "calculado en el dispositivo, pendiente de confirmar"
   },
   "time": {
     "minutesAgo_one": "hace {{count}} min",
@@ -908,7 +913,8 @@
     "outcome": {
       "queued": "Sin conexión: la lectura quedó guardada en el dispositivo y el servidor la evaluará al sincronizar.",
       "local": "Guardada solo en el dispositivo.",
-      "error": "El servidor no aceptó la lectura. Revisa el valor e inténtalo de nuevo."
+      "error": "El servidor no aceptó la lectura. Revisa el valor e inténtalo de nuevo.",
+      "device": "Calculado en el dispositivo con las reglas del servidor, pendiente de confirmar al sincronizar."
     },
     "escalated": {
       "self": "Autocuidado",
@@ -1179,5 +1185,161 @@
     "pendingBody_one": "Queda {{count}} registro en el dispositivo; se enviará al reconectar.",
     "pendingBody_other": "Quedan {{count}} registros en el dispositivo; se enviarán al reconectar.",
     "doneBody": "Todo sincronizado con el servidor."
+  },
+  "triage": {
+    "title": "Triaje",
+    "disclaimer": "Apoyo a la decisión: sigue el protocolo del servidor. No diagnostica ni receta; lo que no cubre se pregunta a Tierra.",
+    "status": {
+      "pending": "Esperando “estoy bien”",
+      "active": "Activa",
+      "closed": "Cerrada (atendida)",
+      "cancelled": "Cancelada (falsa alarma)",
+      "merged": "Unida a otra sesión",
+      "queued": "Pendiente de envío: sin enlace",
+      "demo": "Modo demo: solo en el dispositivo"
+    },
+    "sessionStatus": "Estado",
+    "startedAt": "Inició",
+    "protocol": "Protocolo",
+    "protocolVersion": "v{{version}}",
+    "protocolFallback": "v{{version}} (copia de respaldo)",
+    "offline": "Sin enlace: se muestran los datos del dispositivo.",
+    "joined": "Te uniste a la emergencia que ya estaba abierta.",
+    "solarEvent": "Evento solar activo: incluye el módulo de radiación.",
+    "refresh": "Actualizar",
+    "heartbeat": "Mientras esta pantalla esté abierta se avisa cada 30 s que alguien atiende.",
+    "notFound": "No se encontró la sesión de emergencia en este dispositivo.",
+    "closedSession": "Esta emergencia ya está cerrada.",
+    "safety": {
+      "title": "Antes de ayudar",
+      "secureSelfTitle": "Ponte a salvo",
+      "secureSelfBody": "El protocolo pide que primero te pongas a salvo. Cuando lo estés, continúa.",
+      "nowSafe": "Ya estoy a salvo"
+    },
+    "roster": {
+      "title": "A quién evaluar",
+      "server": "Roster del servidor",
+      "crew": "Tripulación vigente guardada (sin enlace)",
+      "demo": "Tripulación de la maqueta (modo demo)",
+      "none": "Sin tripulación",
+      "empty": "No hay tripulación guardada. Conéctate una vez para descargarla.",
+      "assess": "Evaluar",
+      "reassess": "Reevaluar",
+      "resume": "Continuar",
+      "needSafe": "Contesta primero si estás a salvo."
+    },
+    "attention": {
+      "title": "Orden de atención",
+      "server": "Orden del servidor",
+      "device": "Calculado en la tableta con el protocolo, pendiente de confirmar",
+      "unassessed": "Sin evaluar",
+      "inProgress": "Evaluación en curso",
+      "empty": "Todavía no hay evaluaciones."
+    },
+    "category": {
+      "green": "Verde (leve)",
+      "yellow": "Amarillo (diferido)",
+      "red": "Rojo (inmediato)",
+      "black": "Negro (expectante)"
+    },
+    "flag": {
+      "none": "sin radiación",
+      "possible": "radiación posible",
+      "probable": "radiación probable"
+    },
+    "earth": {
+      "title": "Pregunta a Tierra",
+      "hint": "Lo que no cubre el protocolo se pregunta al flight surgeon. La respuesta llega a toda la tripulación.",
+      "placeholder": "Escribe o dicta tu pregunta",
+      "send": "Enviar a Tierra",
+      "demo": "Modo demo: no hay enlace con Tierra.",
+      "error": "No se pudo enviar la pregunta.",
+      "empty": "Escribe la pregunta primero."
+    },
+    "delivery": {
+      "inTransit": "En camino, llega a las {{time}}",
+      "delivered": "Entregada a las {{time}}",
+      "noLink": "Pendiente de envío: sin enlace",
+      "onboard": "Aviso a bordo inmediato"
+    },
+    "close": {
+      "title": "Cerrar la emergencia",
+      "hint": "Solo comandante u oficial médico. Mantén presionado para confirmar.",
+      "holdClosed": "Atendida",
+      "holdCancelled": "Falsa alarma",
+      "forbidden": "Solo el comandante o el oficial médico pueden cerrarla.",
+      "queued": "Cierre en cola: se enviará cuando vuelva el enlace.",
+      "done": "Emergencia cerrada.",
+      "error": "No se pudo cerrar.",
+      "note": "Falsa alarma (cerrada desde el triaje)"
+    },
+    "assess": {
+      "title": "Evaluar a {{callSign}}",
+      "step": "Pregunta {{n}}",
+      "loading": "Cargando el protocolo…",
+      "yes": "Sí",
+      "no": "No",
+      "done": "Listo",
+      "numberPlaceholder": "Número",
+      "noneExclusive": "“Ninguno” no va con otras opciones.",
+      "back": "Atrás",
+      "repeat": "Repetir",
+      "note": "Nota del protocolo",
+      "observable": "Signo observable: respóndelo tú.",
+      "stoppedTitle": "Ponte a salvo",
+      "stoppedBody": "El protocolo se detiene: primero ponte a salvo.",
+      "classifying": "Clasificando…",
+      "protocolError": "El protocolo no se pudo evaluar con estas respuestas.",
+      "exit": "Salir"
+    },
+    "result": {
+      "title": "Clasificación",
+      "device": "Calculada en la tableta",
+      "pending": "Pendiente de confirmar por el servidor",
+      "server": "Confirmada por el servidor",
+      "mismatch": "La tableta calculó otra cosa: manda la clasificación del servidor.",
+      "deviceWas": "La tableta calculó: {{value}}",
+      "mismatchFields": "Difiere en: {{fields}}",
+      "queued": "En cola con prioridad de emergencia: se enviará al volver el enlace.",
+      "local": "Modo demo: queda solo en el dispositivo.",
+      "sendError": "El servidor no aceptó la evaluación ({{code}}).",
+      "retry": "Reintentar el envío",
+      "notices": "Avisos",
+      "next": "Evaluar a {{callSign}}",
+      "backToSession": "Volver a la sesión",
+      "reassess": "Reevaluar",
+      "level": {
+        "crew": "Tripulación",
+        "flight_surgeon": "Tierra (flight surgeon)",
+        "self_care": "Autocuidado",
+        "behavioral_health": "Salud conductual"
+      }
+    },
+    "voice": {
+      "title": "Voz",
+      "mic": "Responder por voz",
+      "buttonsOnly": "Solo botones",
+      "listening": "Escuchando…",
+      "speaking": "Leyendo…",
+      "heard": "Escuché: “{{text}}”",
+      "understood": "Entendí: {{answer}}. ¿Correcto?",
+      "confirmYes": "Sí, correcto",
+      "confirmNo": "No",
+      "notUnderstood": "No te entendí. Repite, por favor.",
+      "switchToButtons": "No te entendí. Usa los botones en pantalla.",
+      "buttonsMode": "Respondes con botones. Toca “Responder por voz” para volver a usar la voz.",
+      "options": "Opciones: {{options}}.",
+      "multiHint": "Puedes decir varias.",
+      "permissionDenied": "Sin permiso de micrófono: responde con los botones.",
+      "unavailable": "Esta versión de la app no reconoce voz: responde con los botones (la pregunta sí se lee en voz alta).",
+      "systemDictation": "Toca “Responder por voz” para dictar con el reconocedor del sistema.",
+      "noOfflineModel": "Sin modelo de voz sin conexión para este idioma: instálalo desde el Laboratorio de voz.",
+      "and": "y",
+      "commands": "Di la respuesta, o “repetir”, “botones” o “atrás”."
+    },
+    "sync": {
+      "confirmedTitle": "Triaje sincronizado",
+      "confirmedBody": "El servidor confirmó la evaluación hecha sin conexión."
+    }
   }
 }

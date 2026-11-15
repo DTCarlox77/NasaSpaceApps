@@ -194,7 +194,11 @@
     "falseAlarmNote": "False alarm (cancelled from the app)",
     "closeForbiddenTitle": "Not allowed",
     "closeForbidden": "Only the commander or the crew medical officer can close the emergency.",
-    "closeErrorTitle": "Couldn't cancel"
+    "closeErrorTitle": "Couldn't cancel",
+    "solarEvent": "Is there an active solar event or radiation alarm?",
+    "solarEventHint": "With a solar event, the protocol adds its radiation module.",
+    "startTriage": "Assess the crew (triage)",
+    "triageHint": "The protocol guides you question by question, with voice and buttons."
   },
   "voice": {
     "start": "Dictate by voice",
@@ -751,7 +755,8 @@
       "manual": "Manual",
       "camera": "Camera-assisted"
     },
-    "onDevice": "On device"
+    "onDevice": "On device",
+    "pendingConfirm": "computed on the device, pending confirmation"
   },
   "time": {
     "minutesAgo_one": "{{count}} min ago",
@@ -908,7 +913,8 @@
     "outcome": {
       "queued": "Offline: the reading was saved on the device and the server will evaluate it when syncing.",
       "local": "Saved on the device only.",
-      "error": "The server didn't accept the reading. Check the value and try again."
+      "error": "The server didn't accept the reading. Check the value and try again.",
+      "device": "Computed on the device with the server rules, pending confirmation when syncing."
     },
     "escalated": {
       "self": "Self-care",
@@ -1179,5 +1185,161 @@
     "pendingBody_one": "{{count}} record is still on the device; it will be sent when back online.",
     "pendingBody_other": "{{count}} records are still on the device; they will be sent when back online.",
     "doneBody": "Everything is synced with the server."
+  },
+  "triage": {
+    "title": "Triage",
+    "disclaimer": "Decision support: follows the server's protocol. It does not diagnose or prescribe; anything it doesn't cover goes to Earth.",
+    "status": {
+      "pending": "Waiting for “I’m OK”",
+      "active": "Active",
+      "closed": "Closed (handled)",
+      "cancelled": "Cancelled (false alarm)",
+      "merged": "Joined another session",
+      "queued": "Pending: no link",
+      "demo": "Demo mode: device only"
+    },
+    "sessionStatus": "Status",
+    "startedAt": "Started",
+    "protocol": "Protocol",
+    "protocolVersion": "v{{version}}",
+    "protocolFallback": "v{{version}} (backup copy)",
+    "offline": "No link: showing the data on this device.",
+    "joined": "You joined the emergency that was already open.",
+    "solarEvent": "Solar event active: includes the radiation module.",
+    "refresh": "Refresh",
+    "heartbeat": "While this screen is open, a heartbeat every 30 s tells Earth someone is attending.",
+    "notFound": "This emergency session was not found on this device.",
+    "closedSession": "This emergency is already closed.",
+    "safety": {
+      "title": "Before helping",
+      "secureSelfTitle": "Get to safety",
+      "secureSelfBody": "The protocol asks you to get to safety first. When you are safe, continue.",
+      "nowSafe": "I’m safe now"
+    },
+    "roster": {
+      "title": "Who to assess",
+      "server": "Server roster",
+      "crew": "Current crew saved on device (no link)",
+      "demo": "Mock crew (demo mode)",
+      "none": "No crew",
+      "empty": "No crew saved. Connect once to download it.",
+      "assess": "Assess",
+      "reassess": "Reassess",
+      "resume": "Continue",
+      "needSafe": "First answer whether you are safe."
+    },
+    "attention": {
+      "title": "Order of care",
+      "server": "Server order",
+      "device": "Computed on the tablet with the protocol, pending confirmation",
+      "unassessed": "Not assessed",
+      "inProgress": "Assessment in progress",
+      "empty": "No assessments yet."
+    },
+    "category": {
+      "green": "Green (minor)",
+      "yellow": "Yellow (delayed)",
+      "red": "Red (immediate)",
+      "black": "Black (expectant)"
+    },
+    "flag": {
+      "none": "no radiation",
+      "possible": "possible radiation",
+      "probable": "probable radiation"
+    },
+    "earth": {
+      "title": "Ask Earth",
+      "hint": "Anything the protocol does not cover goes to the flight surgeon. The answer reaches the whole crew.",
+      "placeholder": "Type or dictate your question",
+      "send": "Send to Earth",
+      "demo": "Demo mode: there is no link to Earth.",
+      "error": "The question could not be sent.",
+      "empty": "Write the question first."
+    },
+    "delivery": {
+      "inTransit": "On its way, arrives at {{time}}",
+      "delivered": "Delivered at {{time}}",
+      "noLink": "Pending: no link",
+      "onboard": "Immediate on-board notice"
+    },
+    "close": {
+      "title": "Close the emergency",
+      "hint": "Commander or medical officer only. Press and hold to confirm.",
+      "holdClosed": "Handled",
+      "holdCancelled": "False alarm",
+      "forbidden": "Only the commander or the medical officer can close it.",
+      "queued": "Close queued: it will be sent when the link is back.",
+      "done": "Emergency closed.",
+      "error": "It could not be closed.",
+      "note": "False alarm (closed from triage)"
+    },
+    "assess": {
+      "title": "Assess {{callSign}}",
+      "step": "Question {{n}}",
+      "loading": "Loading the protocol…",
+      "yes": "Yes",
+      "no": "No",
+      "done": "Done",
+      "numberPlaceholder": "Number",
+      "noneExclusive": "“None” cannot go with other options.",
+      "back": "Back",
+      "repeat": "Repeat",
+      "note": "Protocol note",
+      "observable": "Observable sign: you answer it.",
+      "stoppedTitle": "Get to safety",
+      "stoppedBody": "The protocol stops: get to safety first.",
+      "classifying": "Classifying…",
+      "protocolError": "The protocol could not be evaluated with these answers.",
+      "exit": "Exit"
+    },
+    "result": {
+      "title": "Classification",
+      "device": "Computed on the tablet",
+      "pending": "Pending confirmation by the server",
+      "server": "Confirmed by the server",
+      "mismatch": "The tablet computed something else: the server's classification prevails.",
+      "deviceWas": "The tablet computed: {{value}}",
+      "mismatchFields": "Differs in: {{fields}}",
+      "queued": "Queued with emergency priority: it will be sent when the link is back.",
+      "local": "Demo mode: it stays on this device only.",
+      "sendError": "The server did not accept the assessment ({{code}}).",
+      "retry": "Retry sending",
+      "notices": "Notices",
+      "next": "Assess {{callSign}}",
+      "backToSession": "Back to the session",
+      "reassess": "Reassess",
+      "level": {
+        "crew": "Crew",
+        "flight_surgeon": "Earth (flight surgeon)",
+        "self_care": "Self-care",
+        "behavioral_health": "Behavioral health"
+      }
+    },
+    "voice": {
+      "title": "Voice",
+      "mic": "Answer by voice",
+      "buttonsOnly": "Buttons only",
+      "listening": "Listening…",
+      "speaking": "Reading…",
+      "heard": "I heard: “{{text}}”",
+      "understood": "I understood: {{answer}}. Is that right?",
+      "confirmYes": "Yes, correct",
+      "confirmNo": "No",
+      "notUnderstood": "I didn't understand. Please repeat.",
+      "switchToButtons": "I didn't understand. Use the buttons on screen.",
+      "buttonsMode": "You are answering with buttons. Tap “Answer by voice” to use your voice again.",
+      "options": "Options: {{options}}.",
+      "multiHint": "You can say several.",
+      "permissionDenied": "No microphone permission: answer with the buttons.",
+      "unavailable": "This build of the app cannot recognize speech: answer with the buttons (questions are still read aloud).",
+      "systemDictation": "Tap “Answer by voice” to dictate with the system recognizer.",
+      "noOfflineModel": "No offline speech model for this language: install it from the Voice lab.",
+      "and": "and",
+      "commands": "Say the answer, or “repeat”, “buttons” or “back”."
+    },
+    "sync": {
+      "confirmedTitle": "Triage synced",
+      "confirmedBody": "The server confirmed the assessment made offline."
+    }
   }
 }

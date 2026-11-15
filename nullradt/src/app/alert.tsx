@@ -52,10 +52,13 @@ export default function AlertScreen() {
   const withApi = apiEnabled();
   const [severity, setSeverity] = useState<ReportSeverity>('critical');
   const [safe, setSafe] = useState<'yes' | 'no'>('yes');
+  const [solar, setSolar] = useState<'yes' | 'no'>('no');
   const [phase, setPhase] = useState<Phase>('idle');
   const [note, setNote] = useState('');
   const [crewAlertId, setCrewAlertId] = useState<string | null>(null);
   const [emergency, setEmergency] = useState<EmergencySessionInfo | null>(null);
+  /** Sesión para el triaje: id del servidor, o el client_uuid si quedó en cola / modo demo. */
+  const [triageRef, setTriageRef] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
   const lang = i18n.language === 'es' ? 'es' : 'en';
 
@@ -76,9 +79,11 @@ export default function AlertScreen() {
       missionDay: mission?.missionDay,
       note: note.trim() || undefined,
       responderSafe: severity === 'critical' ? safe === 'yes' : undefined,
+      solarEventActive: severity === 'critical' ? solar === 'yes' : undefined,
     });
     setPhase(result.status);
     if (result.status === 'sent') setEmergency(result.session);
+    if (severity === 'critical') setTriageRef(result.status === 'sent' && result.session ? result.session.id : result.report.id);
     if (result.status === 'queued') void refreshPendingCount();
     if (!withApi) {
       // Modo demo: la señal llega a la tripulación de forma simulada.
@@ -95,7 +100,7 @@ export default function AlertScreen() {
       lang,
     );
     if (result.status === 'queued') void runSync();
-  }, [severity, trigger, lang, mission?.missionDay, note, safe, t, withApi]);
+  }, [severity, trigger, lang, mission?.missionDay, note, safe, solar, t, withApi]);
 
   const done = phase === 'sent' || phase === 'queued' || phase === 'local' || phase === 'cancelled';
   const canClose = withApi && phase === 'sent' && !!emergency && canCloseEmergency(session);
@@ -177,7 +182,22 @@ export default function AlertScreen() {
               {withApi && severity === 'caution' && <AppText variant="caption" color="textMuted">{t('alert.cautionLocalHint')}</AppText>}
             </View>
 
-            {withApi && severity === 'critical' && (
+            {severity === 'critical' && (
+              <View style={{ gap: spacing.sm }}>
+                <AppText variant="title">{t('alert.solarEvent')}</AppText>
+                <SegmentedControl<'yes' | 'no'>
+                  value={solar}
+                  onChange={setSolar}
+                  options={[
+                    { value: 'no', label: t('common.no') },
+                    { value: 'yes', label: t('common.yes') },
+                  ]}
+                />
+                <AppText variant="caption" color="textMuted">{t('alert.solarEventHint')}</AppText>
+              </View>
+            )}
+
+            {severity === 'critical' && (
               <View style={{ gap: spacing.sm }}>
                 <AppText variant="title">{t('alert.responderSafe')}</AppText>
                 <SegmentedControl<'yes' | 'no'>
@@ -246,9 +266,23 @@ export default function AlertScreen() {
                     <InfoRow label={t('alert.sessionStatus')} value={t(`alert.statuses.${emergency.status}`)} />
                     <InfoRow label={t('alert.startedAt')} value={new Date(emergency.startedAt).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })} />
                     {emergency.roster.length > 0 && <InfoRow label={t('alert.roster')} value={emergency.roster.join(', ')} />}
-                    <AppText variant="caption" color="textMuted">{t('alert.noTriageYet')}</AppText>
                     <Button label={t('alert.refresh')} variant="outline" size="sm" leftIcon="refresh" onPress={refresh} />
                   </Card>
+                )}
+
+                {/* Triaje: la sesión que abrió (o a la que se unió) esta alerta. Funciona también sin conexión y en demo. */}
+                {triageRef && (
+                  <View style={{ gap: spacing.sm }}>
+                    <Button
+                      label={t('alert.startTriage')}
+                      leftIcon="medkit"
+                      size="lg"
+                      variant="danger"
+                      fullWidth
+                      onPress={() => router.push({ pathname: '/triage/[sessionId]', params: { sessionId: triageRef } })}
+                    />
+                    <AppText variant="caption" color="textMuted" align="center">{t('alert.triageHint')}</AppText>
+                  </View>
                 )}
 
                 {(!withApi || canClose) && (
