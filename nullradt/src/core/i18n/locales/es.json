@@ -1,0 +1,918 @@
+{
+  "app": {
+    "name": "NullRadt",
+    "tagline": "Monitoreo de salud para misiones espaciales"
+  },
+  "tabs": {
+    "home": "Inicio",
+    "monitor": "Monitor",
+    "routine": "Rutina",
+    "wellbeing": "Bienestar",
+    "more": "Más"
+  },
+  "common": {
+    "syntheticData": "Datos sintéticos",
+    "comingSoon": "Próximamente",
+    "source": "Fuente",
+    "learnMore": "Conoce más",
+    "seeAll": "Ver todo",
+    "notifications": "Notificaciones",
+    "profile": "Perfil",
+    "back": "Atrás"
+  },
+  "disclaimer": "Herramienta de apoyo a la decisión. No es un diagnóstico médico. Ante cualquier duda, consulta a tu tripulación o al flight surgeon.",
+  "status": {
+    "title": "Semáforo de salud",
+    "normal": "Normal",
+    "caution": "Precaución",
+    "critical": "Crítico",
+    "normalHint": "Dentro del rango del protocolo. Sigue con tu rutina.",
+    "cautionHint": "Fuera del rango: sigue la guía y vuelve a medir.",
+    "criticalHint": "Informa ahora al personal médico de la tripulación.",
+    "unevaluated": "No evaluado",
+    "unevaluatedHint": "Se guarda para revisión experta; no hay regla validada a bordo."
+  },
+  "escalation": {
+    "self": "Autocuidado",
+    "crew": "Tripulación",
+    "flightSurgeon": "Flight surgeon"
+  },
+  "home": {
+    "greeting": {
+      "morning": "Buenos días, {{name}}",
+      "afternoon": "Buenas tardes, {{name}}",
+      "evening": "Buenas noches, {{name}}"
+    },
+    "startCheck": "Iniciar revisión",
+    "hazardsTitle": "Los 5 peligros del vuelo espacial",
+    "today": "Hoy",
+    "missionDay": "Día de misión",
+    "nextCheck": "Próxima medición en {{hours}} h",
+    "dailyCheckIn": "Check-in diario {{done}}/{{total}}",
+    "streak": "Racha de {{count}} días",
+    "environmentStation": "Estación espacial",
+    "gravityLabel": "{{g}} g",
+    "statusTitle": "Semáforo de salud",
+    "missionEyebrow": "{{mission}} · Día {{day}}",
+    "allInRange": "Todos los indicadores evaluados están dentro del rango.",
+    "needAttention_one": "{{count}} indicador necesita tu atención.",
+    "needAttention_other": "{{count}} indicadores necesitan tu atención.",
+    "dailyCheckInBtn": "Check-in diario",
+    "registerMeasurement": "Registrar medición",
+    "tapSystem": "Toca un sistema del cuerpo para revisarlo",
+    "bodySystems": "Sistemas del cuerpo",
+    "exploreSystem": "Explorar sistema",
+    "allIndicators": "Todos los indicadores",
+    "tracked": "{{count}} indicadores monitoreados",
+    "healthOverview": "Resumen de salud",
+    "needsAttentionTitle": "Necesita atención",
+    "protocolScreening": "Evaluación basada en protocolo. No es un diagnóstico médico.",
+    "missionProgress": "Progreso de la misión",
+    "checkDone": "Hecho hoy. Gracias por registrarlo.",
+    "checkPending": "Pendiente: toma 1 minuto.",
+    "crewTitle": "Tu tripulación"
+  },
+  "hazards": {
+    "radiation": {
+      "title": "Radiación espacial",
+      "summary": "Dosis acumulada, eventos solares, riesgo inmune y de cáncer."
+    },
+    "isolation": {
+      "title": "Aislamiento y confinamiento",
+      "summary": "Ánimo, sueño, estrés, cognición y convivencia."
+    },
+    "distance": {
+      "title": "Distancia de la Tierra",
+      "summary": "Retraso de comunicación y autonomía médica."
+    },
+    "gravity": {
+      "title": "Campos de gravedad",
+      "summary": "Hueso, músculo, corazón, fluidos y visión."
+    },
+    "environment": {
+      "title": "Ambientes hostiles y cerrados",
+      "summary": "CO₂, temperatura, ruido, microbios e inmunidad."
+    }
+  },
+  "body": {
+    "title": "Monitoreo de salud",
+    "subtitle": "Elige un sistema del cuerpo para ver qué hace, cómo está y qué medir después.",
+    "orChoose": "O elige de la lista",
+    "callout": {
+      "normal": "Normal. Todas las lecturas recientes de este sistema están dentro del rango del protocolo.",
+      "caution": "Precaución. Al menos una lectura reciente está fuera del rango del protocolo. Sigue la guía de abajo.",
+      "critical": "Crítico. Una lectura reciente está muy fuera del rango del protocolo. Informa a tu oficial médico de la tripulación.",
+      "unevaluated": "No evaluado. Las lecturas de este sistema se guardan, pero no hay una regla validada a bordo para evaluarlas."
+    },
+    "details": "Detalles",
+    "measure": "Medir",
+    "noReadings": "Aún no hay lecturas",
+    "recommendations": "Recomendaciones",
+    "protocolNote": "Guía del protocolo a bordo. No reemplaza a tu flight surgeon."
+  },
+  "log": {
+    "title": "Registrar medición",
+    "subtitle": "Texto, toques o cámara. Funciona sin conexión."
+  },
+  "settings": {
+    "title": "Ajustes",
+    "appearance": "Apariencia",
+    "language": "Idioma",
+    "system": "Sistema",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "spanish": "Español",
+    "english": "English",
+    "about": "Acerca de",
+    "aboutBody": "Proyecto para NASA Space Apps Challenge.",
+    "voiceLab": "Laboratorio de voz",
+    "voiceLabBody": "Prueba texto a voz y voz a texto.",
+    "notificationsLab": "Notificaciones de prueba",
+    "notificationsLabBody": "Genera avisos in-app y del sistema.",
+    "security": "Seguridad",
+    "signedInAs": "Sesión iniciada como {{name}}",
+    "biometricHint": "Pide tu huella o rostro al abrir la app y tras 30 s en segundo plano.",
+    "signOut": "Cerrar sesión",
+    "authDisabled": "Inicio de sesión desactivado en esta versión de prueba: entras directo con un astronauta de maqueta. Se activa con EXPO_PUBLIC_REQUIRE_AUTH=true."
+  },
+  "alert": {
+    "title": "Alerta de emergencia",
+    "subtitle": "Elige la gravedad y mantén presionado el botón 1 s para enviar la señal.",
+    "openedByShake": "Abierta al agitar el teléfono",
+    "severity": "Gravedad",
+    "holdToSend": "Mantén para enviar",
+    "holdHint": "Mantén presionado 1 segundo para enviar la señal",
+    "sending": "Enviando…",
+    "sentTitle": "Informe enviado",
+    "sentBody": "El sistema de la misión recibió tu informe.",
+    "queuedTitle": "Guardado sin conexión",
+    "queuedBody": "No hay conexión con el servidor. El informe quedó en cola y se enviará automáticamente. Si es urgente, avisa en persona a tu tripulación.",
+    "close": "Cerrar",
+    "cancel": "Cancelar",
+    "open": "Abrir alerta",
+    "voiceIntro": "Protocolo de emergencia activado. Mantenga presionado el botón para transmitir la señal.",
+    "voiceSent": "Señal de emergencia transmitida. Gravedad: {{severity}}. La tripulación ha sido notificada.",
+    "voiceQueued": "Enlace no disponible. La señal quedó en cola y se transmitirá al restablecer la conexión.",
+    "note": "¿Qué sientes? (opcional)",
+    "signalSent": "Señal enviada",
+    "crewNotified": "Tu tripulación fue notificada.",
+    "holdToDeactivate": "Mantén para desactivar",
+    "deactivateHint": "¿Fue un error? Mantén presionado 5 segundos para desactivarla.",
+    "cancelledTitle": "Alerta desactivada",
+    "cancelledBody": "Se avisó a la tripulación de que fue un error."
+  },
+  "voice": {
+    "start": "Dictar con voz",
+    "stop": "Detener dictado",
+    "listening": "Escuchando… habla ahora.",
+    "hintMic": "Toca el micrófono para dictar.",
+    "hintKeyboard": "Puedes dictar con el micrófono del teclado.",
+    "error": {
+      "permission": "Permiso de micrófono denegado. Actívalo en Ajustes del teléfono.",
+      "unavailable": "El dictado no está disponible en este dispositivo.",
+      "failed": "No se entendió. Intenta de nuevo o escríbelo.",
+      "offlineUnavailable": "No hay modelo de voz offline para este idioma. Descárgalo o permite usar conexión."
+    },
+    "hintMicLang": "Toca el micrófono para dictar en {{lang}}.",
+    "langName": {
+      "es": "español",
+      "en": "inglés"
+    }
+  },
+  "voiceLab": {
+    "title": "Laboratorio de voz",
+    "languageFrom": "Idioma: {{language}} (según Ajustes)",
+    "sample": "Frecuencia cardíaca en rango normal. Recuerda registrar tu presión arterial antes de dormir.",
+    "ttsTitle": "Texto a voz",
+    "ttsPlaceholder": "Escribe algo para escucharlo",
+    "voiceOffline": "Voz local: {{name}}",
+    "voiceSystemDefault": "Voz predeterminada del sistema",
+    "rate": {
+      "slow": "Lento",
+      "normal": "Normal",
+      "fast": "Rápido"
+    },
+    "speak": "Hablar",
+    "stop": "Detener",
+    "sttTitle": "Voz a texto",
+    "sttExpoGo": "Micrófono propio no disponible en Expo Go",
+    "sttExpoGoBody": "Para probar el reconocimiento integrado necesitas un development build. Mientras tanto, usa el micrófono del teclado en el campo de abajo.",
+    "sttOffline": "Reconocimiento sin conexión ({{locale}})",
+    "sttNeedsModel": "Sin modelo offline para {{locale}}",
+    "downloadModel": "Descargar modelo offline",
+    "download": {
+      "download_success": "Modelo descargado. Ya funciona sin conexión.",
+      "opened_dialog": "Se abrió el diálogo del sistema para descargar el modelo.",
+      "download_scheduled": "Descarga programada. Estará disponible en unos minutos.",
+      "unsupported": "Este dispositivo no permite descargar el modelo desde la app."
+    },
+    "networkPolicy": "Si no hay modelo offline:",
+    "policy": {
+      "offline": "Solo offline",
+      "fallback": "Usar conexión"
+    },
+    "modeOffline": "sin conexión",
+    "modeOnline": "en línea",
+    "transcriptEmpty": "Aquí aparecerá lo que digas…",
+    "readBack": "Leer en voz alta",
+    "clear": "Limpiar",
+    "footer": "El idioma de voz sigue al de la app. Cámbialo en Ajustes → Idioma."
+  },
+  "permissions": {
+    "title": "Permiso de notificaciones",
+    "granted": "Activadas",
+    "denied": "No activadas: las del sistema no se mostrarán.",
+    "blocked": "Bloqueadas. Actívalas en los ajustes del teléfono.",
+    "allow": "Permitir notificaciones",
+    "openSettings": "Abrir ajustes"
+  },
+  "notificationsLab": {
+    "title": "Notificaciones de prueba",
+    "level": "Nivel",
+    "levels": {
+      "info": "Info",
+      "normal": "Normal",
+      "caution": "Aviso",
+      "critical": "Crítico"
+    },
+    "inAppTitle": "Dentro de la app",
+    "inAppBody": "Aparece desde arriba con una barra que se vacía hasta ocultarse. Tócala o deslízala hacia arriba para cerrarla; mantenla presionada para pausarla.",
+    "showInApp": "Mostrar aviso",
+    "burst": "Encolar los 4 niveles",
+    "systemTitle": "Del sistema",
+    "systemBody": "Notificación local del teléfono; no necesita internet. Con la app abierta se muestra como aviso in-app; usa \"en 5 s\" y sal de la app para verla en la barra del sistema.",
+    "sendNow": "Enviar ahora",
+    "sendIn5": "Enviar en 5 s",
+    "sentNow": "Notificación enviada.",
+    "scheduled": "Programada en {{seconds}} s. Sal de la app para verla.",
+    "footer": "Las notificaciones de esta pantalla usan datos sintéticos.",
+    "samples": {
+      "info": {
+        "title": "Recordatorio",
+        "body": "Hora de registrar tus horas de sueño."
+      },
+      "normal": {
+        "title": "Medición registrada",
+        "body": "Frecuencia cardíaca dentro del rango normal."
+      },
+      "caution": {
+        "title": "Revisa este indicador",
+        "body": "Tu temperatura subió. Sigue la guía y vuelve a medir."
+      },
+      "critical": {
+        "title": "Atención inmediata",
+        "body": "Valor crítico detectado. Avisa a la tripulación o al flight surgeon."
+      }
+    }
+  },
+  "auth": {
+    "hero": {
+      "title": "Iniciar sesión"
+    },
+    "steps": {
+      "label": "Pasos de inicio de sesión",
+      "identify": "Identificarse",
+      "mission": "Elegir misión"
+    },
+    "thisDevice": "Este dispositivo",
+    "idAndPassword": "ID y contraseña",
+    "roles": {
+      "astronaut": "Astronauta",
+      "crew": "Tripulación",
+      "flightSurgeon": "Flight surgeon"
+    },
+    "scan": {
+      "idle": "Verifica tu identidad con tu {{method}}",
+      "reading": "Leyendo…",
+      "verified": "Identidad verificada"
+    },
+    "verifying": "Verificando",
+    "verifyWith": "Verificar con {{method}}",
+    "verifyIdentity": "Verificar identidad",
+    "verified": "Verificado",
+    "astronautId": "ID de astronauta",
+    "password": "Contraseña",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
+    "saveBiometric": "Guardar datos biométricos ({{method}})",
+    "saveBiometricHint": "Tu sesión se guarda cifrada. Tus datos biométricos nunca salen del teléfono.",
+    "biometricNotEnrolled": "Registra una huella o rostro en los ajustes del teléfono para usar el desbloqueo biométrico.",
+    "biometricNoHardware": "Este dispositivo no tiene sensor biométrico.",
+    "biometricPrompt": "Confirma tu identidad",
+    "biometricSaved": "{{method}} activado",
+    "biometricSavedBody": "La próxima vez podrás entrar sin contraseña.",
+    "biometricNotSaved": "Biometría no activada",
+    "biometricNotSavedBody": "Puedes activarla luego en Ajustes → Seguridad.",
+    "errors": {
+      "idFormat": "Escribe tu ID de astronauta con el formato NR-A-0000.",
+      "passwordRequired": "Escribe tu contraseña.",
+      "invalid": "ID o contraseña incorrectos.",
+      "network": "No se pudo conectar con el servidor. Intenta de nuevo."
+    },
+    "demoHint": "Prototipo sin servidor: cualquier contraseña funciona. Datos sintéticos.",
+    "demoSession": "Sesión demo",
+    "unlockUnavailable": "La biometría ya no está disponible. Entra con tu contraseña.",
+    "unlockLockout": "Demasiados intentos. Usa el PIN del teléfono o tu contraseña.",
+    "unlockFailed": "No se reconoció. Intenta de nuevo.",
+    "method": {
+      "fingerprint": "huella",
+      "face": "Face ID",
+      "iris": "iris",
+      "generic": "biometría"
+    },
+    "methodTitle": {
+      "fingerprint": "Huella",
+      "face": "Face ID",
+      "iris": "Iris",
+      "generic": "Biometría"
+    }
+  },
+  "mission": {
+    "selectTitle": "Selecciona tu misión",
+    "selectBody": "Tu plan de salud, rutinas y umbrales del protocolo siguen a la misión seleccionada.",
+    "current": "Misión actual",
+    "day": "Día de misión",
+    "dayOf": "{{day}} de {{total}}",
+    "crew": "Tripulación",
+    "crewCount": "{{count}} astronautas",
+    "location": "Ubicación",
+    "notStarted": "Esta misión no ha comenzado. El expediente de salud se abre el día 1 de la misión.",
+    "continue": "Continuar al panel",
+    "notAvailable": "Aún no disponible",
+    "phase": {
+      "active": "En curso",
+      "scheduled": "Programada",
+      "training": "Entrenamiento"
+    }
+  },
+  "connectivity": {
+    "offlineTitle": "Sin enlace con la Tierra — acceso offline",
+    "offlineBody": "Tus registros siguen cifrados en este dispositivo hasta la próxima ventana de enlace.",
+    "onlineTitle": "Enlace con la Tierra disponible",
+    "onlineBody": "Los registros se sincronizarán automáticamente."
+  },
+  "nav": {
+    "sos": "SOS",
+    "online": "En línea",
+    "offline": "Sin conexión"
+  },
+  "routine": {
+    "title": "Rutina y recordatorios",
+    "subtitle": "Tu día a bordo. Marca lo que completes y activa avisos.",
+    "next": "Siguiente",
+    "allDone": "Rutina de hoy completa",
+    "progress": "{{done}} de {{total}} hechas",
+    "enableAll": "Activar todos los recordatorios",
+    "reminder": "Recordatorio",
+    "tapToOpen": "Tocar para abrir",
+    "reminderBody": "Es hora ({{time}}). Ábrelo en NullRadt.",
+    "reminderOn": "Recordatorio activado",
+    "reminderOnBody": "Te avisaremos cada día a las {{time}}.",
+    "reminderError": "No se pudo programar el recordatorio.",
+    "permissionTitle": "Notificaciones desactivadas",
+    "permissionBody": "Activa las notificaciones para recibir recordatorios.",
+    "categories": {
+      "health": "Salud",
+      "exercise": "Ejercicio",
+      "nutrition": "Nutrición",
+      "rest": "Descanso",
+      "work": "Trabajo"
+    },
+    "items": {
+      "wake": {
+        "title": "Despertar e higiene",
+        "body": "Agua, higiene y revisar el plan del día."
+      },
+      "dailyCheck": {
+        "title": "Check diario",
+        "body": "Ánimo, energía, sueño y síntomas."
+      },
+      "vitals": {
+        "title": "Signos vitales",
+        "body": "Presión arterial y frecuencia cardiaca."
+      },
+      "breakfast": {
+        "title": "Desayuno",
+        "body": "Incluye calcio y vitamina D."
+      },
+      "hydration1": {
+        "title": "Hidratación",
+        "body": "Bebe agua: en microgravedad la sed se percibe menos."
+      },
+      "aerobic": {
+        "title": "Ejercicio aeróbico",
+        "body": "Cinta o cicloergómetro, 60 min."
+      },
+      "lunch": {
+        "title": "Almuerzo",
+        "body": "Comida con la tripulación."
+      },
+      "hydration2": {
+        "title": "Hidratación",
+        "body": "Otro vaso de agua."
+      },
+      "resistance": {
+        "title": "Ejercicio de fuerza",
+        "body": "Resistencia (tipo ARED) para huesos y músculos."
+      },
+      "eyes": {
+        "title": "Revisión visual",
+        "body": "Nota cualquier cambio en la visión."
+      },
+      "dinner": {
+        "title": "Cena",
+        "body": "Evita cafeína a partir de ahora."
+      },
+      "winddown": {
+        "title": "Desconexión",
+        "body": "Baja la luz y deja las pantallas."
+      },
+      "sleep": {
+        "title": "Dormir",
+        "body": "Objetivo: 8 h y 30 min de sueño."
+      },
+      "brainTests": {
+        "title": "Tests diarios",
+        "body": "Reflejos, visión, agilidad mental y memoria (6 min)."
+      }
+    },
+    "source": "Rutina de ejemplo inspirada en el día típico en la EEI (≈ 2 h de ejercicio diario, NASA). Datos sintéticos."
+  },
+  "wellbeing": {
+    "title": "Bienestar",
+    "subtitle": "Check diario confidencial: solo se guarda en este dispositivo.",
+    "streak": "Racha (días)",
+    "total": "Checks",
+    "today": "Hoy",
+    "formEyebrow": "1 minuto",
+    "formTitle": "¿Cómo estás hoy?",
+    "mood": "Ánimo",
+    "energy": "Energía",
+    "stress": "Estrés",
+    "low": "Bajo",
+    "high": "Alto",
+    "sleep": "Horas de sueño",
+    "sleepShort": "Sueño",
+    "hours_one": "{{count}} h",
+    "hours_other": "{{count}} h",
+    "symptoms": "Síntomas",
+    "symptomList": {
+      "headache": "Dolor de cabeza",
+      "nausea": "Náuseas",
+      "congestion": "Congestión",
+      "backPain": "Dolor de espalda",
+      "blurredVision": "Visión borrosa",
+      "insomnia": "Insomnio",
+      "fatigue": "Fatiga",
+      "none": "Ninguno"
+    },
+    "note": "Nota (opcional)",
+    "notePlaceholder": "Escribe o dicta cómo te sientes",
+    "submit": "Guardar check",
+    "completeScales": "Responde ánimo, energía y estrés para guardar.",
+    "saved": "Check guardado",
+    "savedBody": "Gracias. Se guardó en tu dispositivo.",
+    "doneTitle": "Check de hoy listo",
+    "doneBody": "Puedes editarlo durante el día.",
+    "allGood": "Todo en orden. Sigue así.",
+    "flags": {
+      "lowMood": "Ánimo bajo: considera hablar con tu tripulación o con el equipo de apoyo psicológico.",
+      "highStress": "Estrés alto: prueba una pausa de respiración y comenta tu carga de trabajo.",
+      "poorSleep": "Dormiste menos de 6 h: revisa tu rutina de desconexión.",
+      "vision": "Visión borrosa: regístralo y revisa el sistema Ojos en Monitor."
+    },
+    "goMonitor": "Ir a Monitor",
+    "edit": "Editar check",
+    "history": "Últimos días",
+    "historyLine": "Sueño {{sleep}} h · Energía {{energy}}/5 · Estrés {{stress}}/5",
+    "private": "Tus respuestas no se comparten automáticamente. No es una evaluación médica."
+  },
+  "more": {
+    "title": "Más",
+    "items": {
+      "history": "Historial de salud",
+      "triage": "Triaje de emergencia",
+      "achievements": "Logros",
+      "profile": "Perfil y misión",
+      "sync": "Offline y sincronización",
+      "voiceLab": "Laboratorio de voz",
+      "notificationsLab": "Notificaciones de prueba",
+      "settings": "Ajustes",
+      "crew": "Tripulación",
+      "connectivity": "Conectividad",
+      "measure": "Medir signos vitales",
+      "tests": "Tests diarios"
+    }
+  },
+  "systems": {
+    "cardiovascular": {
+      "name": "Sistema cardiovascular",
+      "short": "Cardiovascular",
+      "role": "Tu corazón y vasos sanguíneos llevan oxígeno y nutrientes por el cuerpo. En microgravedad los fluidos se desplazan hacia la cabeza y el corazón trabaja menos.",
+      "recommendations": [
+        "Completa tu sesión aeróbica diaria.",
+        "Bebe al menos 2 litros de agua al día."
+      ]
+    },
+    "respiratory": {
+      "name": "Sistema respiratorio",
+      "short": "Respiratorio",
+      "role": "Tus pulmones intercambian oxígeno y dióxido de carbono. La atmósfera de la cabina y el polvo pueden afectar cómo respiras.",
+      "recommendations": [
+        "Reporta cualquier tos o irritación persistente.",
+        "Usa mascarilla durante el mantenimiento de filtros."
+      ]
+    },
+    "brain": {
+      "name": "Cerebro y cognición",
+      "short": "Cerebro",
+      "role": "Tu cerebro gestiona la atención, la memoria y la coordinación. El sueño, la carga de trabajo y la radiación pueden influir en el rendimiento cognitivo.",
+      "recommendations": [
+        "Protege tu ventana de sueño programada.",
+        "Toma pausas cortas durante procedimientos largos."
+      ]
+    },
+    "eyes": {
+      "name": "Ojos y visión",
+      "short": "Ojos",
+      "role": "Tus ojos pueden cambiar ligeramente de forma en misiones largas porque los fluidos suben. Las revisiones regulares detectan los cambios a tiempo.",
+      "recommendations": [
+        "Reporta si ves borroso de cerca.",
+        "Completa tu revisión semanal de la vista."
+      ]
+    },
+    "skeletal": {
+      "name": "Sistema óseo",
+      "short": "Óseo",
+      "role": "Tus huesos sostienen el cuerpo y almacenan calcio. Sin la carga de la gravedad pierden densidad si no haces ejercicio.",
+      "recommendations": [
+        "Mantén tu horario de ejercicio de resistencia.",
+        "Toma tu porción de vitamina D con las comidas planificadas."
+      ]
+    },
+    "muscular": {
+      "name": "Sistema muscular",
+      "short": "Muscular",
+      "role": "Tus músculos te mantienen fuerte para las caminatas espaciales y el aterrizaje. Los músculos de carga se debilitan rápido en microgravedad.",
+      "recommendations": [
+        "Completa tu sesión de ejercicio de resistencia.",
+        "Registra tu consumo de proteína en las comidas."
+      ]
+    },
+    "immune": {
+      "name": "Sistema inmune",
+      "short": "Inmune",
+      "role": "Tu sistema inmune te protege de infecciones. El estrés, la radiación y la falta de sueño pueden reducir su respuesta en el espacio.",
+      "recommendations": [
+        "Lávate las manos antes de comer.",
+        "Reporta los primeros síntomas de enfermedad."
+      ]
+    }
+  },
+  "indicators": {
+    "heartRate": {
+      "name": "Frecuencia cardíaca en reposo",
+      "short": "Frec. cardíaca",
+      "description": "Latidos por minuto en reposo total. Los desplazamientos de fluidos en microgravedad pueden cambiarla."
+    },
+    "bloodPressure": {
+      "name": "Presión arterial",
+      "short": "Presión arterial",
+      "description": "Presión sistólica y diastólica en tus arterias. Muestra cómo se adaptan corazón y vasos a la ingravidez."
+    },
+    "spo2": {
+      "name": "Saturación de oxígeno",
+      "short": "SpO₂",
+      "description": "Porcentaje de oxígeno que transportan tus glóbulos rojos. Refleja la atmósfera de la cabina y la función pulmonar."
+    },
+    "respRate": {
+      "name": "Frecuencia respiratoria",
+      "short": "Respiración",
+      "description": "Respiraciones por minuto en reposo, medidas con la banda de pecho."
+    },
+    "reactionTime": {
+      "name": "Tiempo de reacción psicomotor",
+      "short": "Tiempo de reacción",
+      "description": "Tiempo medio de respuesta en la prueba de vigilancia de 3 minutos. Sensible a la fatiga, la falta de sueño y la carga de trabajo."
+    },
+    "eyePressure": {
+      "name": "Presión intraocular",
+      "short": "Presión ocular",
+      "description": "Presión del fluido dentro del ojo. Se vigila por cambios asociados a vuelos espaciales largos."
+    },
+    "urinaryCalcium": {
+      "name": "Calcio urinario",
+      "short": "Calcio urinario",
+      "description": "Calcio eliminado en 24 horas. Marcador indirecto de pérdida ósea en microgravedad."
+    },
+    "gripStrength": {
+      "name": "Fuerza de agarre",
+      "short": "Fuerza de agarre",
+      "description": "Fuerza máxima de la mano. Refleja la pérdida de masa muscular durante la misión."
+    },
+    "bodyTemperature": {
+      "name": "Temperatura corporal",
+      "short": "Temperatura",
+      "description": "Temperatura central del cuerpo. Puede indicar una infección o una respuesta inmune."
+    }
+  },
+  "health": {
+    "origin": {
+      "mock": "Datos de maqueta — pendiente de backend",
+      "cache": "Sin conexión · última sincronización {{ago}}"
+    },
+    "source": {
+      "wearable": "Sensor",
+      "manual": "Manual",
+      "camera": "Con cámara"
+    },
+    "onDevice": "En el dispositivo"
+  },
+  "time": {
+    "minutesAgo_one": "hace {{count}} min",
+    "minutesAgo_other": "hace {{count}} min",
+    "hoursAgo_one": "hace {{count}} h",
+    "hoursAgo_other": "hace {{count}} h",
+    "daysAgo_one": "hace {{count}} día",
+    "daysAgo_other": "hace {{count}} días"
+  },
+  "profile": {
+    "title": "Perfil y misión",
+    "changePhoto": "Cambiar foto de perfil",
+    "fromGallery": "Galería",
+    "takePhoto": "Tomar foto",
+    "removePhoto": "Quitar",
+    "photoLocal": "La foto se guarda solo en este dispositivo.",
+    "photoSaved": "Foto actualizada",
+    "photoSavedBody": "Tu foto de perfil se guardó en el dispositivo.",
+    "photoError": "No se pudo guardar la foto",
+    "permissionTitle": "Permiso necesario",
+    "permissionBody": "Activa el acceso a la cámara o a las fotos en los ajustes del teléfono.",
+    "gravity": "Gravedad",
+    "changeMission": "Cambiar misión",
+    "closeMissions": "Ocultar misiones",
+    "missionChanged": "Misión actualizada",
+    "session": "Sesión"
+  },
+  "body3d": {
+    "title": "Modelo 3D",
+    "hint": "Arrastra para girar · pellizca para acercar · toca un órgano",
+    "female": "Femenino",
+    "male": "Masculino",
+    "open": "Ver en 3D",
+    "disclaimer": "Representación esquemática con fines educativos. No es un modelo anatómico exacto."
+  },
+  "background": {
+    "criticalTitle": "{{indicator}}: valor crítico",
+    "criticalBody": "Informa ahora a tu oficial médico de la tripulación. Abre NullRadt para ver la guía.",
+    "title": "Monitoreo en segundo plano",
+    "state": {
+      "active": "Activo: revisa cada ~15 min aunque la app esté cerrada.",
+      "expoGo": "No disponible en Expo Go. Funciona en el APK instalado.",
+      "restricted": "Restringido por el sistema (ahorro de batería). Permite la actividad en segundo plano en los ajustes del teléfono.",
+      "error": "No se pudo activar."
+    }
+  },
+  "errors": {
+    "viewTitle": "No se pudo mostrar esta vista",
+    "viewBody": "El resto de la app sigue funcionando. Si el problema continúa, comparte este mensaje con el equipo:",
+    "retry": "Reintentar"
+  },
+  "crew": {
+    "title": "Tripulación",
+    "synthetic": "Datos de relleno (sintéticos)",
+    "you": "Tú",
+    "age": "Edad",
+    "sex": "Sexo",
+    "height": "Estatura",
+    "weight": "Peso",
+    "years_one": "{{count}} año",
+    "years_other": "{{count}} años",
+    "sexes": {
+      "female": "Mujer",
+      "male": "Hombre"
+    },
+    "module": "Módulo {{module}}",
+    "bmi": "IMC {{value}}",
+    "specialty": {
+      "commander": "Comandante",
+      "flightEngineer": "Ingeniería de vuelo",
+      "medicalOfficer": "Oficial médica",
+      "missionSpecialist": "Especialista de misión",
+      "payloadSpecialist": "Especialista de carga útil"
+    },
+    "alertsTitle": "Alertas de la tripulación",
+    "noAlerts": "Sin alertas recientes.",
+    "sosFrom": "SOS de {{name}}",
+    "measurementFrom": "{{what}} grave de {{name}}",
+    "cancelled": "Desactivada",
+    "sosLabel": "Emergencia",
+    "alertSentTitle": "Alerta enviada a la tripulación",
+    "alertSentBody": "{{what}} {{value}}. Tu tripulación fue notificada.",
+    "alertCancelledTitle": "Alerta desactivada",
+    "alertCancelledBody": "Se avisó a la tripulación de que fue un error.",
+    "bloodType": "Tipo de sangre"
+  },
+  "measure": {
+    "simulated": "Equipo y lectura simulados (demo)",
+    "title": {
+      "bloodPressure": "Medir presión arterial",
+      "heartRate": "Medir frecuencia cardiaca",
+      "spo2": "Medir saturación de oxígeno",
+      "bodyTemperature": "Medir temperatura",
+      "respRate": "Medir frecuencia respiratoria"
+    },
+    "devices": {
+      "bpCuff": "Tensiómetro NR-BP2",
+      "pulseOximeter": "Oxímetro de pulso NR-OX1",
+      "thermometer": "Termómetro NR-T1",
+      "respBand": "Banda respiratoria NR-RB"
+    },
+    "searching": "Buscando equipo por Bluetooth…",
+    "connected": "Conectado",
+    "readyTitle": "Equipo listo",
+    "instructions": {
+      "bloodPressure": "Siéntate, apoya el brazo a la altura del corazón y coloca el manguito 2 cm sobre el codo.",
+      "heartRate": "Coloca el oxímetro en el dedo índice y mantén la mano quieta.",
+      "spo2": "Coloca el oxímetro en el dedo índice y mantén la mano quieta.",
+      "bodyTemperature": "Coloca el termómetro bajo la lengua y cierra la boca.",
+      "respRate": "Ajusta la banda en el pecho y respira con normalidad."
+    },
+    "start": "Iniciar medición",
+    "stop": "Detener",
+    "measuring": "Midiendo…",
+    "keepStill": "No te muevas ni hables durante la medición.",
+    "units": {
+      "bloodPressure": "mmHg",
+      "heartRate": "bpm",
+      "spo2": "%",
+      "bodyTemperature": "°C",
+      "respRate": "rpm"
+    },
+    "result": {
+      "normal": "Dentro del rango de referencia.",
+      "caution": "Fuera del rango habitual. Repite la medición en reposo y coméntalo con tu tripulación.",
+      "critical": "Valor fuera de rango seguro. Se avisó automáticamente a tu tripulación."
+    },
+    "crewNotified": "Tu tripulación recibió la lectura y puede venir a ayudarte.",
+    "rule": "Clasificación según {{source}}. Apoyo a la decisión, no diagnóstico.",
+    "openAlert": "Abrir alerta de emergencia",
+    "done": "Listo",
+    "again": "Medir de nuevo"
+  },
+  "connectivityScreen": {
+    "title": "Conectividad",
+    "types": {
+      "wifi": "Wi-Fi",
+      "cellular": "Datos móviles",
+      "none": "Sin red",
+      "other": "Otra red"
+    },
+    "signal": "Intensidad",
+    "quality": "Calidad",
+    "earthDelay": "Retardo Tierra",
+    "live": "Calidad del enlace en vivo",
+    "howTitle": "Cómo funciona",
+    "how": {
+      "phone": {
+        "title": "Tu teléfono",
+        "body": "Guarda todo primero en el dispositivo (offline-first)."
+      },
+      "station": {
+        "title": "Red local de la estación",
+        "body": "Sincroniza con la tripulación cercana aunque no haya enlace con la Tierra."
+      },
+      "relay": {
+        "title": "Satélite de retransmisión",
+        "body": "Cuando hay ventana de comunicación, envía los datos pendientes."
+      },
+      "earth": {
+        "title": "Control de misión",
+        "body": "El equipo médico en la Tierra recibe los informes."
+      }
+    },
+    "offlineNote": "Si se pierde el enlace, las alertas y mediciones quedan en cola y se envían solas al reconectar.",
+    "nearby": "Tripulantes cercanos",
+    "activeCount_one": "{{count}} activo",
+    "activeCount_other": "{{count}} activos",
+    "simulated": "La red se lee del teléfono; intensidad, retardo y proximidad son simulados (demo)."
+  },
+  "tests": {
+    "title": "Tests diarios",
+    "subtitle": "Mantén la mente activa y detecta cambios a tiempo",
+    "cardBody": "{{done}} de {{total}} hechos hoy · reflejos, visión y mente",
+    "today": "Hechos hoy",
+    "streak": "Racha (días)",
+    "allDone": "¡Completaste todos los tests de hoy!",
+    "keepGoing": "Unos minutos al día bastan: lo importante es comparar contigo mismo.",
+    "duration": "~{{min}} min",
+    "last": "Último: {{value}}",
+    "best": "Mejor marca: {{value}}",
+    "how": "Cómo funciona",
+    "start": "Empezar",
+    "again": "Repetir",
+    "done": "Listo",
+    "newBest": "Nueva mejor marca",
+    "trend": "Tu evolución",
+    "lowerBetter": "Más bajo es mejor.",
+    "higherBetter": "Más alto es mejor.",
+    "disclaimer": "Ejercicios de entrenamiento y autoseguimiento, no evaluaciones médicas. Inspirados en la batería Cognition de NASA.",
+    "items": {
+      "reaction": {
+        "title": "Reflejos de alerta",
+        "tagline": "Tiempo de reacción",
+        "why": "La fatiga, el sueño y la radiación pueden hacer más lentas tus reacciones. Este test (tipo PVT) lo detecta comparándote contigo.",
+        "steps": [
+          "Espera con el dedo listo sobre la pantalla.",
+          "Cuando el panel se ponga verde, tócalo lo más rápido posible.",
+          "Si tocas antes de tiempo, cuenta como salida en falso."
+        ],
+        "scoreLabel": "Tiempo de reacción (mediana)"
+      },
+      "vision": {
+        "title": "Claridad visual",
+        "tagline": "Agudeza con la E de Snellen",
+        "why": "En vuelos largos puede cambiar la visión (SANS, síndrome neuro-ocular asociado al vuelo espacial). Detectar cambios pronto ayuda.",
+        "steps": [
+          "Sostén el teléfono a unos 40 cm, con buena luz.",
+          "Cubre un ojo cada vez.",
+          "Indica hacia dónde apuntan las patas de la E. Cada acierto la hace más pequeña."
+        ],
+        "scoreLabel": "Nivel promedio (ambos ojos)"
+      },
+      "stroop": {
+        "title": "Agilidad mental",
+        "tagline": "Test de Stroop",
+        "why": "Mide atención y control: decidir rápido ignorando la información que distrae.",
+        "steps": [
+          "Aparece el nombre de un color pintado de otro color.",
+          "Toca el COLOR DE LA TINTA, no lo que dice la palabra.",
+          "Son 20 palabras: rápido pero sin fallar."
+        ],
+        "scoreLabel": "Aciertos por minuto"
+      },
+      "memory": {
+        "title": "Memoria espacial",
+        "tagline": "Secuencias que crecen",
+        "why": "Entrena la memoria de trabajo, clave para seguir procedimientos complejos a bordo.",
+        "steps": [
+          "Observa qué casillas se iluminan y en qué orden.",
+          "Repite la secuencia tocándolas.",
+          "Cada acierto añade una casilla; dos fallos seguidos terminan el test."
+        ],
+        "scoreLabel": "Secuencia más larga"
+      }
+    },
+    "reaction": {
+      "wait": "Espera…",
+      "now": "¡AHORA!",
+      "early": "Muy pronto",
+      "trial": "Intento {{n}} de {{total}}",
+      "falseStarts_one": "{{count}} salida en falso",
+      "falseStarts_other": "{{count}} salidas en falso",
+      "bestTrial": "Mejor intento",
+      "falseStartsLabel": "Salidas en falso"
+    },
+    "vision": {
+      "coverLeft": "Cubre tu ojo izquierdo",
+      "coverRight": "Ahora cubre tu ojo derecho",
+      "distance": "Mantén el teléfono a unos 40 cm de la cara.",
+      "ready": "Listo",
+      "eye": {
+        "right": "Ojo derecho",
+        "left": "Ojo izquierdo"
+      },
+      "level": "Nivel {{n}} de {{total}}",
+      "question": "¿Hacia dónde apuntan las patas de la E?",
+      "dir": {
+        "0": "Derecha",
+        "90": "Abajo",
+        "180": "Izquierda",
+        "270": "Arriba"
+      },
+      "asymmetry": "Hay diferencia entre tus ojos. Regístralo y revisa el sistema Ojos; si persiste, coméntalo con tu tripulación."
+    },
+    "stroop": {
+      "prompt": "¿De qué color es la tinta?",
+      "progress": "{{n}} de {{total}}",
+      "correct_one": "{{count}} acierto",
+      "correct_other": "{{count}} aciertos",
+      "accuracy": "Precisión",
+      "avgTime": "Tiempo medio",
+      "colors": {
+        "red": "Rojo",
+        "green": "Verde",
+        "blue": "Azul",
+        "yellow": "Amarillo"
+      }
+    },
+    "memory": {
+      "watch": "Observa la secuencia…",
+      "repeat": "Tu turno: {{n}} de {{total}}",
+      "ok": "¡Correcto!",
+      "bad": "Uy, esa no era",
+      "length": "Longitud: {{n}}",
+      "best": "Mejor: {{n}}"
+    }
+  }
+}

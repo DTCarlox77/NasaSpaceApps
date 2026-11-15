@@ -1,0 +1,96 @@
+{
+  "expo": {
+    "name": "NullRadt",
+    "slug": "nullradt",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "NullRadt converts your voice to text to log symptoms and alerts hands-free.",
+        "NSMicrophoneUsageDescription": "NullRadt uses the microphone to let you dictate symptoms and alerts."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1F1F1F",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.anonymous.nullradt"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-localization",
+      "expo-sqlite",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#1F1F1F",
+          "dark": {
+            "backgroundColor": "#1F1F1F"
+          }
+        }
+      ],
+      "expo-font",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "NullRadt uses the microphone to let you dictate symptoms and alerts.",
+          "speechRecognitionPermission": "NullRadt converts your voice to text to log symptoms and alerts hands-free.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox",
+            "com.google.android.as"
+          ]
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#4ADD82"
+        }
+      ],
+      [
+        "./plugins/withNdkVersion",
+        {
+          "version": "28.2.13676358"
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "NullRadt uses Face ID to unlock your health data securely."
+        }
+      ],
+      "expo-background-task",
+      "expo-asset",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "NullRadt uses your photos to set your profile picture.",
+          "cameraPermission": "NullRadt uses the camera to take your profile picture and read medical device displays."
+        }
+      ],
+      "expo-audio"
+    ],
+    "scheme": "nullradt",
+    "backgroundColor": "#1F1F1F",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
