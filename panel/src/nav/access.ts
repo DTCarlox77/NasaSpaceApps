@@ -89,7 +89,7 @@ export const SECTIONS: readonly Section[] = [
     endpoints: ['GET /admin/compliance'],
     contractRoles: ['admin'],
     roles: ['admin'],
-    phase: 'P4',
+    phase: 'P3',
     summary: 'Check-ins completados y aptitud por tripulante (sin valores de bienestar).',
   },
   {
@@ -99,7 +99,7 @@ export const SECTIONS: readonly Section[] = [
     endpoints: ['POST /admin/demo/reset'],
     contractRoles: ['admin'],
     roles: ['admin'],
-    phase: 'P4',
+    phase: 'P3',
     summary: 'Reinicio de la demo de ARES-1 (solo demo; pide confirmación).',
   },
 ];

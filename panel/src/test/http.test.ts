@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpError, NetworkError, request, SESSION_ENDED_MESSAGE } from '../api/http.ts';
 import { shouldRetry } from '../api/queryClient.ts';
+import { logout } from '../api/auth.ts';
 import { resolveApiBase } from '../config/env.ts';
 import * as storage from '../auth/storage.ts';
 import { apiError, groundContext, json, mockFetch, sleep, user } from './helpers.ts';
@@ -117,6 +118,32 @@ describe('cliente HTTP: refresh rotativo', () => {
     const error = await request('/health', { auth: false, timeoutMs: 20 }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(NetworkError);
     expect((error as NetworkError).timeout).toBe(true);
+  });
+});
+
+describe('logout por el cliente HTTP', () => {
+  it('access token vencido: un refresh y un reintento del logout con el token nuevo', async () => {
+    const { calls } = mockFetch((call) => {
+      if (call.path === '/auth/refresh') {
+        return json(200, { access_token: 'at_new', token_type: 'Bearer', expires_in: 900, refresh_token: 'rt_new' });
+      }
+      if (call.auth === 'Bearer at_old') return apiError(401, 'UNAUTHENTICATED');
+      return json(204, undefined);
+    });
+    await logout();
+    const logouts = calls.filter((c) => c.path === '/auth/logout');
+    expect(logouts.map((c) => c.auth)).toEqual(['Bearer at_old', 'Bearer at_new']);
+    expect(calls.filter((c) => c.path === '/auth/refresh')).toHaveLength(1);
+    expect(logouts[1]?.body).toEqual({ device_id: storage.getDeviceId() });
+  });
+
+  it('si el refresh se rechaza, logout no lanza (quien llama borra la sesión igual)', async () => {
+    mockFetch((call) =>
+      call.path === '/auth/refresh'
+        ? apiError(401, 'TOKEN_REUSE_DETECTED')
+        : apiError(401, 'UNAUTHENTICATED'),
+    );
+    await expect(logout()).resolves.toBeUndefined();
   });
 });
 

@@ -28,7 +28,14 @@ export function changePassword(
   });
 }
 
-/** Mejor esfuerzo: revoca el refresh token de este dispositivo; nunca falla. */
+/**
+ * Mejor esfuerzo: revoca el refresh token de este dispositivo; nunca falla.
+ * - Sin `accessToken`: pasa por el cliente HTTP con la sesión, así que un 401 UNAUTHENTICATED
+ *   (access token vencido) hace un refresh y reintenta una vez.
+ * - Con `accessToken` (p. ej. el de un astronauta que el panel rechaza al entrar): usa ese
+ *   Bearer tal cual; no hay sesión guardada que refrescar.
+ * Si aun así falla (red, refresh rechazado), quien llama borra la sesión local igual.
+ */
 export async function logout(accessToken?: string | null): Promise<void> {
   try {
     await request<void>('/auth/logout', {
@@ -38,7 +45,7 @@ export async function logout(accessToken?: string | null): Promise<void> {
       timeoutMs: 5_000,
     });
   } catch {
-    // Si falla (red, token vencido), el refresh token expira solo.
+    // El refresh token expira solo.
   }
 }
 

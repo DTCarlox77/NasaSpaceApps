@@ -146,7 +146,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
-    await authApi.logout(storage.getAccessToken());
+    // Por el cliente HTTP: con el access token vencido, refresca y reintenta una vez.
+    await authApi.logout();
     storage.clearSession();
     queryClient.clear();
     setState(ANONYMOUS);
