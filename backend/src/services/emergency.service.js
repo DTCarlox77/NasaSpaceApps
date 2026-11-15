@@ -205,6 +205,7 @@ async function createSession({ actor, input }) {
             protocolId: open.protocol_id,
             triggerType: body.trigger_type,
             startedBy: C.actorUserId(actor),
+            deviceId: C.actorDeviceId(actor),
             status: 'merged',
             context: body.context || {},
             startedAt: body.started_at,
@@ -241,6 +242,7 @@ async function createSession({ actor, input }) {
           protocolId: protocol.id,
           triggerType: body.trigger_type,
           startedBy: C.actorUserId(actor),
+          deviceId: C.actorDeviceId(actor),
           status: 'active',
           context: body.context || {},
           startedAt: body.started_at,
@@ -524,26 +526,43 @@ async function getSession({ actor, id }) {
   return sessionView(session, actor);
 }
 
-/** "Estoy bien" del tripulante afectado: si todos confirman, la sesión pending se cancela. */
+/**
+ * "Estoy bien" del tripulante afectado: si todos confirman, la sesión pending se cancela.
+ * Desde una tableta sin sesión (tarea 11), el body dice quién confirma (`astronaut_id`) y solo
+ * vale para un afectado con plazo pendiente en esa sesión; queda con el actor_device.
+ */
 async function confirmOk({ actor, id, input }) {
   const session = await openSessionFor(actor, id);
-  if (actor.kind !== 'user' || !actor.astronaut_id) {
+  const body = isPlainObject(input) ? input : {};
+  let who = actor;
+  if (actor.kind === 'device') {
+    if (!isUuid(body.astronaut_id)) {
+      throw badRequest([
+        { field: 'astronaut_id', issue: 'obligatorio desde una tableta sin sesión (UUID)' },
+      ]);
+    }
+    who = { astronaut_id: body.astronaut_id, user_id: null };
+  } else if (!actor.astronaut_id) {
     throw new HttpError(403, 'FORBIDDEN', 'Solo el tripulante afectado confirma que está bien.');
   }
-  const body = isPlainObject(input) ? input : {};
   const at = body.confirmed_at === undefined ? new Date().toISOString() : body.confirmed_at;
   const issue = timestampIssue(at);
   if (issue) throw badRequest([{ field: 'confirmed_at', issue }]);
   const outcome = await withTransaction(async (db) => {
     const result = await model.confirmDeadman(
-      { sessionId: session.id, astronautId: actor.astronaut_id, userId: actor.user_id, at },
+      { sessionId: session.id, astronautId: who.astronaut_id, userId: who.user_id, at },
       db,
     );
     if (result === 'confirmed') {
       await C.event(
         session,
         'deadman_confirmed',
-        { astronautId: actor.astronaut_id, actorUserId: actor.user_id, deviceAt: at },
+        {
+          astronautId: who.astronaut_id,
+          actorUserId: who.user_id,
+          actorDevice: C.actorDevice(actor),
+          deviceAt: at,
+        },
         db,
       );
       const current = await model.findSession(session.id, db);

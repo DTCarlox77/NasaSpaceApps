@@ -27,8 +27,8 @@ async function userActor(userId) {
 }
 
 /**
- * Tableta sin sesión (X-Device-Credential). Queda preparado para la tarea 11: los servicios
- * ya aceptan este actor, pero la ruta todavía exige Bearer.
+ * Tableta sin sesión (X-Device-Credential, tarea 11): opera solo el triaje de su misión.
+ * user_id null: la línea de tiempo la registra como actor_device (etiqueta de la tableta).
  */
 function deviceActor({ deviceId, missionId, label }) {
   return {
@@ -44,11 +44,22 @@ function deviceActor({ deviceId, missionId, label }) {
 }
 
 const actorUserId = (actor) => (actor.kind === 'user' ? actor.user_id : null);
+const actorDeviceId = (actor) => (actor.kind === 'device' ? actor.device_id : null);
 const actorDevice = (actor) =>
   actor.kind === 'device' ? actor.device_label || actor.device_id : null;
 
-/** Tripulante (o tableta) de la misión: puede operar la emergencia a bordo. */
+/**
+ * Tripulante (o tableta) de la misión: puede operar la emergencia a bordo. Una tableta de otra
+ * misión no tiene credencial válida aquí: 401, igual que una credencial desconocida.
+ */
 function assertCrew(actor, missionId) {
+  if (actor.kind === 'device' && !actor.mission_ids.includes(missionId)) {
+    throw new HttpError(
+      401,
+      'INVALID_DEVICE_CREDENTIAL',
+      'La credencial de la tableta no es válida.',
+    );
+  }
   const crewLike = actor.kind === 'device' || actor.role === 'astronaut';
   if (!crewLike || !actor.mission_ids.includes(missionId)) {
     throw new HttpError(403, 'FORBIDDEN', 'Solo la tripulación de la misión opera la emergencia.');
@@ -258,6 +269,7 @@ module.exports = {
   userActor,
   deviceActor,
   actorUserId,
+  actorDeviceId,
   actorDevice,
   assertCrew,
   crewMission,

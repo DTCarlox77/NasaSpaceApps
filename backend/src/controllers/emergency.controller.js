@@ -1,18 +1,26 @@
 'use strict';
 
 /**
- * Modo emergencia (tarea 9). El controlador arma el ACTOR (hoy el usuario de la sesión;
- * desde la tarea 11 también una tableta con X-Device-Credential) y los servicios trabajan
- * con él, nunca con req.user.
+ * Modo emergencia (tarea 9). El controlador arma el ACTOR (el usuario de la sesión o, desde la
+ * tarea 11, la tableta con X-Device-Credential: deviceActor) y los servicios trabajan con él,
+ * nunca con req.user.
  */
 const emergency = require('../services/emergency.service');
 const assessments = require('../services/triageAssessment.service');
 const ground = require('../services/emergencyGround.service');
 const model = require('../models/emergency.model');
-const { userActor } = require('../services/emergencyCommon');
+const authEvents = require('../models/authEvents.model');
+const { userActor, deviceActor } = require('../services/emergencyCommon');
 const { badRequest, notFound } = require('../utils/httpError');
 
-const actorOf = (req) => userActor(req.auth.userId);
+const actorOf = async (req) =>
+  req.device
+    ? deviceActor({
+        deviceId: req.device.id,
+        missionId: req.device.mission_id,
+        label: req.device.label,
+      })
+    : userActor(req.auth.userId);
 
 async function protocol(req, res) {
   let row;
@@ -40,6 +48,14 @@ async function createSession(req, res) {
     actor: await actorOf(req),
     input: req.body,
   });
+  // Emergencia iniciada (o unida) sin sesión de usuario: queda en la bitácora de autenticación.
+  if (req.device && status === 201) {
+    await authEvents.record({
+      event: 'device_emergency_started',
+      deviceId: req.device.id,
+      ip: req.ip,
+    });
+  }
   res.status(status).json(body);
 }
 

@@ -158,6 +158,8 @@ const env = Object.freeze({
     lockoutMinutes: toPositiveInt('LOCKOUT_MINUTES', 15),
     tempPasswordLength: toPositiveInt('TEMP_PASSWORD_LENGTH', 12, { min: 10 }),
     loginRateLimitPerMinute: toPositiveInt('RATE_LIMIT_LOGIN_PER_MINUTE', 30),
+    // Credenciales de tableta inválidas (X-Device-Credential) por IP y minuto; más → 429.
+    deviceCredentialFailuresPerMinute: toPositiveInt('RATE_LIMIT_DEVICE_CREDENTIAL_PER_MINUTE', 10),
   }),
   sync: Object.freeze({
     // POST /sync/push: máximo de items por lote (más → 413).

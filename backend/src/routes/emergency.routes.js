@@ -2,11 +2,21 @@
 
 const { Router } = require('express');
 const ctrl = require('../controllers/emergency.controller');
-const { authenticate, requireRole } = require('../middlewares/auth');
+const {
+  authenticate,
+  authenticateUserOrDevice,
+  requireRole,
+  requireRoleOrDevice,
+} = require('../middlewares/auth');
 
 const router = Router();
-const crew = [authenticate(), requireRole('astronaut')];
-const anyone = [authenticate(), requireRole('astronaut', 'flight_surgeon', 'admin')];
+// Tripulación con sesión o tableta registrada sin sesión (X-Device-Credential, tarea 11): solo
+// estas rutas del triaje aceptan la credencial de la tableta.
+const crew = [authenticateUserOrDevice(), requireRoleOrDevice('astronaut')];
+const anyone = [
+  authenticateUserOrDevice(),
+  requireRoleOrDevice('astronaut', 'flight_surgeon', 'admin'),
+];
 const ground = [authenticate(), requireRole('flight_surgeon', 'admin')];
 
 router.get('/emergency/protocol', ...anyone, ctrl.protocol);
