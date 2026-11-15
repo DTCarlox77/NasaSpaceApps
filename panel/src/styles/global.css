@@ -572,14 +572,98 @@ details summary {
   color: var(--color-text);
   font-weight: 400;
   font-size: var(--text-xs);
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity 120ms ease-in;
+  /* Oculto fuera del flujo: no ensancha la página. */
+  display: none;
 }
 
 .role-badge.has-tooltip:hover .role-tooltip,
 .role-badge.has-tooltip:focus-visible .role-tooltip,
 .role-badge.has-tooltip:focus .role-tooltip {
-  visibility: visible;
-  opacity: 1;
+  display: block;
+}
+
+/* Cerca del borde derecho (cabecera), el tooltip se abre hacia la izquierda. */
+.shell-user .role-tooltip {
+  left: auto;
+  right: 0;
+}
+
+/* ---------------------------------------------------------------- pestañas */
+
+.tabs {
+  display: flex;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  font: inherit;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  background: none;
+  border: none;
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+}
+
+.tab:hover {
+  background: var(--color-surface-hover);
+}
+
+/* Activa: borde inferior y peso (no solo color). */
+.tab.active {
+  border-bottom-color: var(--color-accent);
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- modal */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: rgb(4 8 12 / 75%);
+}
+
+.modal {
+  width: 100%;
+  max-height: calc(100vh - 2 * var(--space-4));
+  overflow: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+  padding: var(--space-5);
+}
+
+.modal:focus {
+  outline: none;
+}
+
+.modal-md {
+  max-width: 30rem;
+}
+
+.modal-lg {
+  max-width: 40rem;
+}
+
+.modal-title {
+  margin-top: 0;
+}
+
+/* ---------------------------------------------------------------- filtros */
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.filter-row .field {
+  min-width: 12rem;
 }

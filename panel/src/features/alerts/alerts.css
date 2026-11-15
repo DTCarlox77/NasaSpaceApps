@@ -1,17 +1,5 @@
-/* ---------------------------------------------------------------- filtros */
-
-.filter-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-}
-
-.filter-row .field {
-  min-width: 12rem;
-}
-
-/* La prioridad (.priority-badge) y el estado a bordo (.delivery) están en styles/global.css:
-   también los usan Emergencias y Salud conductual. */
+/* Los filtros (.filter-row), la prioridad (.priority-badge) y el estado a bordo (.delivery) están
+   en styles/global.css: también los usan Emergencias, Equipo y Salud conductual. */
 
 /* ---------------------------------------------------------------- lista + detalle */
 

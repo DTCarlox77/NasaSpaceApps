@@ -22,17 +22,41 @@ import type {
   EscalationAck,
   EscalationMessage,
   InboxItem,
-  LoginResponse,
   Priority,
   Role,
   SupportMessage,
   SupportRequest,
   SupportRequestAck,
-  TokenPair,
   TriageCounts,
-  UserContext,
-  UserSummary,
 } from '../types.ts';
+import {
+  ACCESS,
+  ACCOUNT_ROUTES,
+  astronautAccount,
+  prepareSecrets,
+  settlePasswords,
+  userFromToken,
+} from './accounts.ts';
+import {
+  BEHAVIORAL,
+  checkMission,
+  conflict,
+  delivered,
+  EVERYONE,
+  fail,
+  forbidden,
+  GROUND,
+  iso,
+  json,
+  me,
+  MockHttpError,
+  notFound,
+  paginate,
+  readBody,
+  type Route,
+  type Secrets,
+} from './core.ts';
+import type { MockAccount } from './fixtures/accounts.ts';
 import {
   buildCheckins,
   buildIndicators,
@@ -41,14 +65,7 @@ import {
   type MockSupportRequest,
 } from './fixtures/behavioral.ts';
 import type { MockEmergency } from './fixtures/emergencies.ts';
-import { currentMission, DELAY_S, MISSION_ID, MISSION_REF, STANDARD_CATALOG } from './fixtures/mission.ts';
-import {
-  crewByAstronautId,
-  userById,
-  userByUsername,
-  type MockCrewMember,
-  type MockUser,
-} from './fixtures/people.ts';
+import { currentMission, DELAY_S, STANDARD_CATALOG } from './fixtures/mission.ts';
 import { crewDashboard } from './fixtures/readings.ts';
 import {
   addMessage,
@@ -72,106 +89,7 @@ export function configureMock(options: { latencyMs?: number }): void {
   if (options.latencyMs !== undefined) latencyMs = Math.max(0, options.latencyMs);
 }
 
-// ---------------------------------------------------------------- respuestas y errores
-
-class MockHttpError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: string,
-    message: string,
-    readonly details: unknown = null,
-  ) {
-    super(message);
-  }
-}
-
-const fail = (status: number, code: string, message: string, details: unknown = null): never => {
-  throw new MockHttpError(status, code, message, details);
-};
-
-function json(status: number, body: unknown): Response {
-  if (status === 204) return new Response(null, { status });
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
-
-const forbidden = (roles: Role[]) =>
-  fail(403, 'FORBIDDEN', 'Tu rol no tiene permiso para esta acción.', { required_roles: roles });
-const notFound = (message = 'El recurso no existe.') => fail(404, 'NOT_FOUND', message);
-const conflict = (message: string) => fail(409, 'CONFLICT', message);
-
-// ---------------------------------------------------------------- tokens
-
-const ACCESS = 'mock-at.';
-const REFRESH = 'mock-rt.';
-let tokenSeq = 0;
-
-function tokensFor(user: MockUser): TokenPair {
-  tokenSeq += 1;
-  return {
-    access_token: `${ACCESS}${user.id}.${tokenSeq}`,
-    token_type: 'Bearer',
-    expires_in: 900,
-    refresh_token: `${REFRESH}${user.id}.${tokenSeq}`,
-  };
-}
-
-function userFromToken(token: string | null | undefined, prefix: string): MockUser | undefined {
-  if (!token || !token.startsWith(prefix)) return undefined;
-  return userById(token.slice(prefix.length).split('.')[0] ?? '');
-}
-
-// ---------------------------------------------------------------- utilidades
-
-const iso = (ms: number) => new Date(ms).toISOString();
-const delivered = (deliverAt: string | null | undefined, now: number) =>
-  !!deliverAt && new Date(deliverAt).getTime() <= now;
-
-function paginate<T>(items: T[], query: URLSearchParams): { items: T[]; next_cursor: string | null } {
-  const rawLimit = query.get('limit');
-  const limit = rawLimit === null ? 50 : Number(rawLimit);
-  if (!Number.isInteger(limit) || limit < 1 || limit > 200) {
-    fail(400, 'VALIDATION_ERROR', 'limit debe ser un entero entre 1 y 200.');
-  }
-  const rawCursor = query.get('cursor');
-  const offset = rawCursor === null ? 0 : Number(rawCursor);
-  if (!Number.isInteger(offset) || offset < 0) fail(400, 'VALIDATION_ERROR', 'Cursor inválido.');
-  const page = items.slice(offset, offset + limit);
-  const next = offset + limit < items.length ? String(offset + limit) : null;
-  return { items: page, next_cursor: next };
-}
-
-function checkMission(query: URLSearchParams): void {
-  const missionId = query.get('mission_id');
-  if (missionId && missionId !== MISSION_ID) notFound('La misión no existe o no es de tu equipo.');
-}
-
-function readBody(body: unknown): string {
-  const text = (body as { body?: unknown } | undefined)?.body;
-  if (typeof text !== 'string' || text.trim().length === 0 || text.length > 4000) {
-    fail(400, 'VALIDATION_ERROR', 'body es obligatorio (1 a 4000 caracteres).', { field: 'body' });
-  }
-  return (text as string).trim();
-}
-
-function summary(user: MockUser): UserSummary {
-  return { id: user.id, username: user.username, full_name: user.full_name, role: user.role, email: null };
-}
-
-function contextFor(user: MockUser): UserContext {
-  if (user.role === 'astronaut') {
-    const member = user as MockCrewMember;
-    return {
-      astronaut_id: member.astronaut_id,
-      call_sign: member.call_sign,
-      crew_role: member.crew_role,
-      mission: MISSION_REF,
-    };
-  }
-  return { astronaut_id: null, call_sign: null, crew_role: null, ground_missions: [MISSION_REF] };
-}
+type MockUser = MockAccount;
 
 const PRIORITY_RANK: Record<Priority, number> = { emergency: 0, urgent: 1, routine: 2 };
 
@@ -321,7 +239,7 @@ function logAccess(state: MockState, user: MockUser, astronautId: string, resour
     actor_username: user.username,
     actor_role: user.role,
     astronaut_id: astronautId,
-    call_sign: crewByAstronautId(astronautId)?.call_sign,
+    call_sign: astronautAccount(state, astronautId)?.astronaut?.call_sign,
     resource,
     accessed_at: iso(now),
   });
@@ -365,74 +283,13 @@ const closedItem = (item: { id: string; closed_at?: string | null; closed_by?: s
 
 // ---------------------------------------------------------------- rutas
 
-interface Ctx {
-  method: string;
-  query: URLSearchParams;
-  params: Record<string, string>;
-  body: unknown;
-  user: MockUser | null;
-  state: MockState;
-  now: number;
-}
-
-interface Route {
-  method: string;
-  pattern: string;
-  /** x-roles del contrato; 'public' = sin sesión. */
-  roles: Role[] | 'public';
-  handle(ctx: Ctx): Response;
-}
-
-const GROUND: Role[] = ['flight_surgeon', 'admin'];
-const BEHAVIORAL: Role[] = ['behavioral_health'];
-const EVERYONE: Role[] = ['astronaut', 'flight_surgeon', 'behavioral_health', 'admin'];
-
-const me = (ctx: Ctx) => ctx.user as MockUser;
-
 const ROUTES: Route[] = [
+  ...ACCOUNT_ROUTES,
   {
     method: 'GET',
     pattern: '/health',
     roles: 'public',
     handle: ({ now }) => json(200, { status: 'ok', db: 'up', time: iso(now), version: '1.8.0-mock' }),
-  },
-  {
-    method: 'POST',
-    pattern: '/auth/login',
-    roles: 'public',
-    handle: ({ body }) => {
-      const { username, password } = (body ?? {}) as { username?: unknown; password?: unknown };
-      if (typeof username !== 'string' || !username.trim() || typeof password !== 'string' || !password) {
-        return fail(400, 'VALIDATION_ERROR', 'username y password son obligatorios.');
-      }
-      const user = userByUsername(username.trim().toLowerCase());
-      if (!user) return fail(401, 'INVALID_CREDENTIALS', 'Usuario o contraseña incorrectos.');
-      const response: LoginResponse = {
-        ...tokensFor(user),
-        must_change_password: false,
-        offline_unlock_until: null,
-        user: summary(user),
-        context: contextFor(user),
-      };
-      return json(200, response);
-    },
-  },
-  {
-    method: 'POST',
-    pattern: '/auth/refresh',
-    roles: 'public',
-    handle: ({ body }) => {
-      const user = userFromToken((body as { refresh_token?: string } | undefined)?.refresh_token, REFRESH);
-      if (!user) return fail(401, 'UNAUTHENTICATED', 'El refresh token no es válido.');
-      return json(200, tokensFor(user));
-    },
-  },
-  { method: 'POST', pattern: '/auth/logout', roles: 'public', handle: () => json(204, undefined) },
-  {
-    method: 'GET',
-    pattern: '/me',
-    roles: EVERYONE,
-    handle: (ctx) => json(200, { user: summary(me(ctx)), context: contextFor(me(ctx)) }),
   },
   {
     method: 'GET',
@@ -615,7 +472,7 @@ const ROUTES: Route[] = [
       const { query, state, now } = ctx;
       checkMission(query);
       const includeClosed = query.get('include_closed') === 'true';
-      const callSign = (id: string) => crewByAstronautId(id)?.call_sign ?? '—';
+      const callSign = (id: string) => astronautAccount(state, id)?.astronaut?.call_sign ?? '—';
       const requests: BehavioralInboxItem[] = state.supportRequests
         .filter((r) => delivered(r.deliver_at, now) && (includeClosed || r.status !== 'closed'))
         .map((r) => ({
@@ -667,20 +524,23 @@ const ROUTES: Route[] = [
     roles: BEHAVIORAL,
     handle: (ctx) => {
       const { state, now } = ctx;
-      const member = crewByAstronautId(ctx.params.id as string);
-      if (!member) return notFound('El astronauta no existe o no es de tu misión.');
-      logAccess(state, me(ctx), member.astronaut_id, DETAIL_RESOURCE, now);
+      const account = astronautAccount(state, ctx.params.id as string);
+      const member = account?.astronaut;
+      if (!account || !member) return notFound('El astronauta no existe o no es de tu misión.');
+      logAccess(state, me(ctx), member.id, DETAIL_RESOURCE, now);
       const byRecent = <T extends { measured_at: string }>(list: T[]) =>
         [...list].sort((a, b) => b.measured_at.localeCompare(a.measured_at));
+      // Un tripulante dado de alta en el demo todavía no tiene check-ins, tamizajes ni PVT.
+      const fixture = !account.created_in_demo;
       return json(200, {
-        astronaut: { id: member.astronaut_id, call_sign: member.call_sign },
+        astronaut: { id: member.id, call_sign: member.call_sign },
         generated_at: iso(now),
-        baseline_ready: true,
-        indicators: buildIndicators(state.t0, member.call_sign),
+        baseline_ready: fixture,
+        indicators: fixture ? buildIndicators(state.t0, member.call_sign) : [],
         // Sin la nota privada: en los datos del demo ni siquiera existe.
-        checkins: byRecent(buildCheckins(state.t0, member.call_sign)),
+        checkins: fixture ? byRecent(buildCheckins(state.t0, member.call_sign)) : [],
         escalations: state.behavioralEscalations
-          .filter((e) => e.astronaut_id === member.astronaut_id && e.status !== 'closed' && delivered(e.deliver_at, now))
+          .filter((e) => e.astronaut_id === member.id && e.status !== 'closed' && delivered(e.deliver_at, now))
           .map((e) => ({
             id: e.id,
             indicator_code: e.indicator_code,
@@ -690,10 +550,10 @@ const ROUTES: Route[] = [
             deliver_at: e.deliver_at,
             measured_at: e.measured_at,
           })),
-        screenings: byRecent(buildScreenings(state.t0, member.call_sign)),
-        pvt_runs: byRecent(buildPvtRuns(state.t0, member.call_sign)),
+        screenings: fixture ? byRecent(buildScreenings(state.t0, member.call_sign)) : [],
+        pvt_runs: fixture ? byRecent(buildPvtRuns(state.t0, member.call_sign)) : [],
         support_requests: state.supportRequests
-          .filter((r) => r.astronaut_id === member.astronaut_id && delivered(r.deliver_at, now))
+          .filter((r) => r.astronaut_id === member.id && delivered(r.deliver_at, now))
           .sort((a, b) => b.created_at.localeCompare(a.created_at))
           .map(publicSupport),
       });
@@ -826,9 +686,18 @@ export interface MockRequest {
   path: string;
   bearer: string | null;
   body?: unknown;
+  /** Hash de las contraseñas del body (lo calcula handleMockRequestAsync). */
+  secrets?: Secrets;
 }
 
-/** Responde una petición como lo haría la API (síncrono y sin red: lo usan también las pruebas). */
+/** Rutas que no existen en el contrato v1.8 (solo modo demo). */
+export const MOCK_ONLY_ROUTES = ROUTES.filter((r) => r.mockOnly).map((r) => `${r.method} ${r.pattern}`);
+
+/**
+ * Responde una petición como lo haría la API (síncrono y sin red; lo usan también las pruebas).
+ * Las contraseñas necesitan hash (async): para el login y el cambio de contraseña con cuentas
+ * que tienen contraseña, usa handleMockRequestAsync.
+ */
 export function handleMockRequest(request: MockRequest, now: number = Date.now()): Response {
   const [pathname = '', search = ''] = request.path.split('?');
   const method = request.method.toUpperCase();
@@ -847,7 +716,7 @@ export function handleMockRequest(request: MockRequest, now: number = Date.now()
     const state = getState(now);
     let user: MockUser | null = null;
     if (found.route.roles !== 'public') {
-      user = userFromToken(request.bearer, ACCESS) ?? null;
+      user = userFromToken(state, request.bearer, ACCESS) ?? null;
       if (!user) return fail(401, 'UNAUTHENTICATED', 'Falta el token de acceso o no es válido.');
       if (!found.route.roles.includes(user.role)) return forbidden(found.route.roles);
     }
@@ -857,6 +726,8 @@ export function handleMockRequest(request: MockRequest, now: number = Date.now()
       params: found.params,
       body: request.body,
       user,
+      bearer: request.bearer,
+      secrets: request.secrets ?? {},
       state,
       now,
     });
@@ -869,6 +740,30 @@ export function handleMockRequest(request: MockRequest, now: number = Date.now()
     }
     return json(500, { error: { code: 'INTERNAL_ERROR', message: 'Error del modo demo.', details: null } });
   }
+}
+
+/** Igual que handleMockRequest, con el hash de las contraseñas antes y después de la ruta. */
+export async function handleMockRequestAsync(request: MockRequest, now: number = Date.now()): Promise<Response> {
+  const state = getState(now);
+  let secrets: Secrets;
+  try {
+    secrets = await prepareSecrets(state, request);
+  } catch (err) {
+    return json(500, { error: { code: 'INTERNAL_ERROR', message: (err as Error).message, details: null } });
+  }
+  const response = handleMockRequest({ ...request, secrets }, now);
+  try {
+    if (await settlePasswords(state)) persistState(state);
+  } catch (err) {
+    return json(500, { error: { code: 'INTERNAL_ERROR', message: (err as Error).message, details: null } });
+  }
+  return response;
+}
+
+/** Termina el trabajo async pendiente (hash de contraseñas temporales). Lo usan las pruebas. */
+export async function settleMock(now: number = Date.now()): Promise<void> {
+  const state = getState(now);
+  if (await settlePasswords(state)) persistState(state);
 }
 
 function wait(ms: number, signal: AbortSignal): Promise<void> {
@@ -894,7 +789,7 @@ export async function mockTransport(
   if (latencyMs > 0) await wait(latencyMs, init.signal);
   else if (init.signal.aborted) throw new DOMException('La petición se canceló.', 'AbortError');
   const authorization = init.headers.Authorization ?? '';
-  return handleMockRequest({
+  return handleMockRequestAsync({
     method: init.method,
     path,
     bearer: authorization.startsWith('Bearer ') ? authorization.slice('Bearer '.length) : null,

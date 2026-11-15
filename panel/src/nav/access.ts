@@ -5,14 +5,14 @@
  * cada sección; `roles` son los que ven la sección en el panel, siempre un subconjunto de los
  * del contrato, con estas reglas fijas además del contrato:
  * - Salud conductual: SOLO behavioral_health (admin y flight_surgeon nunca ven nada conductual).
- * - Cumplimiento y Demo: SOLO admin.
+ * - Equipo, Cumplimiento y Demo: SOLO admin.
  * El backend vuelve a comprobar el rol en cada petición (403 si no corresponde): esto solo
  * decide qué se muestra.
  */
 import type { GroundRole, Role } from '../api/types.ts';
 import { GLOBAL_ROLE_INFO } from './roles.ts';
 
-export type SectionId = 'crew' | 'alerts' | 'emergencies' | 'behavioral' | 'compliance' | 'demo';
+export type SectionId = 'crew' | 'alerts' | 'emergencies' | 'team' | 'behavioral' | 'compliance' | 'demo';
 
 export interface Section {
   id: SectionId;
@@ -25,7 +25,7 @@ export interface Section {
   /** Roles que ven la sección en el panel. */
   roles: GroundRole[];
   /** Fase del plan en que se implementa (en P1 es un placeholder). */
-  phase: 'P2' | 'P3' | 'P4';
+  phase: 'P2' | 'P3' | 'P4' | 'V1b';
   summary: string;
 }
 
@@ -64,6 +64,23 @@ export const SECTIONS: readonly Section[] = [
     roles: ['flight_surgeon', 'admin'],
     phase: 'P3',
     summary: 'Sesiones de triaje, línea de tiempo y reporte (admin: solo estado operativo).',
+  },
+  {
+    id: 'team',
+    title: 'Equipo',
+    path: '/equipo',
+    endpoints: [
+      'GET /missions/{id}/crew',
+      'GET /admin/assignments',
+      'POST /admin/users',
+      'POST /admin/users/{id}/reset-password',
+      'POST /admin/users/{id}/unlock',
+      'PATCH /admin/assignments/{id}',
+    ],
+    contractRoles: ['admin'],
+    roles: ['admin'],
+    phase: 'V1b',
+    summary: 'Tripulación y equipo en Tierra con su rol: alta guiada, contraseña temporal y acciones de cuenta.',
   },
   {
     id: 'behavioral',
@@ -145,6 +162,10 @@ export function homePathFor(role: Role | null | undefined): string {
 // ---------------------------------------------------------------- acciones (botones)
 
 export type ActionId =
+  | 'account.create'
+  | 'account.reset_password'
+  | 'account.unlock'
+  | 'assignment.change_role'
   | 'escalation.ack'
   | 'escalation.reply'
   | 'escalation.thread'
@@ -163,6 +184,19 @@ export interface Action {
 }
 
 export const ACTIONS: Record<ActionId, Action> = {
+  // Equipo: solo control de misión.
+  'account.create': { endpoint: 'POST /admin/users', contractRoles: ['admin'], roles: ['admin'] },
+  'account.reset_password': {
+    endpoint: 'POST /admin/users/{id}/reset-password',
+    contractRoles: ['admin'],
+    roles: ['admin'],
+  },
+  'account.unlock': { endpoint: 'POST /admin/users/{id}/unlock', contractRoles: ['admin'], roles: ['admin'] },
+  'assignment.change_role': {
+    endpoint: 'PATCH /admin/assignments/{id}',
+    contractRoles: ['admin'],
+    roles: ['admin'],
+  },
   'escalation.ack': {
     endpoint: 'POST /admin/escalations/{id}/ack',
     contractRoles: ['flight_surgeon', 'admin'],

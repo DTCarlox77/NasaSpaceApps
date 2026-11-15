@@ -129,7 +129,8 @@ describe('navegación por rol en el panel', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/tripulacion'));
     const nav = screen.getByRole('navigation', { name: 'Secciones' });
     const links = Array.from(nav.querySelectorAll('a .nav-title')).map((a) => a.textContent);
-    expect(links).toEqual(['Dashboard de tripulación', 'Alertas', 'Emergencias', 'Cumplimiento', 'Demo']);
+    // V1b: "Equipo" (solo admin) se agregó a la navegación.
+    expect(links).toEqual(['Dashboard de tripulación', 'Alertas', 'Emergencias', 'Equipo', 'Cumplimiento', 'Demo']);
     expect(screen.getByText('Datos sintéticos · Apoyo a la decisión, no diagnóstico')).toBeInTheDocument();
     expect(screen.getByText('ARES-1')).toBeInTheDocument();
   });

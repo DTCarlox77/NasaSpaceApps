@@ -36,6 +36,11 @@ export const queryKeys = {
   behavioralAstronaut: (missionId: string, astronautId: string) =>
     [MISSION_DATA, missionId, 'behavioral-astronaut', astronautId] as const,
   confidentialAccess: (missionId: string) => [MISSION_DATA, missionId, 'confidential-access'] as const,
+  // Equipo (solo admin).
+  missionCrew: (missionId: string) => [MISSION_DATA, missionId, 'team', 'crew'] as const,
+  assignments: (missionId: string) => [MISSION_DATA, missionId, 'team', 'assignments'] as const,
+  /** SOLO modo demo: GET /admin/users. */
+  teamAccounts: (missionId: string, kind: 'crew' | 'ground') => [MISSION_DATA, missionId, 'team', 'accounts', kind] as const,
   /** Respuestas a una solicitud de apoyo enviadas en esta sesión (el contrato no da el hilo a Tierra). */
   supportReplies: (missionId: string, requestId: string) =>
     [MISSION_DATA, missionId, 'support-replies', requestId] as const,

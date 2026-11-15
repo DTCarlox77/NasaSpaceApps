@@ -9,7 +9,8 @@ describe('navegación por rol (nav/access.ts)', () => {
       expect(canSee(role, 'behavioral')).toBe(false);
       expect(ids(role)).not.toContain('behavioral');
     }
-    expect(ids('admin')).toEqual(['crew', 'alerts', 'emergencies', 'compliance', 'demo']);
+    // V1b: "Equipo" (solo admin) se agregó a la navegación.
+    expect(ids('admin')).toEqual(['crew', 'alerts', 'emergencies', 'team', 'compliance', 'demo']);
     expect(ids('flight_surgeon')).toEqual(['crew', 'alerts', 'emergencies']);
   });
 

@@ -609,3 +609,105 @@ export interface ConfidentialAccessPage {
   items: ConfidentialAccess[];
   next_cursor: string | null;
 }
+
+// ---------------------------------------------------------------- equipo: cuentas y asignaciones (V1b)
+
+/** UserAdmin del contrato (lo que ve admin de una cuenta). */
+export interface UserAdmin {
+  id: string;
+  username: string;
+  email?: string | null;
+  full_name: string;
+  role: Role;
+  must_change_password: boolean;
+  is_active: boolean;
+  failed_login_attempts: number;
+  locked_until?: string | null;
+  last_login_at?: string | null;
+  created_at?: string;
+}
+
+/** POST /admin/users (CreateUserRequest). */
+export interface CreateUserRequest {
+  username: string;
+  full_name: string;
+  email?: string | null;
+  role: Role;
+  astronaut?: {
+    call_sign: string;
+    agency?: string | null;
+    mission_id: string;
+    crew_role: CrewRole;
+  };
+  ground_mission_ids?: string[];
+}
+
+export interface AstronautProfile {
+  id: string;
+  user_id: string;
+  call_sign: string;
+  agency?: string | null;
+  synthetic: boolean;
+}
+
+export interface Assignment {
+  id: string;
+  mission_id: string;
+  astronaut_id: string;
+  call_sign?: string;
+  crew_role: CrewRole;
+  assigned_from: string;
+  /** null = sin fecha de fin. */
+  assigned_to?: string | null;
+  created_at?: string;
+}
+
+export interface AssignmentPage {
+  items: Assignment[];
+  next_cursor: string | null;
+}
+
+/** 201 de POST /admin/users. `temporary_password` se muestra UNA sola vez. */
+export interface CreatedUser {
+  user: UserAdmin;
+  astronaut?: AstronautProfile;
+  assignment?: Assignment;
+  temporary_password: string;
+}
+
+/** POST /admin/users/{id}/reset-password. */
+export interface TemporaryPasswordResponse {
+  user_id: string;
+  temporary_password: string;
+  must_change_password: boolean;
+  revoked_refresh_tokens: number;
+}
+
+/** GET /missions/{id}/crew (admin no recibe `sex`). */
+export interface CrewMember {
+  astronaut_id: string;
+  user_id?: string;
+  call_sign: string;
+  full_name: string;
+  crew_role: CrewRole;
+  assigned_from: string;
+}
+
+export interface CrewPage {
+  items: CrewMember[];
+  next_cursor: string | null;
+}
+
+/**
+ * SOLO modo demo (GET /admin/users no existe en el contrato v1.8): cuenta con su lugar en la
+ * misión. En modo api el panel no la pide.
+ */
+export interface TeamAccount extends UserAdmin {
+  astronaut?: { id: string; call_sign: string; crew_role: CrewRole; mission_id: string; assignment_id: string };
+  ground_mission_ids?: string[];
+}
+
+export interface TeamAccountPage {
+  items: TeamAccount[];
+  next_cursor: string | null;
+}

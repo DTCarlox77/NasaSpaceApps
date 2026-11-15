@@ -13,12 +13,15 @@ import {
   type MockBehavioralEscalation,
   type MockSupportRequest,
 } from './fixtures/behavioral.ts';
+import { buildAccounts, isAccountRecord, type MockAccount } from './fixtures/accounts.ts';
 import { buildEmergencies, type MockEmergency } from './fixtures/emergencies.ts';
 import { buildInbox, buildMessages } from './fixtures/inbox.ts';
 import { clearChanges, emptyChanges, loadChanges, saveChanges, type DemoChanges } from './persistence.ts';
 
 export interface MockState {
   t0: number;
+  /** Cuentas del seed más las creadas en el demo. */
+  accounts: MockAccount[];
   escalations: InboxItem[];
   messages: EscalationMessage[];
   emergencies: MockEmergency[];
@@ -28,22 +31,23 @@ export interface MockState {
   audit: ConfidentialAccess[];
   /** Cambios del usuario sobre los fixtures (lo único que se guarda en localStorage). */
   changes: DemoChanges;
-}
-
-/** Ganchos para que otros módulos (cuentas) armen y apliquen su parte del estado. */
-type Extension = {
-  build(state: MockState): void;
-  apply(state: MockState, changes: DemoChanges): void;
-};
-const extensions: Extension[] = [];
-
-export function registerStateExtension(extension: Extension): void {
-  extensions.push(extension);
+  /**
+   * Contraseñas temporales recién generadas cuyo hash falta calcular (crypto.subtle es async).
+   * SOLO en memoria y por un instante: server.ts las convierte en hash antes de responder.
+   */
+  pendingPasswords: { userId: string; password: string }[];
 }
 
 const byId = <T extends { id: string }>(list: T[], id: string) => list.find((item) => item.id === id);
 
 function applyChanges(state: MockState, changes: DemoChanges): void {
+  for (const [id, change] of Object.entries(changes.accounts)) {
+    const account = byId(state.accounts, id);
+    if (account) Object.assign(account, change);
+    else if (change.created_in_demo === true && isAccountRecord(change)) {
+      state.accounts.push(change as unknown as MockAccount);
+    }
+  }
   for (const [id, patch] of Object.entries(changes.escalations)) {
     const item = byId(state.escalations, id);
     if (item) Object.assign(item, patch);
@@ -62,13 +66,13 @@ function applyChanges(state: MockState, changes: DemoChanges): void {
     const item = byId(state.behavioralEscalations, id);
     if (item) Object.assign(item, patch);
   }
-  for (const extension of extensions) extension.apply(state, changes);
   state.changes = changes;
 }
 
 export function createState(t0: number, saved?: DemoChanges | null): MockState {
   const state: MockState = {
     t0,
+    accounts: buildAccounts(t0),
     escalations: buildInbox(t0),
     messages: buildMessages(t0),
     emergencies: buildEmergencies(t0),
@@ -77,8 +81,8 @@ export function createState(t0: number, saved?: DemoChanges | null): MockState {
     behavioralEscalations: buildBehavioralEscalations(t0),
     audit: buildAudit(t0),
     changes: emptyChanges(t0),
+    pendingPasswords: [],
   };
-  for (const extension of extensions) extension.build(state);
   if (saved) {
     try {
       applyChanges(state, saved);
@@ -120,6 +124,19 @@ export function forgetMockState(): void {
 }
 
 // ---------------------------------------------------------------- escrituras (estado + cambios)
+
+/** Cambia una cuenta (y anota el cambio; una creada en el demo se guarda completa). */
+export function patchAccount(current: MockState, account: MockAccount, patch: Partial<MockAccount>): void {
+  Object.assign(account, patch);
+  current.changes.accounts[account.id] = account.created_in_demo
+    ? { ...account }
+    : { ...current.changes.accounts[account.id], ...patch };
+}
+
+export function addAccount(current: MockState, account: MockAccount): void {
+  current.accounts.push(account);
+  current.changes.accounts[account.id] = { ...account };
+}
 
 export function patchEscalation(current: MockState, item: InboxItem, patch: Partial<InboxItem>): void {
   Object.assign(item, patch);

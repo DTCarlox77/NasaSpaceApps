@@ -52,6 +52,15 @@ export function formatDuration(totalSeconds: number): string {
   return pair(Math.floor(s / DAY), 'd', Math.floor((s % DAY) / HOUR), 'h');
 }
 
+const calendarFormat = new Intl.DateTimeFormat('es', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+/** dd/mm/aaaa en hora local (p. ej. fecha de alta). Vacío si no es válida. */
+export function calendarDate(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const ms = toMs(iso);
+  return Number.isNaN(ms) ? '' : calendarFormat.format(ms);
+}
+
 /** hh:mm si `iso` es del mismo día que `now`; si no, dd/mm hh:mm. */
 export function dayClock(iso: string | null | undefined, now: number): string {
   if (!iso) return '';
