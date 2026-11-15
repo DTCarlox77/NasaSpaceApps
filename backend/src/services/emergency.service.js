@@ -48,20 +48,25 @@ function timestampIssue(value) {
 async function risksFor(session, deadman) {
   const risks = new Map();
   for (const d of deadman) {
-    if (d.expired_at) risks.set(d.astronaut_id, 'No respondió "estoy bien" a tiempo');
-    else if (!d.confirmed_at) {
-      risks.set(
-        d.astronaut_id,
-        d.trigger_type === 'missed_checkin'
-          ? 'Sin respuesta a la alerta de check-in'
-          : 'Esperando "estoy bien"',
-      );
+    if (d.expired_at) {
+      risks.set(d.astronaut_id, { reason: 'No respondió "estoy bien" a tiempo', rank: 0 });
+    } else if (!d.confirmed_at) {
+      risks.set(d.astronaut_id, {
+        reason:
+          d.trigger_type === 'missed_checkin'
+            ? 'Sin respuesta a la alerta de check-in'
+            : 'Esperando "estoy bien"',
+        rank: 1,
+      });
     }
   }
   for (const r of await model.recentCritical(session.mission_id, RISK_WINDOW_MIN)) {
     if (risks.has(r.astronaut_id)) continue;
     const minutes = Math.max(0, Math.round((Date.now() - new Date(r.measured_at)) / 60000));
-    risks.set(r.astronaut_id, `Lectura crítica de ${r.indicator_code} hace ${minutes} min`);
+    risks.set(r.astronaut_id, {
+      reason: `Lectura crítica de ${r.indicator_code} hace ${minutes} min`,
+      rank: 2,
+    });
   }
   return risks;
 }

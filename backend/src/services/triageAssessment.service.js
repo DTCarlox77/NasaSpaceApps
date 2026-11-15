@@ -199,6 +199,12 @@ async function putAnswers({ actor, id, input }) {
   const questions = new Map(protocol.definition.questions.map((q) => [q.code, q]));
   const problems = list.flatMap((a, i) => checkAnswer(a, i, questions));
   if (problems.length) throw badRequest(problems);
+  const known = await model.existingAnswers(list.map((a) => a.client_uuid));
+  if (assessment.status !== 'in_progress' && list.every((a) => known.has(a.client_uuid))) {
+    // Reintento (p. ej. por sync) de respuestas ya guardadas: duplicate, no error.
+    const { protocol: used, result } = await evaluate(assessment, session);
+    return { accepted: 0, duplicates: list.length, preview: toResult(result, { protocol: used }) };
+  }
   if (assessment.status !== 'in_progress') {
     throw conflict(
       'ASSESSMENT_COMPLETED',

@@ -26,6 +26,8 @@ const FLAG_LABEL = {
 };
 const PRIORITY_RANK = { routine: 0, urgent: 1, emergency: 2 };
 
+const riskRank = (risks, id) => (risks.has(id) ? risks.get(id).rank : 99);
+
 /** La prioridad mayor de las acciones (para el campo priority del contrato). */
 function maxPriority(actions = []) {
   return actions.reduce(
@@ -53,7 +55,8 @@ function currentAssessments(assessments) {
 
 /**
  * Orden de atención de toda la tripulación según el protocolo (attention_order), con el
- * motivo de cada lugar. risks: Map astronaut_id → texto (lectura crítica, hombre muerto...).
+ * motivo de cada lugar. risks: Map astronaut_id → { reason, rank } (rank 0 = más urgente:
+ * no respondió "estoy bien"; luego esperando respuesta; luego lectura crítica reciente).
  */
 function attentionOrder({ crew, assessments, protocol, risks = new Map() }) {
   const order = (protocol && protocol.attention_order) || DEFAULT_ATTENTION;
@@ -77,7 +80,7 @@ function attentionOrder({ crew, assessments, protocol, risks = new Map() }) {
   const sortKey = (r) =>
     r.assessed
       ? [catIndex(r.a.triage_category), flagIndex(r.a.radiation_flag), new Date(r.a.completed_at)]
-      : [unassessedSlot, risks.has(r.member.astronaut_id) ? 0 : 1, r.member.call_sign];
+      : [unassessedSlot, riskRank(risks, r.member.astronaut_id), r.member.call_sign];
   rows.sort((x, y) => {
     const kx = sortKey(x);
     const ky = sortKey(y);
@@ -100,7 +103,7 @@ function attentionOrder({ crew, assessments, protocol, risks = new Map() }) {
         r.a && r.a.status === 'in_progress'
           ? 'Evaluación en curso: termínala (puede ser rojo)'
           : 'Sin evaluar: evalúalo (puede ser rojo)';
-      if (risk) reason += `. ${risk}`;
+      if (risk) reason += `. ${risk.reason}`;
     }
     return {
       position: i + 1,
@@ -118,17 +121,17 @@ function attentionOrder({ crew, assessments, protocol, risks = new Map() }) {
 
 /** Roster de evaluación: primero quien tiene un riesgo conocido; luego el resto. */
 function roster({ crew, risks = new Map(), prefill = new Map() }) {
-  const sorted = [...crew].sort((x, y) => {
-    const rx = risks.has(x.astronaut_id) ? 0 : 1;
-    const ry = risks.has(y.astronaut_id) ? 0 : 1;
-    return rx - ry || x.call_sign.localeCompare(y.call_sign);
-  });
+  const sorted = [...crew].sort(
+    (x, y) =>
+      riskRank(risks, x.astronaut_id) - riskRank(risks, y.astronaut_id) ||
+      x.call_sign.localeCompare(y.call_sign),
+  );
   return sorted.map((m, i) => ({
     astronaut_id: m.astronaut_id,
     call_sign: m.call_sign,
     crew_role: m.crew_role,
     sequence_no: i + 1,
-    priority_reason: risks.get(m.astronaut_id) || null,
+    priority_reason: risks.has(m.astronaut_id) ? risks.get(m.astronaut_id).reason : null,
     prefill: prefill.get(m.astronaut_id) || {},
   }));
 }

@@ -415,6 +415,15 @@ async function insertAnswer(row, db) {
   return rows.length > 0;
 }
 
+/** client_uuid de respuestas que ya existen (para responder duplicate sin error). */
+async function existingAnswers(clientUuids, db = pool) {
+  const { rows } = await db.query(
+    'SELECT client_uuid FROM emergency_answers WHERE client_uuid = ANY($1::uuid[])',
+    [clientUuids],
+  );
+  return new Set(rows.map((r) => r.client_uuid));
+}
+
 async function answersFor(assessmentId, db = pool) {
   const { rows } = await db.query(
     `SELECT client_uuid, question_code, answer, source::text AS source, source_reading_id,
@@ -550,9 +559,9 @@ async function sessionEscalations(sessionId, { groundDelivered = false } = {}, d
                  ELSE e.status::text END AS status,
             e.deliver_at, e.created_at, e.source_type, e.source_id, e.astronaut_id
      FROM escalations e
-     WHERE (e.source_type = 'emergency_session' AND e.source_id = $1)
+     WHERE ((e.source_type = 'emergency_session' AND e.source_id = $1)
         OR (e.source_type = 'emergency_assessment'
-            AND e.source_id IN (SELECT id FROM emergency_assessments WHERE session_id = $1))
+            AND e.source_id IN (SELECT id FROM emergency_assessments WHERE session_id = $1)))
        ${groundDelivered ? `AND e.level = 'flight_surgeon' AND e.deliver_at <= now()` : ''}
      ORDER BY e.created_at, e.id`,
     [sessionId],
@@ -672,6 +681,7 @@ module.exports = {
   completeAssessment,
   saveProvisional,
   insertAnswer,
+  existingAnswers,
   answersFor,
   crewOfMission,
   recentCritical,
