@@ -61,6 +61,17 @@ async function derivationContext(indicator, reading, db) {
 }
 
 /**
+ * Contexto de las reglas: componentes de la lectura + derivados + datos del perfil.
+ * `sex` (sexo biológico, migración 009) solo si el perfil lo tiene: así una regla puede usar
+ * { "field": "sex", "op": "eq", "value": "female" } y, sin dato, la condición es falsa.
+ * Ninguna regla actual lo usa; la radiación no depende del sexo (límite de carrera universal,
+ * NASA-STD-3001 Vol. 1 [V1 4030]). Los datos de la lectura ganan sobre los del perfil.
+ */
+function ruleContext({ components, derived, sex }) {
+  return { ...(sex ? { sex } : {}), ...components, ...derived };
+}
+
+/**
  * Evalúa una lectura ya guardada. Devuelve { evaluation, derived }: evaluation tiene la
  * forma de evaluateIndicator (con la versión de reglas activa).
  */
@@ -71,11 +82,12 @@ async function evaluateReading(reading, db) {
   const { indicator, ruleSet } = entry;
   const ctx = await derivationContext(indicator, reading, db);
   const derived = computeDerived(indicator, reading, ctx);
+  const sex = reading.astronaut_id ? await readings.astronautSex(reading.astronaut_id, db) : null;
   const evaluation = evaluateIndicator(
     { code: indicator.code, rules: ruleSet.rules, rules_version: ruleSet.version },
-    { ...reading.components, ...derived },
+    ruleContext({ components: reading.components, derived, sex }),
   );
   return { evaluation, derived };
 }
 
-module.exports = { evaluateReading };
+module.exports = { evaluateReading, ruleContext };

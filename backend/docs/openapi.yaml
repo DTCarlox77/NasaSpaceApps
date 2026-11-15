@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Astro Health API
-  version: 1.1.0
+  version: 1.2.0
   description: |
     API de apoyo a la decisión para el monitoreo de salud de astronautas.
 
@@ -57,6 +57,17 @@ info:
     `npm run api:mock` levanta Prism en `http://localhost:4010` con los ejemplos de este
     contrato. Para pedir otra respuesta documentada usa el header `Prefer`, por ejemplo
     `Prefer: code=423` o `Prefer: example=duplicate`.
+
+    ## Cambios
+    **1.2.0** (tarea 8):
+    - Perfil del astronauta: campo nuevo `sex` (`female` | `male` | null), sexo biológico para
+      referencias clínicas (no es identidad de género). Lo escribe admin en
+      `POST /admin/users` (`astronaut.sex`) y en el nuevo `PATCH /admin/astronauts/{id}`, pero
+      **no lo recibe**. Lo ven el propio astronauta (`GET /me` → `context.sex`) y
+      `flight_surgeon` / `behavioral_health` de su misión (`GET /missions/{id}/crew`). Nunca
+      otro astronauta ni el dashboard. El motor lo pone en el contexto de las reglas; ninguna
+      regla actual lo usa.
+    - `GET /missions/{id}/crew` ya está implementado.
 servers:
   - url: http://localhost:3000
     description: Desarrollo local
@@ -454,6 +465,7 @@ paths:
                       astronaut_id: '10000000-0000-4000-8000-000000000011'
                       call_sign: 'ORION'
                       crew_role: 'commander'
+                      sex: female
                       mission:
                         id: '20000000-0000-4000-8000-000000000001'
                         code: 'ARES-1'
@@ -679,6 +691,54 @@ paths:
               examples:
                 unlocked:
                   $ref: '#/components/examples/UserAdminLyra'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/admin/astronauts/{id}:
+    patch:
+      tags: [Admin-Cuentas]
+      summary: Cambia el sexo biológico del perfil del astronauta
+      description: |
+        `sex`: `female`, `male` o `null` (lo borra); cualquier otro valor o campo da 400. admin
+        lo escribe pero la respuesta **no** lo incluye (ver BiologicalSex).
+      operationId: updateAstronaut
+      x-status: mvp
+      x-roles: [admin]
+      x-hazards: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AstronautPatch'
+            examples:
+              female:
+                summary: Sexo biológico de LYRA (sintético)
+                value: { sex: female }
+      responses:
+        '200':
+          description: Perfil actualizado (sin `sex`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AstronautProfile'
+              examples:
+                lyra:
+                  summary: LYRA
+                  value:
+                    id: '10000000-0000-4000-8000-000000000013'
+                    user_id: '00000000-0000-4000-8000-000000000013'
+                    call_sign: LYRA
+                    agency: Demo Agency
+                    synthetic: true
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -979,9 +1039,12 @@ paths:
     get:
       tags: [Misión]
       summary: Tripulación vigente de una misión
+      description: |
+        La ven la tripulación de la misión, su equipo en Tierra y admin (403 si no eres parte).
+        `sex` solo viene en tu propia fila (astronauta) o si eres `flight_surgeon` o
+        `behavioral_health`; admin y los demás astronautas no lo reciben.
       operationId: getMissionCrew
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut, flight_surgeon, behavioral_health, admin]
       x-hazards: [isolation_confinement]
       parameters:
@@ -997,7 +1060,7 @@ paths:
                 $ref: '#/components/schemas/CrewPage'
               examples:
                 ares1:
-                  summary: Tripulación de ARES-1
+                  summary: Tripulación de ARES-1 (vista de admin, sin sex)
                   value:
                     items:
                       - {
@@ -6946,6 +7009,8 @@ components:
           type: string
           nullable: true
           enum: [commander, pilot, crew_medical_officer, flight_engineer, mission_specialist, null]
+        sex:
+          $ref: '#/components/schemas/BiologicalSex'
         mission: { $ref: '#/components/schemas/MissionRef' }
         environment: { $ref: '#/components/schemas/EnvironmentRef' }
         ground_missions:
@@ -7037,6 +7102,8 @@ components:
             agency: { type: string, nullable: true }
             mission_id: { $ref: '#/components/schemas/Uuid' }
             crew_role: { $ref: '#/components/schemas/CrewRole' }
+            sex:
+              $ref: '#/components/schemas/BiologicalSex'
         ground_mission_ids:
           type: array
           description: Misiones a cuyo equipo en Tierra se agrega (no aplica a astronautas ni a service). Si se omite, las misiones activas del equipo en Tierra del admin que crea la cuenta.
@@ -7048,15 +7115,35 @@ components:
           properties:
             mission_id: { $ref: '#/components/schemas/Uuid' }
             description: { type: string, minLength: 1, maxLength: 200 }
+    BiologicalSex:
+      type: string
+      nullable: true
+      enum: [female, male, null]
+      description: |
+        Sexo biológico para referencias clínicas futuras. **No es identidad de género.** Datos
+        sintéticos en la demo. Quién lo recibe (accessPolicy, vista `clinical_profile`): el propio
+        astronauta, y `flight_surgeon` y `behavioral_health` de su misión. `admin` lo escribe
+        pero **no** lo recibe; otro astronauta (también el CMO y el comandante) nunca lo ve, y no
+        aparece en el dashboard. Si el rol no puede verlo, el campo no viene. Ninguna regla
+        actual lo usa y la radiación no depende de él (límite de carrera universal,
+        NASA-STD-3001 Vol. 1 [V1 4030]).
     AstronautProfile:
       type: object
       required: [id, user_id, call_sign, synthetic]
+      description: Lo recibe admin, así que nunca trae `sex` (ver BiologicalSex).
       properties:
         id: { $ref: '#/components/schemas/Uuid' }
         user_id: { $ref: '#/components/schemas/Uuid' }
         call_sign: { type: string }
         agency: { type: string, nullable: true }
         synthetic: { type: boolean }
+    AstronautPatch:
+      type: object
+      required: [sex]
+      additionalProperties: false
+      properties:
+        sex:
+          $ref: '#/components/schemas/BiologicalSex'
     CreatedUser:
       type: object
       required: [user, temporary_password]
@@ -7402,6 +7489,8 @@ components:
         full_name: { type: string }
         crew_role: { $ref: '#/components/schemas/CrewRole' }
         assigned_from: { $ref: '#/components/schemas/Timestamp' }
+        sex:
+          $ref: '#/components/schemas/BiologicalSex'
     CrewPage:
       type: object
       required: [items, next_cursor]

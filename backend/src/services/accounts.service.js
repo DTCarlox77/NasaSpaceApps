@@ -90,7 +90,12 @@ async function createUser({ actor, input }) {
       if (input.role === 'astronaut') {
         await assertOpenMission(input.astronaut.mission_id, 'astronaut.mission_id', db);
         const astronaut = await accounts.insertAstronaut(
-          { userId: user.id, callSign: input.astronaut.call_sign, agency: input.astronaut.agency },
+          {
+            userId: user.id,
+            callSign: input.astronaut.call_sign,
+            agency: input.astronaut.agency,
+            sex: input.astronaut.sex,
+          },
           db,
         );
         const assignment = await accounts.insertAssignment(
@@ -126,6 +131,16 @@ async function createUser({ actor, input }) {
   }
 }
 
+/**
+ * Sexo biológico del perfil (referencias clínicas). admin lo escribe pero la respuesta no lo
+ * incluye: solo lo ven el astronauta y el equipo clínico (accessPolicy, clinical_profile).
+ */
+async function updateAstronaut({ astronautId, input }) {
+  const astronaut = await accounts.updateAstronautSex(astronautId, input.sex);
+  if (!astronaut) throw notFound('El astronauta no existe.');
+  return astronaut;
+}
+
 /** Contraseña temporal nueva, must_change_password y revocación de todas sus sesiones. */
 async function resetPassword({ userId, ip }) {
   const temporaryPassword = passwords.generateTemporary(env.auth.tempPasswordLength);
@@ -153,4 +168,4 @@ async function unlock({ userId, ip }) {
   });
 }
 
-module.exports = { createUser, resetPassword, unlock };
+module.exports = { createUser, updateAstronaut, resetPassword, unlock };

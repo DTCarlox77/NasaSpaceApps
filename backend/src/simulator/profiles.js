@@ -46,9 +46,12 @@ const LIMITS = Object.freeze({
 /**
  * Por astronauta (call sign del seed). Medias y desviaciones: suposición de diseño.
  * rad_factor: blindaje y puesto de trabajo (±5 %); rad_prior_msv: dosis de carrera previa.
+ * sex: el del seed (sintético). Ningún valor de aquí depende del sexo; tampoco la radiación,
+ * cuyo límite de carrera es universal (NASA-STD-3001 Vol. 1 [V1 4030]).
  */
 const ASTRONAUTS = Object.freeze({
   ORION: {
+    sex: 'female',
     bp: [114, 74],
     hr: 64,
     rr: 14,
@@ -64,6 +67,7 @@ const ASTRONAUTS = Object.freeze({
     pvt: { lapses: [1, 2, 3], mean_rt: [262, 271, 279], false_starts: [0, 1, 1] },
   },
   VEGA: {
+    sex: 'male',
     bp: [110, 70],
     hr: 68,
     rr: 15,
@@ -79,6 +83,7 @@ const ASTRONAUTS = Object.freeze({
     pvt: { lapses: [2, 3, 4], mean_rt: [271, 280, 290], false_starts: [1, 1, 2] },
   },
   LYRA: {
+    sex: 'female',
     bp: [108, 68],
     hr: 66,
     rr: 14,
@@ -94,6 +99,7 @@ const ASTRONAUTS = Object.freeze({
     pvt: { lapses: [0, 1, 2], mean_rt: [248, 255, 263], false_starts: [0, 0, 1] },
   },
   ATLAS: {
+    sex: 'male',
     bp: [116, 75],
     hr: 62,
     rr: 13,

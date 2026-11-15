@@ -143,6 +143,12 @@ async function firstInMission({ indicatorCode, astronautId, missionId, excludeId
   return rows[0] || null;
 }
 
+/** Sexo biológico del perfil para el contexto de evaluación (null si no está). */
+async function astronautSex(astronautId, db = pool) {
+  const { rows } = await db.query('SELECT sex FROM astronauts WHERE id = $1', [astronautId]);
+  return rows[0] ? rows[0].sex : null;
+}
+
 async function missionEndsAt(missionId, db = pool) {
   const { rows } = await db.query('SELECT ends_at FROM missions WHERE id = $1', [missionId]);
   return rows[0] ? rows[0].ends_at : null;
@@ -243,6 +249,7 @@ module.exports = {
   history,
   firstInMission,
   missionEndsAt,
+  astronautSex,
   attachmentOwnedBy,
   series,
   latestForAstronaut,

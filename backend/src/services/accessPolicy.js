@@ -16,7 +16,8 @@
  *     sensitivity,         // 'standard' | 'confidential'
  *     category,            // 'physical' | 'behavioral' | 'emergency'
  *     action,              // 'read' | 'write'
- *     view,                // opcional: 'detail' (por defecto) | 'escalated_alert' | 'compliance' | 'fitness'
+ *     view,                // opcional: 'detail' (por defecto) | 'escalated_alert' | 'compliance' |
+ *                          //           'fitness' | 'clinical_profile' (sexo biológico del perfil)
  *     emergency_active,    // opcional: hay una emergencia activa del triaje en la misión
  *     share_with_cmo,      // opcional: privacy_preferences.share_with_cmo del dueño
  *   }
@@ -31,7 +32,7 @@ const confidentialAccess = require('../models/confidentialAccess.model');
 const SENSITIVITIES = ['standard', 'confidential'];
 const CATEGORIES = ['physical', 'behavioral', 'emergency'];
 const ACTIONS = ['read', 'write'];
-const VIEWS = ['detail', 'escalated_alert', 'compliance', 'fitness'];
+const VIEWS = ['detail', 'escalated_alert', 'compliance', 'fitness', 'clinical_profile'];
 
 function assertResource(resource) {
   if (!resource || typeof resource !== 'object') throw new TypeError('resource inválido');
@@ -55,6 +56,16 @@ function canAccess(actor, resource) {
   const habitat = resource.astronaut_id == null; // dato del módulo, no de una persona
   const own =
     !habitat && actor.astronaut_id != null && resource.astronaut_id === actor.astronaut_id;
+
+  // Perfil clínico (sexo biológico): el propio astronauta y el equipo clínico de su misión
+  // (flight_surgeon, behavioral_health). admin lo escribe por el panel pero no lo recibe;
+  // otro astronauta (CMO y comandante incluidos) nunca lo ve.
+  if (view === 'clinical_profile') {
+    if (action !== 'read' || habitat) return false;
+    if (actor.role === 'astronaut') return own;
+    if (actor.role === 'flight_surgeon' || actor.role === 'behavioral_health') return sameMission;
+    return false;
+  }
 
   switch (actor.role) {
     case 'service':
@@ -102,6 +113,23 @@ function canAccess(actor, resource) {
     default:
       return false;
   }
+}
+
+/**
+ * Filtro de respuesta del perfil del astronauta: quita `sex` si el actor no puede ver el
+ * perfil clínico (canAccess, vista clinical_profile). Devuelve una copia.
+ */
+function filterAstronautProfile(actor, profile, { astronautId, missionId }) {
+  const { sex, ...rest } = profile;
+  const visible = canAccess(actor, {
+    astronaut_id: astronautId,
+    mission_id: missionId,
+    sensitivity: 'standard',
+    category: 'physical',
+    action: 'read',
+    view: 'clinical_profile',
+  });
+  return visible ? { ...rest, sex: sex ?? null } : rest;
 }
 
 /** Aptitud que ve admin: solo "fit" o "not_confirmed", nunca los valores PVT. */
@@ -179,6 +207,7 @@ async function loadActor(userId, db = pool) {
 
 module.exports = {
   canAccess,
+  filterAstronautProfile,
   fitnessForAdmin,
   logConfidentialAccess,
   enforceAccess,
