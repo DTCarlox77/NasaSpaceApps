@@ -26,13 +26,14 @@ const PIN_RE = /^[0-9]{4,8}$/;
 
 /**
  * Parámetros del verificador local de la app (regla de diseño): PBKDF2-HMAC-SHA256 con
- * 600 000 iteraciones (OWASP Password Storage Cheat Sheet) y una sal aleatoria de 16 bytes
- * generada en el dispositivo; tras LOCKOUT_MAX_ATTEMPTS fallos, la app borra el verificador y
- * exige un login en línea.
+ * OFFLINE_PIN_PBKDF2_ITERATIONS iteraciones (600 000 por defecto, OWASP Password Storage Cheat
+ * Sheet; configurable porque en React Native puede tardar demasiado, mínimo 10 000) y una sal
+ * aleatoria de 16 bytes generada en el dispositivo; tras LOCKOUT_MAX_ATTEMPTS fallos, la app
+ * borra el verificador y exige un login en línea.
  */
 const offlineVerifier = () => ({
   kdf: 'PBKDF2-HMAC-SHA256',
-  iterations: 600000,
+  iterations: env.auth.offlinePinIterations,
   salt_bytes: 16,
   max_attempts: env.auth.lockoutMaxAttempts,
 });
