@@ -241,7 +241,19 @@ async function findOverlappingOutage({ excludeId = null, missionId, from, to }, 
   return rows[0] ? rows[0].id : null;
 }
 
+/** Cortes vigentes o futuros de la misión (current = ya empezó), en orden de inicio. */
+async function activeAndUpcomingOutages(missionId, db = pool) {
+  const { rows } = await db.query(
+    `SELECT ${OUTAGE_COLUMNS}, (starts_at <= now()) AS current FROM mission_comm_outages
+     WHERE mission_id = $1 AND (ends_at IS NULL OR ends_at > now())
+     ORDER BY starts_at, id LIMIT 20`,
+    [missionId],
+  );
+  return rows;
+}
+
 module.exports = {
+  activeAndUpcomingOutages,
   findMission,
   defaultMission,
   listMissions,
