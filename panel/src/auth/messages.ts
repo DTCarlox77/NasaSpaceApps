@@ -1,5 +1,6 @@
 /** Mensajes del login y del cambio de contraseña según el `code` del error (nunca el texto). */
 import { HttpError, NetworkError, SESSION_ENDED_MESSAGE } from '../api/http.ts';
+import { clockTime } from '../lib/time.ts';
 
 export const ASTRONAUT_MESSAGE =
   'Este panel es para el equipo en Tierra. Los astronautas usan la app móvil.';
@@ -8,9 +9,7 @@ export const NETWORK_MESSAGE = 'No se pudo conectar con el servidor.';
 export { SESSION_ENDED_MESSAGE };
 
 /** Hora local hh:mm de un instante ISO (p. ej. locked_until del 423). */
-export function localTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
-}
+export const localTime = (iso: string): string => clockTime(iso);
 
 function detail<T>(err: HttpError, key: string): T | undefined {
   const details = err.details;

@@ -11,7 +11,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    env: { VITE_API_URL: 'http://api.test' },
+    // TZ fija: las pruebas comparan hh:mm locales.
+    env: { VITE_API_URL: 'http://api.test', TZ: 'UTC' },
     restoreMocks: true,
   },
 });
