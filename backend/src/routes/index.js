@@ -8,6 +8,7 @@ const adminUsersRoutes = require('./admin.users.routes');
 const catalogRoutes = require('./catalog.routes');
 const readingsRoutes = require('./readings.routes');
 const habitatRoutes = require('./habitat.routes');
+const groundRoutes = require('./ground.routes');
 const adminMissionRoutes = require('./admin.mission.routes');
 const { restrictServiceAccounts } = require('../middlewares/auth');
 
@@ -24,6 +25,7 @@ router.use('/admin/users', adminUsersRoutes);
 router.use(catalogRoutes);
 router.use(readingsRoutes);
 router.use(habitatRoutes);
+router.use(groundRoutes);
 router.use('/admin', adminMissionRoutes);
 
 module.exports = router;
