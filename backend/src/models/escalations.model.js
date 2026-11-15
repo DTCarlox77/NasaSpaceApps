@@ -221,45 +221,61 @@ async function crewThreadPage({ escalationId, after, limit }, db = pool) {
 // ---------------------------------------------------------------- recálculo por cortes
 
 /**
+ * deliver_at nuevo de algo que no ha cruzado el enlace: compute_deliver_at(misión, envío).
+ * Lo que estaba EN COLA (deliver_at NULL, corte sin fin conocido) no puede haber llegado
+ * antes de que se cerrara el corte: si el corte se cierra con un ends_at en el pasado, sale
+ * ahora (nunca con un deliver_at pasado, que la app ya no recogería en /sync/pull).
+ */
+const requeued = (alias, missionExpr, sentExpr) => {
+  const computed = `compute_deliver_at(${missionExpr}, ${sentExpr})`;
+  return `CASE WHEN ${alias}.deliver_at IS NULL AND ${computed} IS NOT NULL
+               THEN greatest(${computed}, now()) ELSE ${computed} END`;
+};
+
+/**
  * Recalcula deliver_at de todo lo que todavía no cruzó el enlace en la misión (en cola o
  * en camino) con compute_deliver_at(misión, hora de envío). Se llama al crear, corregir o
  * cerrar un corte. Devuelve cuántas filas cambiaron por tabla.
  */
 async function recomputePending(missionId, db = pool) {
+  const escNext = requeued('e', 'e.mission_id', 'e.created_at');
   const escalations = await db.query(
     `UPDATE escalations e
-     SET deliver_at = compute_deliver_at(e.mission_id, e.created_at)
+     SET deliver_at = ${escNext}
      WHERE e.mission_id = $1 AND e.status = 'queued'
        AND e.level IN ('flight_surgeon', 'behavioral_health')
        AND (e.deliver_at IS NULL OR e.deliver_at > now())
-       AND e.deliver_at IS DISTINCT FROM compute_deliver_at(e.mission_id, e.created_at)`,
+       AND e.deliver_at IS DISTINCT FROM ${escNext}`,
     [missionId],
   );
+  const msgNext = requeued('m', 'e.mission_id', 'm.created_at');
   const messages = await db.query(
     `UPDATE escalation_messages m
-     SET deliver_at = compute_deliver_at(e.mission_id, m.created_at)
+     SET deliver_at = ${msgNext}
      FROM escalations e
      WHERE e.id = m.escalation_id AND e.mission_id = $1
        AND (m.deliver_at IS NULL OR m.deliver_at > now())
-       AND m.deliver_at IS DISTINCT FROM compute_deliver_at(e.mission_id, m.created_at)`,
+       AND m.deliver_at IS DISTINCT FROM ${msgNext}`,
     [missionId],
   );
   // Bienestar ("Quiero hablar con alguien"): mismas reglas de enlace.
+  const srNext = requeued('s', 's.mission_id', 's.received_at');
   const supportRequests = await db.query(
     `UPDATE support_requests s
-     SET deliver_at = compute_deliver_at(s.mission_id, s.received_at)
+     SET deliver_at = ${srNext}
      WHERE s.mission_id = $1 AND s.status <> 'closed'
        AND (s.deliver_at IS NULL OR s.deliver_at > now())
-       AND s.deliver_at IS DISTINCT FROM compute_deliver_at(s.mission_id, s.received_at)`,
+       AND s.deliver_at IS DISTINCT FROM ${srNext}`,
     [missionId],
   );
+  const smNext = requeued('sm', 's.mission_id', 'sm.created_at');
   const supportMessages = await db.query(
     `UPDATE support_messages sm
-     SET deliver_at = compute_deliver_at(s.mission_id, sm.created_at)
+     SET deliver_at = ${smNext}
      FROM support_requests s
      WHERE s.id = sm.request_id AND s.mission_id = $1
        AND (sm.deliver_at IS NULL OR sm.deliver_at > now())
-       AND sm.deliver_at IS DISTINCT FROM compute_deliver_at(s.mission_id, sm.created_at)`,
+       AND sm.deliver_at IS DISTINCT FROM ${smNext}`,
     [missionId],
   );
   return {

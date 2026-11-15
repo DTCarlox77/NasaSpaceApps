@@ -734,3 +734,59 @@ test('corte programado retrasa la entrega; acortarlo la adelanta', async (t) => 
     400,
   );
 });
+
+test('corte sin fin cerrado hacia atrás: lo que estaba en cola sale ahora, no en el pasado', async (t) => {
+  if (skip(t)) return;
+  // Enlace libre: los cortes de las pruebas anteriores ya terminaron.
+  await q('DELETE FROM mission_comm_outages WHERE mission_id = $1', [ARES1]);
+  const outage = await api('admin', 'post', '/admin/comm-outages', {
+    mission_id: ARES1,
+    starts_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    reason: 'Corte sin fin conocido (prueba)',
+  });
+  assert.equal(outage.status, 201, JSON.stringify(outage.body));
+  const { groundId } = await criticalReading();
+  // Una alerta que ya llegó a Tierra (de una prueba anterior) para responderla durante el corte.
+  const [arrived] = await q(
+    `SELECT id FROM escalations WHERE mission_id = $1 AND level = 'flight_surgeon'
+       AND deliver_at < now() - interval '1 minute' AND status <> 'closed' LIMIT 1`,
+    [ARES1],
+  );
+  const reply = await api('reyes', 'post', `/admin/escalations/${arrived.id}/messages`, {
+    body: 'Mensaje en cola durante el corte.',
+  });
+  assert.equal(reply.status, 201, JSON.stringify(reply.body));
+  assert.equal(reply.body.deliver_at, null);
+  // Lo que se pidió hace 8 min, durante el corte, sigue en cola.
+  await q(`UPDATE escalations SET created_at = now() - interval '8 minutes' WHERE id = $1`, [
+    groundId,
+  ]);
+  await q(
+    `UPDATE escalation_messages SET created_at = now() - interval '8 minutes' WHERE id = $1`,
+    [reply.body.id],
+  );
+  const [queued] = await q('SELECT deliver_at FROM escalations WHERE id = $1', [groundId]);
+  assert.equal(queued.deliver_at, null);
+
+  // Se cierra con un fin de hace 5 min: fin + 90 s ya pasó, pero en cola nada llegó antes.
+  const before = Date.now();
+  const closed = await api('admin', 'patch', `/admin/comm-outages/${outage.body.id}`, {
+    ends_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+  });
+  assert.equal(closed.status, 200, JSON.stringify(closed.body));
+  const [esc] = await q('SELECT deliver_at FROM escalations WHERE id = $1', [groundId]);
+  assert.ok(esc.deliver_at.getTime() >= before - 1000, 'no queda en el pasado');
+  assert.ok(esc.deliver_at.getTime() <= Date.now() + 1000, 'sale ya');
+  const [msg] = await q('SELECT deliver_at FROM escalation_messages WHERE id = $1', [
+    reply.body.id,
+  ]);
+  assert.ok(msg.deliver_at.getTime() >= before - 1000);
+  // Lo que ya estaba en camino (no en cola) se sigue calculando igual.
+  const scheduled = await api('admin', 'post', '/admin/comm-outages', {
+    mission_id: ARES1,
+    starts_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    ends_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+    reason: 'Programado (prueba)',
+  });
+  assert.equal(scheduled.status, 201);
+});
