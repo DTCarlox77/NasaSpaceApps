@@ -1,6 +1,7 @@
 'use strict';
 
 const delegation = require('../services/delegation.service');
+const crewStatus = require('../services/crewStatus.service');
 
 async function unlockUser(req, res) {
   res.json(
@@ -34,4 +35,8 @@ async function audit(req, res) {
   res.json(await delegation.groundAudit({ userId: req.auth.userId, query: req.query }));
 }
 
-module.exports = { unlockUser, resetPin, registerDevice, audit };
+async function status(req, res) {
+  res.json(await crewStatus.crewStatus({ userId: req.auth.userId }));
+}
+
+module.exports = { unlockUser, resetPin, registerDevice, audit, status };
