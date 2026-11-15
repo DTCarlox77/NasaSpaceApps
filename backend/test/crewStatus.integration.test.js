@@ -25,8 +25,9 @@ const USERS = {
   vega: 'k.mensah',
   lyra: 'l.tanaka',
 };
-// Nada de esto puede salir en la respuesta de ningún tripulante.
-const FORBIDDEN_TEXT = /WB_|PVT|PHQ|GAD|fitness|support|checkin|"sex"|"note"|"reason"/i;
+// Nada de esto puede salir en la respuesta de ningún tripulante. SLEEP_HOURS llega con el
+// check-in (diría quién lo hizo y a qué hora); con estos datos tampoco escala a bordo.
+const FORBIDDEN_TEXT = /WB_|PVT|PHQ|GAD|SLEEP_HOURS|fitness|support|checkin|"sex"|"note"|"reason"/i;
 const ALERT_KEYS = ['created_at', 'escalation_id', 'indicator_code', 'indicator_name', 'level'];
 
 let db = null;
@@ -43,13 +44,13 @@ const api = (who, method, url, body) => {
 };
 const iso = (ms = Date.now()) => new Date(ms).toISOString();
 
-async function reading(who, code, values, escalation = 'crew') {
+async function reading(who, code, values, escalation = 'crew', inputMethod = 'manual') {
   const res = await api(who, 'post', '/readings', {
     client_uuid: randomUUID(),
     indicator_code: code,
     measured_at: iso(Date.now() - 1000),
     values,
-    input_method: 'manual',
+    input_method: inputMethod,
   });
   assert.equal(res.status, 201, JSON.stringify(res.body));
   assert.equal(res.body.evaluation.escalation, escalation, `${code}: ${JSON.stringify(res.body)}`);
@@ -81,6 +82,8 @@ before(async () => {
   ids.lyraSpo2 = await reading('lyra', 'SPO2', { value: 98 }, 'self_care');
   ids.orionSpo2 = await reading('orion', 'SPO2', { value: 92 });
   ids.orionOld = await reading('orion', 'RESP_RATE', { value: 22 });
+  // Cefalea de VEGA (caution, self_care): lo único que puede colorear brain en el semáforo.
+  await reading('vega', 'SYMPTOM', { symptoms: ['headache'] }, 'self_care', 'clicks');
   ids.oldAlert = await crewEscalation(ids.orionOld);
   await q(
     `UPDATE escalations SET created_at = now() - interval '25 hours',
@@ -255,15 +258,19 @@ test('CMO: semáforo físico de todos (también el propio), sin nada confidencia
   assert.equal(zone('immune'), 'caution');
   assert.equal(zone('lungs'), 'normal');
   assert.equal(zone('metabolism'), 'unrated');
-  // SLEEP_HOURS (estándar, de la pulsera; llegó con el check-in) es lo único que colorea brain.
   assert.deepEqual(
     lyra.indicators.map((i) => i.code),
-    ['HEART_RATE', 'SPO2', 'BODY_TEMP', 'SLEEP_HOURS'],
-    'solo los que tienen lectura, en el orden del catálogo',
+    ['HEART_RATE', 'SPO2', 'BODY_TEMP'],
+    'solo los que tienen lectura, en el orden del catálogo; sin SLEEP_HOURS',
   );
-  const sleep = lyra.indicators.find((i) => i.code === 'SLEEP_HOURS');
-  assert.equal(zone('brain'), sleep.level);
-  assert.deepEqual(sleep.last_value, { value: 5 });
+  // LYRA sí tiene un SLEEP_HOURS en caution (llegó con su check-in): no colorea brain.
+  const [sleep] = await q(
+    `SELECT e.level FROM readings r JOIN reading_evaluations e ON e.reading_id = r.id
+     WHERE r.astronaut_id = $1 AND r.indicator_code = 'SLEEP_HOURS'`,
+    [A.lyra],
+  );
+  assert.equal(sleep.level, 'caution', 'la lectura existe y está en caution');
+  assert.equal(zone('brain'), 'unrated', 'SLEEP_HOURS no colorea brain');
   const hr = lyra.indicators.find((i) => i.code === 'HEART_RATE');
   assert.equal(hr.level, 'caution');
   assert.deepEqual(hr.last_value, { value: 120 });
@@ -271,12 +278,20 @@ test('CMO: semáforo físico de todos (también el propio), sin nada confidencia
 
   const orion = member(body, A.orion).physical;
   assert.deepEqual(orion.indicators.map((i) => i.code).sort(), ['RESP_RATE', 'SPO2']);
-  // ORION tiene un PHQ-2 alto (escalado a behavioral_health) y ningún SLEEP_HOURS.
+  // ORION tiene un PHQ-2 alto (escalado a behavioral_health).
   assert.equal(
     orion.zones.find((z) => z.zone === 'brain').worst_level,
     'unrated',
     'el bienestar no colorea brain',
   );
+  // brain solo lo colorea SYMPTOM: la cefalea de VEGA (el CMO se ve a sí mismo).
+  const vega = member(body, A.vega).physical;
+  assert.deepEqual(
+    vega.indicators.map((i) => [i.code, i.level]),
+    [['SYMPTOM', 'caution']],
+  );
+  assert.deepEqual(vega.indicators[0].last_value, { symptoms: ['headache'] });
+  assert.equal(vega.zones.find((z) => z.zone === 'brain').worst_level, 'caution');
   const atlas = member(body, A.atlas).physical;
   assert.deepEqual(atlas.indicators, []);
   assert.ok(atlas.zones.every((z) => z.worst_level === 'unrated'));

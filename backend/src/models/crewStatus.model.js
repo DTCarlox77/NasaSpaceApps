@@ -55,21 +55,22 @@ async function crewAlerts({ missionId, astronautIds, hours }, db = pool) {
 }
 
 /**
- * Última lectura vigente (no corregida) de cada indicador físico estándar por astronauta de la
- * misión, con su nivel. Sin el hábitat.
+ * Última lectura vigente (no corregida) de cada indicador físico estándar de `codes` (los que
+ * canAccess deja ver) por astronauta de la misión, con su nivel. Sin el hábitat.
  */
-async function latestPhysical({ missionId, astronautIds }, db = pool) {
+async function latestPhysical({ missionId, astronautIds, codes }, db = pool) {
   const { rows } = await db.query(
     `SELECT DISTINCT ON (r.astronaut_id, r.indicator_code)
             r.astronaut_id, r.indicator_code, r.components, r.measured_at, e.level
      FROM v_readings_standard r
      LEFT JOIN reading_evaluations e ON e.reading_id = r.id
      WHERE r.mission_id = $1 AND r.astronaut_id = ANY($2::uuid[])
+       AND r.indicator_code = ANY($3::text[])
        AND r.body_zone <> 'environment'
        AND NOT EXISTS (SELECT 1 FROM v_readings_standard s
                        WHERE s.recorded_by = r.recorded_by AND s.supersedes_uuid = r.client_uuid)
      ORDER BY r.astronaut_id, r.indicator_code, r.measured_at DESC, r.received_at DESC, r.id DESC`,
-    [missionId, astronautIds],
+    [missionId, astronautIds, codes],
   );
   return rows;
 }

@@ -291,6 +291,14 @@ test('crew_physical: solo el oficial médico (CMO); el comandante no', () => {
   assert.equal(canAccess(cmo, physical({ category: 'emergency' })), false, 'CMO: triaje');
   assert.equal(canAccess(cmo, physical({ action: 'write' })), false, 'CMO: escribe');
   assert.equal(canAccess(cmo, physical({ mission_id: M2 })), false, 'CMO: otra misión');
+  assert.equal(canAccess(cmo, physical({ indicator_code: 'HEART_RATE' })), true, 'CMO: pulso');
+  // SLEEP_HOURS llega con el check-in: diría quién lo hizo y a qué hora (cumplimiento).
+  assert.equal(canAccess(cmo, physical({ indicator_code: 'SLEEP_HOURS' })), false, 'CMO: sueño');
+  assert.equal(
+    canAccess(cmo, physical({ view: 'crew_status', indicator_code: 'SLEEP_HOURS' })),
+    true,
+    'la alerta de sueño escalada a bordo sí (crew_status)',
+  );
   // El propio tampoco: en esta pantalla su semáforo es solo del CMO (lo suyo está en /me/*).
   for (const name of ['astronaut', 'commander']) {
     assert.equal(canAccess(ACTORS[name], physical()), false, `${name}: otro`);

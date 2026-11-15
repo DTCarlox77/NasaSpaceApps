@@ -63,8 +63,9 @@ info:
     - Nuevo `GET /crew/status` (solo `astronaut` con asignación vigente; su misión): roster, la
       sesión de emergencia abierta de la misión (`id` y estado) y las alertas físicas escaladas
       a bordo (`crew`) en las últimas 24 h, sin valores. Solo el oficial médico (CMO) recibe
-      además `physical` de cada tripulante (peor nivel por zona y, por indicador estándar, nivel,
-      último valor y hora); para los demás, el comandante incluido, `physical: null`. Nunca
+      además `physical` de cada tripulante (peor nivel por zona y, por indicador estándar salvo
+      `SLEEP_HOURS`, nivel, último valor y hora); para los demás, el comandante incluido,
+      `physical: null`. Nunca
       bienestar, check-ins, solicitudes de apoyo, escalamientos conductuales, `sex` ni notas.
       Tierra y `service` → 403 (tienen el panel). Esquemas nuevos: `CrewStatus`,
       `CrewStatusMember`, `CrewAlert` y `CrewPhysical`.
@@ -1342,8 +1343,9 @@ paths:
           `physical: null`; el comandante tampoco lo recibe (sus permisos delegados son de
           acceso, no médicos).
         - **Nunca**, para nadie: bienestar (`WB_*`, PHQ-2/GAD-2, `PVT_*`, aptitud), check-ins,
-          solicitudes de apoyo, escalamientos conductuales, `sex` ni notas. `SLEEP_HOURS` sí
-          puede salir en `physical` (indicador estándar de la pulsera).
+          solicitudes de apoyo, escalamientos conductuales, `sex` ni notas. `physical` tampoco
+          trae `SLEEP_HOURS`: llega con el check-in y diría quién lo hizo y a qué hora. Sí puede
+          aparecer en `crew_alerts` si una racha de noches cortas escala a bordo (sin valores).
         - `admin`, `flight_surgeon`, `behavioral_health` y `service` → 403 (tienen el panel).
           Astronauta sin asignación vigente → 403 `NO_ACTIVE_ASSIGNMENT`.
         La regla vive en `canAccess` (vistas `crew_status` y `crew_physical`).
@@ -8828,7 +8830,8 @@ components:
           description: |
             Zonas del cuerpo (sin `environment` ni `by_symptom`), con el peor nivel de la última
             lectura de sus indicadores estándar. `SYMPTOM` cuenta en la zona de cada síntoma
-            reportado. Zona sin lecturas = `unrated`. Igual que `GET /me/body-status`.
+            reportado. Zona sin lecturas = `unrated`. Como `GET /me/body-status`, pero sin
+            `SLEEP_HOURS`: `brain` solo lo colorea `SYMPTOM`.
           items:
             type: object
             required: [zone, worst_level]
@@ -8837,7 +8840,9 @@ components:
               worst_level: { $ref: '#/components/schemas/Level' }
         indicators:
           type: array
-          description: Indicadores estándar con alguna lectura en la misión, en el orden del catálogo.
+          description: |
+            Indicadores estándar con alguna lectura en la misión, salvo `SLEEP_HOURS`, en el
+            orden del catálogo.
           items:
             type: object
             required: [code, level, last_value, measured_at]

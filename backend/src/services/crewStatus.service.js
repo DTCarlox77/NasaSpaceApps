@@ -6,7 +6,8 @@
  * - toda la tripulación: roster, la sesión de emergencia abierta de la misión (id y estado) y
  *   las alertas físicas ya escaladas a bordo (level crew) en las últimas 24 h, sin valores;
  * - solo el oficial médico (CMO): además, el semáforo físico de cada tripulante (peor nivel por
- *   zona y, por indicador estándar, nivel, último valor y hora), de v_readings_standard.
+ *   zona y, por indicador estándar, nivel, último valor y hora), de v_readings_standard. Sin
+ *   SLEEP_HOURS: llega con el check-in y diría quién lo hizo y a qué hora (cumplimiento).
  * Nunca bienestar (WB_*, PHQ2/GAD2, PVT_*, aptitud), check-ins, solicitudes de apoyo,
  * escalamientos conductuales, sex ni notas. Tierra y service → 403 (tienen el panel).
  */
@@ -25,8 +26,9 @@ const worst = (levels) =>
 /**
  * Semáforo físico de un tripulante (pura). Como GET /me/body-status: por zona del cuerpo, el
  * peor nivel de la última lectura de sus indicadores estándar (SYMPTOM cuenta en la zona de
- * cada síntoma reportado; zona sin lecturas = unrated). `indicators`: solo los que tienen
- * lectura, en el orden del catálogo. Lo confidencial no entra (solo indicadores estándar).
+ * cada síntoma reportado; zona sin lecturas = unrated). `indicators` = los que canAccess deja
+ * ver (sin SLEEP_HOURS: brain solo lo colorea SYMPTOM); salen solo los que tienen lectura, en
+ * el orden del catálogo. Lo confidencial no entra (solo indicadores estándar).
  */
 function physicalSummary({ zones, indicators, symptomZones, rows }) {
   const byCode = new Map(rows.map((r) => [r.indicator_code, r]));
@@ -73,7 +75,7 @@ async function crewStatus({ userId }) {
   if (!actor) throw forbidden();
   const missionId = actor.mission_ids[0] ?? null;
 
-  const allowed = (astronautId, view, category = 'physical') =>
+  const allowed = (astronautId, view, category = 'physical', indicatorCode = undefined) =>
     canAccess(actor, {
       astronaut_id: astronautId,
       mission_id: missionId,
@@ -81,6 +83,7 @@ async function crewStatus({ userId }) {
       category,
       action: 'read',
       view,
+      indicator_code: indicatorCode,
     });
 
   // astronaut_id representativo ("un tripulante"): la pantalla es de toda la misión.
@@ -102,21 +105,29 @@ async function crewStatus({ userId }) {
   const ids = crew.map((m) => m.astronaut_id);
   const alertIds = ids.filter((id) => allowed(id, 'crew_status'));
   const physicalIds = ids.filter((id) => allowed(id, 'crew_physical'));
+  // Indicadores del semáforo que el actor puede ver de cada tripulante (canAccess por
+  // indicador): de la base solo se leen esos.
+  const standard = physicalIds.length ? await catalog.standardIndicators() : [];
+  const visibleBy = new Map(
+    physicalIds.map((id) => [
+      id,
+      standard.filter((i) => allowed(id, 'crew_physical', 'physical', i.code)),
+    ]),
+  );
+  const codes = [...new Set([...visibleBy.values()].flat().map((i) => i.code))];
 
-  const [session, alerts, readings, zones, indicators, symptomZones] = await Promise.all([
+  const [session, alerts, readings, zones, symptomZones] = await Promise.all([
     allowed('*', 'crew_status', 'emergency') ? model.openEmergency(missionId) : null,
     alertIds.length
       ? model.crewAlerts({ missionId, astronautIds: alertIds, hours: ALERT_WINDOW_HOURS })
       : [],
-    physicalIds.length ? model.latestPhysical({ missionId, astronautIds: physicalIds }) : [],
+    codes.length ? model.latestPhysical({ missionId, astronautIds: physicalIds, codes }) : [],
     physicalIds.length ? catalog.zoneList() : [],
-    physicalIds.length ? catalog.standardIndicators() : [],
     physicalIds.length ? catalog.symptomZones() : new Map(),
   ]);
   const alertsBy = groupBy(alerts, 'astronaut_id');
   const readingsBy = groupBy(readings, 'astronaut_id');
   const alertSet = new Set(alertIds);
-  const physicalSet = new Set(physicalIds);
 
   return {
     mission: { id: mission.id, code: mission.code },
@@ -138,10 +149,10 @@ async function crewStatus({ userId }) {
             created_at: a.created_at,
           }))
         : [],
-      physical: physicalSet.has(member.astronaut_id)
+      physical: visibleBy.has(member.astronaut_id)
         ? physicalSummary({
             zones,
-            indicators,
+            indicators: visibleBy.get(member.astronaut_id),
             symptomZones,
             rows: readingsBy.get(member.astronaut_id) || [],
           })
