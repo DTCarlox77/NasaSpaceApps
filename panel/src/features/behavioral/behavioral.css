@@ -1,0 +1,170 @@
+/* ---------------------------------------------------------------- confidencialidad */
+
+.confidential-note {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-caution);
+  border-radius: var(--radius-sm);
+  background: var(--color-caution-bg);
+  color: var(--color-caution);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- pestañas */
+
+.tabs {
+  display: flex;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+}
+
+.tab:hover {
+  background: var(--color-surface-hover);
+}
+
+/* Activa: borde inferior y peso (no solo color). */
+.tab.active {
+  border-bottom-color: var(--color-accent);
+  font-weight: 700;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+/* ---------------------------------------------------------------- bandeja */
+
+.bh-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.bh-row {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.bh-support_request {
+  border-left-color: var(--color-accent);
+}
+
+.bh-closed {
+  opacity: 0.75;
+  border-style: dashed;
+}
+
+.bh-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.bh-link:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+/* ---------------------------------------------------------------- detalle */
+
+.bh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+  gap: var(--space-3);
+}
+
+.bh-two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.bh-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: 4px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.bh-card h3,
+.bh-card p {
+  margin: 0;
+}
+
+.bh-card-caution {
+  border-top-color: var(--color-caution);
+}
+
+.bh-card-critical {
+  border-top-color: var(--color-critical);
+}
+
+.bh-card-normal {
+  border-top-color: var(--color-normal);
+}
+
+.bh-highlight {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.bh-content {
+  white-space: pre-wrap;
+}
+
+.indicator-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.slider-chart {
+  width: 100%;
+}
+
+.screening {
+  font-weight: 700;
+}
+
+.screening-positive {
+  color: var(--color-caution);
+}
+
+.screening-negative {
+  color: var(--color-normal);
+}
+
+.audit-table {
+  width: 100%;
+}
+
+.audit-table td {
+  vertical-align: top;
+}

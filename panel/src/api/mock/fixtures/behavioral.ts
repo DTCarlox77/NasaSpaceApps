@@ -77,7 +77,7 @@ const PROFILES: Record<string, Profile> = {
   LYRA: {
     values: {
       mood: series(64, 4, 0.9, [48, 42, 38, 35]),
-      fatigue: series(48, 5, 2.2, [60, 66, 72]),
+      fatigue: series(48, 5, 2.2, [52, 54, 55]),
       stress: series(50, 5, 1.3),
       crew_conflict: series(25, 4, 0.4),
     },

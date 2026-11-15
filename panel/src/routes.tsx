@@ -26,18 +26,31 @@ const EmergenciesPage = lazy(() =>
 const EmergencyDetailPage = lazy(() =>
   import('./features/emergencies/EmergencyDetailPage.tsx').then((m) => ({ default: m.EmergencyDetailPage })),
 );
+// Salud conductual: solo behavioral_health (RequireRole muestra "Sin acceso" a los demás).
+const BehavioralInboxPage = lazy(() =>
+  import('./features/behavioral/BehavioralInboxPage.tsx').then((m) => ({ default: m.BehavioralInboxPage })),
+);
+const BehavioralAstronautPage = lazy(() =>
+  import('./features/behavioral/BehavioralAstronautPage.tsx').then((m) => ({ default: m.BehavioralAstronautPage })),
+);
+const ConfidentialAuditPage = lazy(() =>
+  import('./features/behavioral/ConfidentialAuditPage.tsx').then((m) => ({ default: m.ConfidentialAuditPage })),
+);
 
 /** Pantallas ya implementadas; el resto sigue como placeholder de su fase. */
 const PAGES: Partial<Record<SectionId, ReactNode>> = {
   crew: <CrewDashboardPage />,
   alerts: <AlertsPage />,
   emergencies: <EmergenciesPage />,
+  behavioral: <BehavioralInboxPage />,
 };
 
 /** Rutas hijas de una sección (detalle), protegidas con el mismo rol que la sección. */
 const SUBROUTES: { section: SectionId; path: string; element: ReactNode }[] = [
   { section: 'crew', path: '/tripulacion/:astronautId', element: <AstronautDetailPage /> },
   { section: 'emergencies', path: '/emergencias/:emergencyId', element: <EmergencyDetailPage /> },
+  { section: 'behavioral', path: '/salud-conductual/astronauta/:astronautId', element: <BehavioralAstronautPage /> },
+  { section: 'behavioral', path: '/salud-conductual/auditoria', element: <ConfidentialAuditPage /> },
 ];
 
 /** Rutas del panel (también las usan las pruebas con un router en memoria). */

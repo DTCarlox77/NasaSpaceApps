@@ -30,4 +30,13 @@ export const queryKeys = {
   /** Aviso global de la cabecera (primera página sin filtro). */
   emergenciesOpen: (missionId: string) => [MISSION_DATA, missionId, 'emergencies-open'] as const,
   emergency: (missionId: string, id: string) => [MISSION_DATA, missionId, 'emergency', id] as const,
+  // Salud conductual (confidencial: solo behavioral_health).
+  behavioralInbox: (missionId: string, includeClosed: boolean) =>
+    [MISSION_DATA, missionId, 'behavioral-inbox', includeClosed] as const,
+  behavioralAstronaut: (missionId: string, astronautId: string) =>
+    [MISSION_DATA, missionId, 'behavioral-astronaut', astronautId] as const,
+  confidentialAccess: (missionId: string) => [MISSION_DATA, missionId, 'confidential-access'] as const,
+  /** Respuestas a una solicitud de apoyo enviadas en esta sesión (el contrato no da el hilo a Tierra). */
+  supportReplies: (missionId: string, requestId: string) =>
+    [MISSION_DATA, missionId, 'support-replies', requestId] as const,
 };

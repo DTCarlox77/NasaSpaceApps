@@ -142,7 +142,15 @@ export function homePathFor(role: Role | null | undefined): string {
 
 // ---------------------------------------------------------------- acciones (botones)
 
-export type ActionId = 'escalation.ack' | 'escalation.reply' | 'escalation.thread';
+export type ActionId =
+  | 'escalation.ack'
+  | 'escalation.reply'
+  | 'escalation.thread'
+  | 'support.ack'
+  | 'support.reply'
+  | 'support.close'
+  | 'behavioral_escalation.ack'
+  | 'behavioral_escalation.close';
 
 export interface Action {
   endpoint: string;
@@ -167,6 +175,32 @@ export const ACTIONS: Record<ActionId, Action> = {
     endpoint: 'GET /admin/escalations/{id}/messages',
     contractRoles: ['flight_surgeon', 'admin'],
     roles: ['flight_surgeon', 'admin'],
+  },
+  // Salud conductual: solo behavioral_health (confidencial).
+  'support.ack': {
+    endpoint: 'POST /admin/behavioral/support-requests/{id}/ack',
+    contractRoles: ['behavioral_health'],
+    roles: ['behavioral_health'],
+  },
+  'support.reply': {
+    endpoint: 'POST /admin/behavioral/support-requests/{id}/messages',
+    contractRoles: ['behavioral_health'],
+    roles: ['behavioral_health'],
+  },
+  'support.close': {
+    endpoint: 'POST /admin/behavioral/support-requests/{id}/close',
+    contractRoles: ['behavioral_health'],
+    roles: ['behavioral_health'],
+  },
+  'behavioral_escalation.ack': {
+    endpoint: 'POST /admin/behavioral/escalations/{id}/ack',
+    contractRoles: ['behavioral_health'],
+    roles: ['behavioral_health'],
+  },
+  'behavioral_escalation.close': {
+    endpoint: 'POST /admin/behavioral/escalations/{id}/close',
+    contractRoles: ['behavioral_health'],
+    roles: ['behavioral_health'],
   },
 };
 

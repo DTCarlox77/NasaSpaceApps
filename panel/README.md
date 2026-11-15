@@ -101,7 +101,12 @@ Un astronauta (`a.ortega`, …) se rechaza: "Este panel es para el equipo en Tie
   - `SLEEP_HOURS` no se muestra en el dashboard ni en el detalle de tripulante para ningún rol (defensa: el backend ya lo excluye desde v1.8).
 - **Emergencias** (`/emergencias`, flight surgeon y admin): lista con estado, inicio, quién la abrió (manual o automática y motivo), tripulantes evaluados y peor categoría de triaje; filtro por estado. Detalle en `/emergencias/:id`: línea de tiempo vertical, orden de atención con la categoría (color + texto) y el bloque de radiación, último latido frente al umbral del hombre muerto del contrato, preguntas de la tripulación con "Responder en Alertas" y reporte al cierre. Admin ve solo el estado operativo (si la API mandara algo clínico, no se muestra). Sondeo cada 10 s con una emergencia abierta y 30 s si no. "Triaje autónomo a bordo · protocolo, no diagnóstico".
 - **Aviso global**: con una emergencia abierta, la cabecera lo dice (flight surgeon y admin) con enlace al detalle.
-- **Carga por ruta**: el dashboard (con Recharts), la bandeja y Emergencias se cargan al abrirlos.
+- **Salud conductual** (SOLO `behavioral_health`; admin y flight surgeon no la ven y la URL muestra "Sin acceso"). Texto fijo: "Confidencial · cada consulta queda registrada · apoyo a la decisión, no diagnóstico".
+  - Bandeja (`/salud-conductual`, cada 30 s): escalamientos confidenciales y solicitudes "Quiero hablar con alguien" con prioridad o urgencia y su retraso; "Incluir lo cerrado".
+  - Detalle por astronauta (`/salud-conductual/astronauta/:id`, cada 60 s): los 4 deslizadores (ánimo, fatiga, estrés, roces) en el tiempo con la banda del rango habitual y la z adversa de la API; PHQ-2/GAD-2 solo positivo/negativo y fecha; PVT contra su línea base y aptitud; solicitudes (acuse, respuesta con `deliver_at`, cierre) y escalamientos abiertos (acuse y cierre). **Nunca la nota privada** del check-in.
+  - Auditoría (`/salud-conductual/auditoria`): quién consultó datos confidenciales, de quién, qué y cuándo.
+  - El rango habitual (media ± 1 desviación de sus check-ins anteriores a los últimos 3) y la línea base de la PVT (promedio de sus pruebas anteriores) los estima el panel: el contrato no los manda, y la pantalla lo dice.
+- **Carga por ruta**: el dashboard (con Recharts), la bandeja, Emergencias y Salud conductual se cargan al abrirlos.
 
 ## Estructura
 
