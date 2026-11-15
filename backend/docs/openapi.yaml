@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Astro Health API
-  version: 1.4.0
+  version: 1.5.0
   description: |
     API de apoyo a la decisión para el monitoreo de salud de astronautas.
 
@@ -59,6 +59,33 @@ info:
     `Prefer: code=423` o `Prefer: example=duplicate`.
 
     ## Cambios
+    **1.5.0** (tarea 11, acceso). Cambios al contrato (aditivos salvo los marcados ⚠):
+    - Implementadas: `GET`/`POST /admin/devices`, `POST /admin/devices/{id}/revoke`,
+      `POST /crew/users/{id}/unlock`, `POST /crew/users/{id}/reset-pin`, `POST /crew/devices`,
+      `PUT /me/offline-pin`, `GET /admin/audit/delegated-actions` y `GET /missions/current`.
+    - Nuevo `GET /admin/devices` (el contrato solo tenía el alta y la revocación).
+    - **Emergencia sin sesión**: `X-Device-Credential` ya autentica las rutas del triaje (la
+      tableta es el actor; `actor_device` en la línea de tiempo). Se agrega a
+      `POST /emergency/sessions/{id}/confirm` (con `astronaut_id` en el body: quién confirma
+      desde la tableta compartida) y a `/questions`. Credencial desconocida, revocada, de una
+      misión que no está activa o usada sobre otra misión → **401** `INVALID_DEVICE_CREDENTIAL`;
+      demasiados fallos desde la misma IP → **429** `RATE_LIMITED`
+      (`RATE_LIMIT_DEVICE_CREDENTIAL_PER_MINUTE`). En cualquier otra ruta la credencial no
+      autentica (401).
+    - `Device` agrega `status` (`active` | `revoked`). Registrar una etiqueta repetida en la
+      misión → 409 `DEVICE_LABEL_TAKEN`. Revocar es idempotente e invalida los PIN offline
+      definidos en esa tableta.
+    - ⚠ `DelegatedAudit.reported_to_earth` = el aviso ya tiene hora de llegada (`false` = en cola
+      por un corte). `deliver_at` se calcula al leer (`compute_deliver_at(misión, recepción)`):
+      `delegated_actions` es append-only. `GET /admin/audit/delegated-actions` solo muestra lo
+      que ya llegó a Tierra.
+    - `PUT /me/offline-pin`: `device_id` debe ser el de la sesión (si no, 403 `DEVICE_NOT_OWNED`;
+      tableta revocada, 403 `DEVICE_REVOKED`). `OfflinePinResponse` agrega `offline_verifier`
+      (parámetros del verificador local de la app). `offline_unlock_until` = ahora +
+      `OFFLINE_UNLOCK_DAYS` (7) y cada login en línea en ese dispositivo lo renueva.
+    - `GET /missions/current` agrega 403 (astronauta sin asignación o personal de Tierra fuera
+      del equipo de la misión).
+
     **1.4.0** (tarea 10, bienestar). Cambios al contrato (aditivos salvo los marcados ⚠):
     - Rutas de bienestar implementadas: `/wellbeing/*`, `GET /me/wellbeing`,
       `GET /admin/compliance` y `/admin/behavioral/*`.
@@ -580,11 +607,17 @@ paths:
       tags: [Auth]
       summary: Define el PIN de desbloqueo offline del dispositivo
       description: |
-        Permite desbloquear la app sin conexión hasta `offline_unlock_until` (7 días desde el
-        último login en línea). El PIN se guarda con hash; nunca viaja de vuelta.
+        Define o cambia el PIN de desbloqueo sin conexión del **dispositivo de la sesión**
+        (`device_id` = el del login; si no, 403 `DEVICE_NOT_OWNED`). El servidor guarda solo el
+        hash bcrypt y nunca devuelve el PIN ni su hash. Permite desbloquear la app sin conexión
+        hasta `offline_unlock_until` (`OFFLINE_UNLOCK_DAYS`, 7 días; cada login en línea en ese
+        dispositivo lo renueva). La verificación sin conexión la hace la app con su propio
+        verificador local (`offline_verifier`). El PIN **nunca** autentica contra el servidor:
+        para sincronizar hace falta un login o un refresh. Un PIN nuevo reemplaza al anterior; el
+        comandante (`/crew/users/{id}/reset-pin`) o la revocación de la tableta lo borran
+        (`offline_unlock_until: null` en el próximo login = pedir otro).
       operationId: setOfflinePin
       x-status: extra
-      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -607,7 +640,16 @@ paths:
               examples:
                 saved:
                   summary: PIN válido por 7 días
-                  value: { device_id: ipad-crew-01, offline_unlock_until: '2026-11-21T16:00:00Z' }
+                  value:
+                    device_id: ipad-crew-01
+                    offline_unlock_until: '2026-11-21T16:00:00Z'
+                    offline_verifier:
+                      {
+                        kdf: PBKDF2-HMAC-SHA256,
+                        iterations: 600000,
+                        salt_bytes: 16,
+                        max_attempts: 5,
+                      }
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -842,15 +884,60 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   /api/v1/admin/devices:
+    get:
+      tags: [Admin-Cuentas]
+      summary: Tabletas registradas (sin credenciales)
+      description: |
+        Nunca devuelve la credencial ni su hash. Sin `mission_id`, las de todas las misiones;
+        `include_revoked=true` incluye las revocadas.
+      operationId: listDevices
+      x-status: mvp
+      x-roles: [admin]
+      x-hazards: [distance_from_earth]
+      parameters:
+        - $ref: '#/components/parameters/MissionIdQuery'
+        - name: include_revoked
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Tabletas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceList'
+              examples:
+                ares1:
+                  summary: Tabletas de ARES-1
+                  value:
+                    items:
+                      - id: '80000000-0000-4000-8000-000000000001'
+                        label: TAB-1
+                        kind: tablet
+                        mission_id: '20000000-0000-4000-8000-000000000001'
+                        module_id: HAB-1
+                        registered_by: '00000000-0000-4000-8000-000000000001'
+                        registered_via: admin
+                        status: active
+                        created_at: '2026-09-30T08:00:00Z'
+                        last_seen_at: '2026-11-14T08:05:00Z'
+                        revoked_at: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
       tags: [Admin-Cuentas]
       summary: Registra una tableta de la misión
       description: |
-        Devuelve la credencial del dispositivo **una sola vez** (solo se guarda su hash). La
-        tableta la envía en `X-Device-Credential` para usar los endpoints de emergencia sin sesión.
+        Devuelve la credencial del dispositivo **una sola vez**: `dc_` + 32 bytes aleatorios en
+        base64url. Solo se guarda su SHA-256. La tableta la envía en `X-Device-Credential` para
+        usar los endpoints de emergencia sin sesión (solo los de su misión). Etiqueta repetida en
+        la misión → 409 `DEVICE_LABEL_TAKEN`; misión inexistente → 404.
       operationId: registerDevice
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -887,16 +974,19 @@ paths:
                       module_id: 'HAB-1'
                       registered_by: '00000000-0000-4000-8000-000000000001'
                       registered_via: 'admin'
+                      status: 'active'
                       created_at: '2026-09-30T08:00:00Z'
                       last_seen_at: null
                       revoked_at: null
-                    credential: dc_live_5f0b9c2e7a1d4e83b6c4
+                    credential: dc_q3Vh0bJm9xW2uR8aT5kL1yNc7pE4sD6fG0iH3jK9mZQ
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
 
@@ -904,9 +994,11 @@ paths:
     post:
       tags: [Admin-Cuentas]
       summary: Revoca la credencial de un dispositivo
+      description: |
+        La credencial deja de servir de inmediato (401) y se invalidan los PIN offline definidos
+        en esa tableta. Idempotente: revocar otra vez devuelve la misma `revoked_at`.
       operationId: revokeDevice
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: []
       parameters:
@@ -929,6 +1021,7 @@ paths:
                     module_id: HAB-1
                     registered_by: '00000000-0000-4000-8000-000000000001'
                     registered_via: admin
+                    status: revoked
                     created_at: '2026-09-30T08:00:00Z'
                     last_seen_at: '2026-11-14T08:05:00Z'
                     revoked_at: '2026-11-14T15:00:00Z'
@@ -943,10 +1036,13 @@ paths:
     post:
       tags: [Admin-Cuentas]
       summary: El comandante desbloquea la cuenta de un tripulante
-      description: Permiso delegado para cuando Tierra no responde a tiempo. Queda auditado y se reporta a Tierra con el retraso del enlace.
+      description: |
+        Permiso delegado para cuando Tierra no responde a tiempo. Solo el comandante vigente y
+        solo sobre los tripulantes de su misión (`{id}` = id del usuario; otro → 404). Queda en
+        `delegated_actions` (append-only) y en `auth_events` (`delegated_unlock`), y se reporta a
+        Tierra con el retraso del enlace. **No** da acceso a datos médicos ni de bienestar.
       operationId: crewUnlockUser
       x-status: extra
-      x-status-impl: pending
       x-roles: [astronaut]
       x-crew-role: [commander]
       x-hazards: [distance_from_earth, isolation_confinement]
@@ -970,6 +1066,8 @@ paths:
                       audit_id: 'b1000000-0000-4000-8000-000000000001'
                       reported_to_earth: true
                       deliver_at: '2026-11-14T09:01:30Z'
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -981,9 +1079,11 @@ paths:
     post:
       tags: [Admin-Cuentas]
       summary: El comandante restablece el PIN offline de un tripulante
+      description: |
+        Borra el PIN de todos los dispositivos del tripulante (el anterior deja de servir); lo
+        define otra vez en su próximo login en línea. Mismas reglas que el desbloqueo.
       operationId: crewResetPin
       x-status: extra
-      x-status-impl: pending
       x-roles: [astronaut]
       x-crew-role: [commander]
       x-hazards: [distance_from_earth, isolation_confinement]
@@ -1007,6 +1107,8 @@ paths:
                       audit_id: 'b1000000-0000-4000-8000-000000000002'
                       reported_to_earth: true
                       deliver_at: '2026-11-14T09:06:30Z'
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -1018,9 +1120,11 @@ paths:
     post:
       tags: [Admin-Cuentas]
       summary: El comandante registra una tableta de reemplazo
+      description: |
+        En la misión del comandante; la credencial se muestra **una sola vez**. Auditada y
+        reportada a Tierra como las otras acciones delegadas.
       operationId: crewRegisterDevice
       x-status: extra
-      x-status-impl: pending
       x-roles: [astronaut]
       x-crew-role: [commander]
       x-hazards: [distance_from_earth]
@@ -1078,7 +1182,6 @@ paths:
         `mission_id` o la primera activa de su equipo. `comm.link: down` si hay un corte en curso.
       operationId: getCurrentMission
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut, flight_surgeon, behavioral_health, admin]
       x-hazards: [distance_from_earth, gravity_fields]
       parameters:
@@ -1125,6 +1228,8 @@ paths:
                           created_at: '2026-11-14T10:00:00Z'
         '401':
           $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -4741,6 +4846,9 @@ paths:
       x-status: mvp
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, isolation_confinement]
+      security:
+        - bearerAuth: []
+        - deviceCredential: []
       parameters:
         - $ref: '#/components/parameters/Id'
       requestBody:
@@ -4751,10 +4859,23 @@ paths:
               type: object
               properties:
                 confirmed_at: { $ref: '#/components/schemas/Timestamp' }
+                astronaut_id:
+                  allOf:
+                    - $ref: '#/components/schemas/Uuid'
+                  description: |
+                    Solo con `X-Device-Credential` (tableta compartida, sin sesión): quién confirma.
+                    Debe tener un plazo pendiente en la sesión (si no, 409).
             examples:
               ok:
                 summary: LYRA está bien
                 value: { confirmed_at: '2026-11-14T08:00:20Z' }
+              tablet:
+                summary: Desde la tableta TAB-1 (sin sesión)
+                value:
+                  {
+                    confirmed_at: '2026-11-14T08:00:20Z',
+                    astronaut_id: '10000000-0000-4000-8000-000000000013',
+                  }
       responses:
         '200':
           description: Sesión (cancelled si todos confirmaron)
@@ -4800,6 +4921,9 @@ paths:
       x-status: mvp
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
+      security:
+        - bearerAuth: []
+        - deviceCredential: []
       parameters:
         - $ref: '#/components/parameters/Id'
       requestBody:
@@ -6909,9 +7033,11 @@ paths:
     get:
       tags: [Auditoría]
       summary: Acciones delegadas del comandante
+      description: |
+        Solo lo que ya llegó a Tierra: `deliver_at` = compute_deliver_at(misión, recepción),
+        calculado al leer (cortes incluidos). Más reciente primero.
       operationId: listDelegatedActions
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -6946,6 +7072,8 @@ paths:
                           deliver_at: '2026-11-14T09:01:30Z',
                         }
                     next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -7009,7 +7137,13 @@ components:
       type: apiKey
       in: header
       name: X-Device-Credential
-      description: Credencial de una tableta registrada (`POST /admin/devices`). Solo para los endpoints de emergencia.
+      description: |
+        Credencial de una tableta registrada (`POST /admin/devices` o `POST /crew/devices`): `dc_`
+        + 32 bytes aleatorios en base64url; el servidor solo guarda su SHA-256. Solo para los
+        endpoints del triaje de SU misión (protocolo, abrir o unirse, sesión, evaluar, "estoy
+        bien", latido, preguntas a Tierra y cerrar). Inválida, revocada, de una misión no activa
+        o sobre otra misión → 401 `INVALID_DEVICE_CREDENTIAL`; demasiados fallos desde una IP →
+        429.
 
   parameters:
     Id:
@@ -7749,6 +7883,18 @@ components:
       properties:
         device_id: { type: string }
         offline_unlock_until: { $ref: '#/components/schemas/Timestamp' }
+        offline_verifier:
+          type: object
+          description: |
+            Cómo guarda la app su verificador local del PIN (regla de diseño): KDF con una sal
+            aleatoria generada en el dispositivo; tras `max_attempts` fallos (LOCKOUT_MAX_ATTEMPTS)
+            borra el verificador y exige un login en línea.
+          required: [kdf, iterations, salt_bytes, max_attempts]
+          properties:
+            kdf: { type: string, enum: [PBKDF2-HMAC-SHA256] }
+            iterations: { type: integer, minimum: 1 }
+            salt_bytes: { type: integer, minimum: 16 }
+            max_attempts: { type: integer, minimum: 1 }
 
     # ---------------------------------------------------------------- cuentas y dispositivos
     UserAdmin:
@@ -7867,9 +8013,17 @@ components:
         module_id: { type: string, nullable: true }
         registered_by: { type: string, format: uuid, nullable: true }
         registered_via: { type: string, enum: [admin, commander] }
+        status: { type: string, enum: [active, revoked] }
         created_at: { $ref: '#/components/schemas/Timestamp' }
         last_seen_at: { type: string, format: date-time, nullable: true }
         revoked_at: { type: string, format: date-time, nullable: true }
+    DeviceList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Device' }
     DeviceCreated:
       type: object
       required: [device, credential]
@@ -7882,14 +8036,16 @@ components:
       required: [audit_id, reported_to_earth]
       properties:
         audit_id: { $ref: '#/components/schemas/Uuid' }
-        reported_to_earth: { type: boolean }
+        reported_to_earth:
+          type: boolean
+          description: true = ya tiene hora de llegada a Tierra; false = en cola por un corte.
         deliver_at:
-          {
-            type: string,
-            format: date-time,
-            nullable: true,
-            description: null = en cola esperando enlace.,
-          }
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            compute_deliver_at(misión, recepción), calculado al leer (la bitácora es append-only).
+            null = en cola esperando enlace.
     DelegatedActionResult:
       type: object
       required: [action, target_user_id, performed_at, audit]
