@@ -1,6 +1,7 @@
 'use strict';
 
 const env = require('../config/env');
+const { describeError, safeUrl } = require('../utils/safeLog');
 
 function errorHandler(err, req, res, _next) {
   let status = err.status || err.statusCode || 500;
@@ -19,7 +20,8 @@ function errorHandler(err, req, res, _next) {
   }
 
   if (status >= 500) {
-    console.error('[error]', err);
+    // Sin el error crudo: el detail de PostgreSQL puede traer la fila (valores de salud).
+    console.error(`[error] ${req.method} ${safeUrl(req.originalUrl)} → ${describeError(err)}`);
   }
 
   res.status(status).json({

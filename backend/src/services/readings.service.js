@@ -7,6 +7,7 @@
  */
 const { HttpError, badRequest, conflict } = require('../utils/httpError');
 const { isUuid, validate } = require('../utils/validate');
+const { describeError } = require('../utils/safeLog');
 const { LEVEL_ORDER } = require('../engine/conditions');
 const { withTransaction } = require('../models/transaction');
 const readings = require('../models/readings.model');
@@ -95,7 +96,7 @@ async function openEmergencyIfCritical(row, indicator) {
     const { onCriticalReading } = require('./emergency.service');
     return await onCriticalReading({ reading: row, indicator, evaluation: row });
   } catch (err) {
-    console.error('[emergency] no se pudo activar por lectura crítica', err);
+    console.error(`[emergency] no se pudo activar por lectura crítica: ${describeError(err)}`);
     return null;
   }
 }
