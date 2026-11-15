@@ -2,6 +2,7 @@
 
 const { Router } = require('express');
 const ctrl = require('../controllers/wellbeing.controller');
+const confidentialAudit = require('../services/confidentialAudit.service');
 const { authenticate, requireRole } = require('../middlewares/auth');
 
 // Bienestar del astronauta (confidencial): solo él registra y ve lo suyo.
@@ -20,5 +21,9 @@ router.post('/wellbeing/pvt-runs', ...astronaut, ctrl.createPvtRun);
 router.post('/wellbeing/support-requests', ...astronaut, ctrl.createSupportRequest);
 router.get('/wellbeing/support-requests/:id/messages', ...astronaut, ctrl.supportMessages);
 router.get('/me/wellbeing', ...astronaut, ctrl.myWellbeing);
+// Quién consultó mis datos confidenciales y cuándo (tarea 11).
+router.get('/me/confidential-access', ...astronaut, async (req, res) => {
+  res.json(await confidentialAudit.forOwner({ userId: req.auth.userId, query: req.query }));
+});
 
 module.exports = router;

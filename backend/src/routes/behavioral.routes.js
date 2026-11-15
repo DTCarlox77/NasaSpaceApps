@@ -2,6 +2,7 @@
 
 const { Router } = require('express');
 const ctrl = require('../controllers/behavioral.controller');
+const confidentialAudit = require('../services/confidentialAudit.service');
 const { authenticate, requireRole } = require('../middlewares/auth');
 
 // Salud conductual (solo behavioral_health) y cumplimiento (solo admin). Va antes del router
@@ -16,6 +17,12 @@ router.post('/admin/behavioral/support-requests/:id/ack', ...bh, ctrl.ackSupport
 router.post('/admin/behavioral/support-requests/:id/close', ...bh, ctrl.closeSupport);
 router.post('/admin/behavioral/escalations/:id/ack', ...bh, ctrl.ackEscalation);
 router.post('/admin/behavioral/escalations/:id/close', ...bh, ctrl.closeEscalation);
+// Auditoría de accesos confidenciales: solo behavioral_health (admin no; tarea 11).
+router.get('/admin/audit/confidential-access', ...bh, async (req, res) => {
+  res.json(
+    await confidentialAudit.forBehavioralHealth({ userId: req.auth.userId, query: req.query }),
+  );
+});
 router.get('/admin/compliance', authenticate(), requireRole('admin'), ctrl.compliance);
 
 module.exports = router;
