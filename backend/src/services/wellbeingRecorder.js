@@ -66,6 +66,8 @@ async function recordGroup(actor, { insertGroup, entries, afterReadings }) {
       return {
         status: 'duplicate',
         group_id: group.id,
+        astronaut_id: actor.astronaut_id,
+        received_at: group.received_at,
         readings: [],
         reading_count: checked.length,
       };
@@ -94,18 +96,39 @@ async function recordGroup(actor, { insertGroup, entries, afterReadings }) {
         sensitivity: entry.indicator.sensitivity,
         reading_id: row.id,
         level: row.level,
+        escalation: row.escalation,
+        recommendation: row.recommendation,
         escalation_id: row.escalation_id,
       });
     }
     if (afterReadings) await afterReadings(group.id, out, db);
-    return { status: 'accepted', group_id: group.id, readings: out };
+    return {
+      status: 'accepted',
+      group_id: group.id,
+      astronaut_id: actor.astronaut_id,
+      received_at: group.received_at,
+      readings: out,
+    };
   });
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Día de misión = día UTC de measured_at: [inicio, fin). */
+function utcDayRange(measuredAt) {
+  const start = Math.floor(new Date(measuredAt).getTime() / DAY_MS) * DAY_MS;
+  return { from: new Date(start).toISOString(), to: new Date(start + DAY_MS).toISOString() };
 }
 
 /**
  * Check-in diario: { client_uuid, measured_at, sleep_hours?, sleep_uuid?, sleep_input_method?,
  * private_note?, sliders } con sliders = { WB_MOOD: { value, client_uuid }, ... }.
  * SLEEP_HOURS (estándar) va en el grupo (input_method wearable por defecto).
+ *
+ * Uno por día de misión (día UTC de measured_at). Si ese día ya hay un check-in vigente, el
+ * nuevo lo CORRIGE (append-only): fila nueva con supersedes_id y lecturas nuevas con
+ * supersedes_uuid de las vigentes del anterior; sus derivados ya no cuentan la corregida.
+ * Gana el último que llega. Idempotente por client_uuid del check-in (duplicate).
  */
 async function recordCheckin({ userId, checkin }) {
   const actor = await astronautActor(userId);
@@ -116,7 +139,6 @@ async function recordCheckin({ userId, checkin }) {
     components: { value },
     inputMethod: 'slider',
     measuredAt: checkin.measured_at,
-    groupColumn: 'wellbeingCheckinId',
   }));
   if (checkin.sleep_hours != null && checkin.sleep_uuid) {
     entries.unshift({
@@ -125,22 +147,79 @@ async function recordCheckin({ userId, checkin }) {
       components: { value: checkin.sleep_hours },
       inputMethod: checkin.sleep_input_method || 'wearable',
       measuredAt: checkin.measured_at,
-      groupColumn: 'wellbeingCheckinId',
     });
   }
-  return recordGroup(actor, {
-    entries,
-    insertGroup: (db) =>
-      wellbeing.insertCheckin(
+  const checked = [];
+  for (const entry of entries) checked.push({ ...entry, indicator: await checkReading(entry) });
+
+  return withTransaction(async (db) => {
+    // Un check-in a la vez por astronauta: dos del mismo día no pueden corregir al mismo.
+    await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+      `wb-checkin:${actor.astronaut_id}`,
+    ]);
+    const existing = await wellbeing.findCheckin(actor.astronaut_id, checkin.client_uuid, db);
+    if (existing) {
+      return {
+        status: 'duplicate',
+        group_id: existing.id,
+        astronaut_id: actor.astronaut_id,
+        supersedes_id: existing.supersedes_id,
+        received_at: existing.received_at,
+        readings: [],
+        reading_count: checked.length,
+      };
+    }
+    const previous = await wellbeing.currentCheckinOfDay(
+      { astronautId: actor.astronaut_id, ...utcDayRange(checkin.measured_at) },
+      db,
+    );
+    const group = await wellbeing.insertCheckin(
+      {
+        clientUuid: checkin.client_uuid,
+        astronautId: actor.astronaut_id,
+        measuredAt: checkin.measured_at,
+        sleepHours: checkin.sleep_hours,
+        privateNote: checkin.private_note,
+        supersedesId: previous ? previous.id : null,
+      },
+      db,
+    );
+    const out = [];
+    for (const entry of checked) {
+      const row = await recordAndEvaluate(
         {
-          clientUuid: checkin.client_uuid,
+          clientUuid: entry.clientUuid,
+          recordedBy: actor.user_id,
+          missionId: actor.mission_ids[0],
           astronautId: actor.astronaut_id,
-          measuredAt: checkin.measured_at,
-          sleepHours: checkin.sleep_hours,
-          privateNote: checkin.private_note,
+          indicatorCode: entry.code,
+          components: entry.components,
+          source: entry.inputMethod,
+          measuredAt: entry.measuredAt,
+          supersedesUuid: previous ? previous.readings[entry.code] : undefined,
+          wellbeingCheckinId: group.id,
         },
+        entry.indicator,
         db,
-      ),
+      );
+      out.push({
+        indicator_code: entry.code,
+        sensitivity: entry.indicator.sensitivity,
+        reading_id: row.id,
+        level: row.level,
+        escalation: row.escalation,
+        recommendation: row.recommendation,
+        escalation_id: row.escalation_id,
+      });
+    }
+    return {
+      status: 'accepted',
+      group_id: group.id,
+      astronaut_id: actor.astronaut_id,
+      supersedes_id: previous ? previous.id : null,
+      received_at: group.received_at,
+      readings: out,
+    };
   });
 }
 

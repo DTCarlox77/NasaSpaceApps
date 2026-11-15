@@ -191,6 +191,17 @@ const env = Object.freeze({
     // Prescripción semanal de ejercicio para EXERCISE_MIN (rolling_7d_pct_of_prescription).
     exerciseWeeklyPrescriptionMin: toPositiveInt('EXERCISE_WEEKLY_PRESCRIPTION_MIN', 600),
   }),
+  // Bienestar (tarea 10). Todas son reglas de diseño (basis: design_rule), no umbrales clínicos.
+  wellbeing: Object.freeze({
+    // Un solo escalamiento conductual abierto por astronauta e indicador: mientras
+    // behavioral_health no lo cierre, un cambio que sigue sostenido no vuelve a escalar.
+    oneOpenEscalation: toBoolean('WELLBEING_ONE_OPEN_ESCALATION', true),
+    // Aptitud para tarea crítica: solo cuenta una PVT de las últimas N horas; sin PVT
+    // reciente → not_confirmed (dashboard y cumplimiento).
+    fitnessMaxAgeH: toPositiveInt('WELLBEING_FITNESS_MAX_AGE_H', 12),
+    // PHQ-2 y GAD-2 cada N días, un día antes de la conferencia psicológica (screening_due).
+    screeningEveryDays: toPositiveInt('WELLBEING_SCREENING_EVERY_DAYS', 14, { min: 2 }),
+  }),
 });
 
 module.exports = env;
