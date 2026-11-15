@@ -1,4 +1,4 @@
-/** Tipos del contrato (docs/openapi.yaml v1.7) que usa el panel en P1. */
+/** Tipos del contrato (docs/openapi.yaml v1.7) que usa el panel. */
 
 export type Role = 'astronaut' | 'flight_surgeon' | 'behavioral_health' | 'admin' | 'service';
 
@@ -62,4 +62,51 @@ export interface ErrorBody {
   code: string;
   message: string;
   details?: unknown;
+}
+
+// ---------------------------------------------------------------- misión vigente (P2)
+
+export interface CommOutage {
+  id: string;
+  mission_id: string;
+  starts_at: string;
+  /** null = corte en curso. */
+  ends_at?: string | null;
+  reason: string;
+  created_at?: string;
+}
+
+export interface CommStatus {
+  delay_seconds: number;
+  /** down = hay un corte en curso. */
+  link: 'up' | 'down';
+  current_outage?: CommOutage;
+  upcoming_outages: CommOutage[];
+}
+
+export interface Environment {
+  code: string;
+  name: string;
+  type: 'spacecraft' | 'space_station' | 'rover' | 'lunar_base' | 'mars_base';
+  gravity_g: number;
+  comm_delay_seconds: number;
+  description?: string | null;
+}
+
+export interface Mission {
+  id: string;
+  code: string;
+  name: string;
+  environment_code: string;
+  status: MissionRef['status'];
+  starts_at: string;
+  ends_at?: string | null;
+}
+
+/** GET /missions/current (CurrentMission). */
+export interface CurrentMission {
+  mission: Mission;
+  environment: Environment;
+  crew_role?: string | null;
+  comm: CommStatus;
 }

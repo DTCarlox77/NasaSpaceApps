@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as authApi from '../api/auth.ts';
 import { HttpError, refreshAccessToken } from '../api/http.ts';
 import { isGroundRole, type LoginResponse } from '../api/types.ts';
+import { MISSION_DATA } from '../api/queryKeys.ts';
 import * as storage from './storage.ts';
 import { AuthContext, type AuthState, type AuthValue, type SignInResult } from './context.ts';
 import {
@@ -165,15 +166,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRestoreAttempt((n) => n + 1);
       },
       selectMission: (id: string) => {
+        const next = state.context?.ground_missions?.find((m) => m.id === id);
+        if (!next || next.id === state.mission?.id) return;
         storage.setSelectedMissionId(id);
-        setState((s) => ({
-          ...s,
-          mission: s.context?.ground_missions?.find((m) => m.id === id) ?? s.mission,
-        }));
+        // Fuera los datos de la misión anterior (dashboard, bandeja, enlace…).
+        queryClient.removeQueries({ queryKey: [MISSION_DATA] });
+        setState((s) => ({ ...s, mission: next }));
       },
       clearNotice: () => setState((s) => ({ ...s, notice: null })),
     }),
-    [state, signIn, completePasswordChange, signOut],
+    [state, signIn, completePasswordChange, signOut, queryClient],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

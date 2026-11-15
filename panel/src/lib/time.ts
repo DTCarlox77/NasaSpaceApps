@@ -52,6 +52,11 @@ export function formatDuration(totalSeconds: number): string {
   return pair(Math.floor(s / DAY), 'd', Math.floor((s % DAY) / HOUR), 'h');
 }
 
+/** Retraso del enlace: en segundos hasta 2 min ("90 s"); después, como duración ("5 min"). */
+export function formatDelay(seconds: number): string {
+  return seconds < 120 ? `${Math.max(0, Math.round(seconds))} s` : formatDuration(seconds);
+}
+
 /**
  * "hace X" relativo a `now`: "hace un momento" (< 45 s), "hace 5 min", "hace 2 h", "hace 3 d".
  * Una fecha futura (reloj desfasado) → "en X".
