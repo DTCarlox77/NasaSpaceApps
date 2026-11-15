@@ -5,11 +5,14 @@
  * indicador, con último valor, serie y tendencia. Sin estado conductual: las lecturas salen
  * de v_readings_standard. `compliance` y `fitness` solo si accessPolicy lo permite
  * (fitness: flight_surgeon y admin; compliance: solo admin); si no, null.
+ * `fitness` = aptitud para tarea crítica con una PVT reciente (WELLBEING_FITNESS_MAX_AGE_H,
+ * tarea 10): sin PVT reciente, not_confirmed. Igual que GET /admin/compliance.
  */
 const { LEVEL_ORDER } = require('../engine/conditions');
 const dashboard = require('../models/dashboard.model');
 const { loadActor, canAccess, enforceAccess } = require('./accessPolicy');
 const { resolveMission } = require('./missionScope');
+const { fitnessByAstronaut } = require('./wellbeing.service');
 const { forbidden } = require('../utils/httpError');
 
 const SERIES_POINTS = 10;
@@ -100,7 +103,7 @@ async function crewDashboard({ userId, missionId }) {
           perIndicator: SERIES_POINTS,
         }),
         dashboard.checkinDays7d(ids),
-        dashboard.latestFitness(ids),
+        fitnessByAstronaut(ids),
       ])
     : [[], new Map(), new Map()];
 

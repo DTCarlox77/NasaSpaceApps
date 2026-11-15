@@ -3,8 +3,9 @@
 /**
  * Consultas del dashboard de tripulación (GET /admin/dashboard/crew).
  * REGLA: las lecturas salen SIEMPRE de v_readings_standard (nunca de readings): los
- * indicadores confidenciales no pueden aparecer. De bienestar solo se leen dos agregados que
- * la matriz permite a admin: cuántos check-ins hubo (no su contenido) y pvt_runs.fitness.
+ * indicadores confidenciales no pueden aparecer. De bienestar solo se lee un agregado que la
+ * matriz permite a admin: cuántos check-ins hubo (no su contenido). La aptitud sale de
+ * wellbeing.service (fitnessByAstronaut: pvt_runs.fitness de una PVT reciente).
  */
 const { pool } = require('../config/db');
 
@@ -56,15 +57,4 @@ async function checkinDays7d(astronautIds, db = pool) {
   return new Map(rows.map((r) => [r.astronaut_id, r.days]));
 }
 
-/** Aptitud de la PVT más reciente por astronauta (fit | not_confirmed). */
-async function latestFitness(astronautIds, db = pool) {
-  const { rows } = await db.query(
-    `SELECT DISTINCT ON (astronaut_id) astronaut_id, fitness
-     FROM pvt_runs WHERE astronaut_id = ANY($1::uuid[])
-     ORDER BY astronaut_id, measured_at DESC`,
-    [astronautIds],
-  );
-  return new Map(rows.map((r) => [r.astronaut_id, r.fitness]));
-}
-
-module.exports = { currentCrew, recentPhysicalReadings, checkinDays7d, latestFitness };
+module.exports = { currentCrew, recentPhysicalReadings, checkinDays7d };

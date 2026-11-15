@@ -336,6 +336,13 @@ test('dashboard: tras la historia muestra las series físicas y la aptitud', asy
   const bp = orion.indicators.find((i) => i.code === 'BLOOD_PRESSURE');
   assert.equal(bp.series.length, 10);
   assert.notEqual(bp.trend, 'insufficient_data');
-  assert.equal(orion.fitness, 'fit');
+  // Aptitud para tarea crítica (tarea 10): la de una PVT de las últimas 12 h; la historia hace
+  // la PVT semanal, así que sin una reciente es not_confirmed.
+  const [recent] = await q(
+    `SELECT fitness FROM pvt_runs WHERE astronaut_id = $1 AND measured_at >= now() - interval '12 hours'
+     ORDER BY measured_at DESC LIMIT 1`,
+    [A.orion],
+  );
+  assert.equal(orion.fitness, recent ? recent.fitness : 'not_confirmed');
   assert.equal(orion.compliance, null);
 });

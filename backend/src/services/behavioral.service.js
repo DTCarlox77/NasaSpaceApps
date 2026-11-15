@@ -9,6 +9,8 @@
  * - POST /admin/behavioral/escalations/{id}/ack y /close.
  * Cada lectura de datos confidenciales queda en confidential_access_log (una fila por
  * astronauta que aparece en la bandeja; una por consulta del detalle).
+ * Admin vive en /admin/compliance (cumplimiento y aptitud): sin valores, tendencias ni
+ * solicitudes.
  */
 const { badRequest, conflict, forbidden, notFound } = require('../utils/httpError');
 const { isUuid, uuidParam } = require('../utils/validate');
@@ -22,12 +24,15 @@ const {
 const { withTransaction } = require('../models/transaction');
 const behavioral = require('../models/behavioral.model');
 const escalations = require('../models/escalations.model');
+const wellbeing = require('../models/wellbeing.model');
+const dashboard = require('../models/dashboard.model');
 const catalog = require('./catalog.service');
 const delivery = require('./escalationDelivery.service');
 const { trendOf } = require('./dashboard.service');
 const { loadActor, canAccess, enforceAccess, logConfidentialAccess } = require('./accessPolicy');
 const { resolveMission } = require('./missionScope');
 const { toSupportRequest } = require('./supportRequest.service');
+const { fitnessByAstronaut, streakFrom } = require('./wellbeing.service');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WB_CODES = ['WB_MOOD', 'WB_FATIGUE', 'WB_STRESS', 'WB_CREW_CONFLICT'];
@@ -272,9 +277,99 @@ async function closeEscalation({ userId, id }) {
   });
 }
 
+// ---------------------------------------------------------------- cumplimiento (admin)
+
+/**
+ * GET /admin/compliance: por astronauta de la tripulación vigente, cumplimiento y aptitud.
+ * Solo conteos y horas (check-in hoy, último check-in, racha, cuestionarios y PVT hechos) y
+ * fit | not_confirmed. Sin valores, tendencias, niveles ni solicitudes de apoyo.
+ */
+async function compliance({ userId, query }) {
+  const problems = [];
+  for (const field of ['from', 'to']) {
+    if (query[field] !== undefined && Number.isNaN(Date.parse(query[field]))) {
+      problems.push({ field, issue: 'debe ser una fecha ISO 8601' });
+    }
+  }
+  if (problems.length) throw badRequest(problems);
+  const nowMs = Date.now();
+  const todayStart = Math.floor(nowMs / DAY_MS) * DAY_MS;
+  const to = query.to ? Date.parse(query.to) : nowMs;
+  const from = query.from ? Date.parse(query.from) : todayStart - 6 * DAY_MS;
+  if (from >= to) throw badRequest([{ field: 'from', issue: 'debe ser anterior a to' }]);
+  if (to - from > 366 * DAY_MS) {
+    throw badRequest([{ field: 'from', issue: 'el rango máximo es de 366 días' }]);
+  }
+
+  const actor = await loadActor(userId);
+  if (!actor) throw forbidden();
+  const mission = await resolveMission(actor, query.mission_id);
+  const crew = await dashboard.currentCrew(mission.id);
+  const view = (astronautId, v) => ({
+    astronaut_id: astronautId,
+    mission_id: mission.id,
+    sensitivity: 'standard',
+    category: 'behavioral',
+    action: 'read',
+    view: v,
+  });
+  await enforceAccess(actor, view(crew[0] ? crew[0].astronaut_id : '*', 'compliance'));
+  for (const m of crew) await enforceAccess(actor, view(m.astronaut_id, 'compliance'));
+
+  const ids = crew.map((m) => m.astronaut_id);
+  const fromIso = new Date(from).toISOString();
+  const toIso = new Date(to).toISOString();
+  const [done, days, counts, fitness] = ids.length
+    ? await Promise.all([
+        behavioral.checkinDaysBetween(ids, fromIso, toIso),
+        wellbeing.checkinDays(ids, new Date(todayStart - 400 * DAY_MS).toISOString()),
+        wellbeing.complianceCounts(ids, fromIso, toIso),
+        fitnessByAstronaut(ids, nowMs),
+      ])
+    : [new Map(), new Map(), new Map(), new Map()];
+  const last = ids.length ? await wellbeing.lastCheckinAt(ids) : new Map();
+  const todayIso = new Date(todayStart).toISOString().slice(0, 10);
+
+  return {
+    mission_id: mission.id,
+    from: fromIso,
+    to: toIso,
+    generated_at: new Date(nowMs).toISOString(),
+    astronauts: crew.map((m) => {
+      const own = days.get(m.astronaut_id);
+      const expected = expectedDays(from, to, m.assigned_from);
+      return {
+        astronaut_id: m.astronaut_id,
+        call_sign: m.call_sign,
+        checkin_today: Boolean(own && own.days.includes(todayIso)),
+        checkins_completed: Math.min(expected, done.get(m.astronaut_id) || 0),
+        checkins_expected: expected,
+        streak_days: streakFrom(own ? own.days : [], nowMs).streak_days,
+        last_checkin_at: last.get(m.astronaut_id) || null,
+        screenings_completed: (counts.get(m.astronaut_id) || {}).screenings || 0,
+        pvt_runs: (counts.get(m.astronaut_id) || {}).pvt_runs || 0,
+        fitness: canAccess(actor, view(m.astronaut_id, 'fitness'))
+          ? fitness.get(m.astronaut_id) || 'not_confirmed'
+          : 'not_confirmed',
+      };
+    }),
+  };
+}
+
+/** Días UTC del rango [from, to) desde el inicio de la asignación (un check-in por día). */
+function expectedDays(fromMs, toMs, assignedFrom) {
+  const start = Math.max(fromMs, new Date(assignedFrom).getTime());
+  if (start >= toMs) return 0;
+  const firstDay = Math.floor(start / DAY_MS);
+  const lastDay = Math.floor((toMs - 1) / DAY_MS);
+  return lastDay - firstDay + 1;
+}
+
 module.exports = {
   inbox,
   astronautDetail,
   acknowledgeEscalation,
   closeEscalation,
+  compliance,
+  expectedDays,
 };

@@ -39,6 +39,10 @@ async function closeEscalation(req, res) {
   res.json(await behavioralService.closeEscalation({ userId: req.auth.userId, id: req.params.id }));
 }
 
+async function compliance(req, res) {
+  res.json(await behavioralService.compliance({ userId: req.auth.userId, query: req.query }));
+}
+
 module.exports = {
   inbox,
   astronaut,
@@ -47,4 +51,5 @@ module.exports = {
   closeSupport,
   ackEscalation,
   closeEscalation,
+  compliance,
 };
