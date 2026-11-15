@@ -7,6 +7,12 @@
  *
  *   npm run smoke -- --base=https://astro-health-api-81jd.onrender.com/api/v1
  *   npm run smoke                       (por defecto http://localhost:3000/api/v1)
+ *   npm run smoke -- --base=<url> --quick
+ *
+ * --quick: no espera el retraso de la misión (~90 s en ARES-1). Se salta lo que depende de
+ * deliver_at: que la SpO₂ llegue a la bandeja del flight surgeon y la bandeja de bh.salas (y
+ * por eso no puede cerrar su solicitud de apoyo, que queda abierta para el reinicio de demo).
+ * Mantiene todo lo demás, incluidos los chequeos de confidencialidad que no esperan.
  *
  * Opcional por variable de entorno: SMOKE_PASSWORD (Demo2026!) y SMOKE_DEVICE_CREDENTIAL
  * (la de TAB-1 del seed; cámbiala si registraste tabletas nuevas).
@@ -42,7 +48,10 @@ function baseUrl(argv) {
   return trimmed.endsWith('/api/v1') ? trimmed : `${trimmed}/api/v1`;
 }
 
-const API = baseUrl(process.argv.slice(2));
+const ARGS = process.argv.slice(2);
+const API = baseUrl(ARGS);
+const QUICK = ARGS.includes('--quick');
+const STARTED_AT = Date.now();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const clock = () => new Date().toISOString().slice(11, 19);
 const log = (...a) => console.error(clock(), ...a);
@@ -107,13 +116,21 @@ function printTable() {
   );
   const cut = (s, w) => (s.length > w ? `${s.slice(0, w - 1)}…` : s.padEnd(w));
   const line = (cells) => `| ${cells.map((c, i) => cut(c, widths[i])).join(' | ')} |`;
-  console.log(`\nPrueba de humo contra ${API}\n`);
+  console.log(`\nPrueba de humo contra ${API}${QUICK ? ' (--quick)' : ''}\n`);
+  if (QUICK) {
+    console.log(
+      'Modo --quick: sin esperar el retraso de la misión. No comprueba la llegada a Tierra ni la ' +
+        'bandeja de bh.salas, y la solicitud de apoyo queda abierta: corre el reinicio de demo ' +
+        'después.\n',
+    );
+  }
   console.log(line(head));
   console.log(`|${widths.map((w) => '-'.repeat(w + 2)).join('|')}|`);
   for (const d of data) console.log(line(d));
   const ok = rows.filter((r) => r.ok).length;
+  const seconds = Math.round((Date.now() - STARTED_AT) / 1000);
   console.log(
-    `\n${ok}/${rows.length} pasos OK${failures.length ? ` · ${failures.length} FALLA` : ''}`,
+    `\n${ok}/${rows.length} pasos OK en ${seconds} s${failures.length ? ` · ${failures.length} FALLA` : ''}`,
   );
   for (const f of failures) {
     console.log(
@@ -364,14 +381,23 @@ async function main() {
     '201',
     support,
     support.status === 201 && Boolean(sb.id),
-    sb.deliver_at ? `deliver_at=${sb.deliver_at}` : '',
+    [sb.deliver_at ? `deliver_at=${sb.deliver_at}` : '', QUICK ? 'queda abierta (--quick)' : '']
+      .filter(Boolean)
+      .join('; '),
   );
 
-  // 7. Tierra tras el retraso: bandeja del flight surgeon y de behavioral_health.
-  log('esperando a que llegue a Tierra (retraso de ARES-1, ~90 s)...');
+  // 7. Tierra: la bandeja del flight surgeon responde; sin --quick, además espera el retraso y
+  // comprueba que llegan la SpO₂ (flight surgeon) y la solicitud de apoyo (bh.salas).
   if (surgeon) {
     const inbox = await call('GET', '/admin/inbox', { token: surgeon });
     record('7', 'GET /admin/inbox (dr.reyes)', '200', inbox, inbox.status === 200);
+  }
+  if (QUICK) {
+    log('--quick: no se espera el retraso (llegada a Tierra y bandeja de bh.salas)');
+  } else {
+    log('esperando a que llegue a Tierra (retraso de ARES-1, ~90 s)...');
+  }
+  if (!QUICK && surgeon) {
     if (escalationId) {
       const { res, item } = await waitInInbox(
         '/admin/inbox',
@@ -390,7 +416,7 @@ async function main() {
       );
     }
   }
-  if (tokens['bh.salas'] && sb.id) {
+  if (!QUICK && tokens['bh.salas'] && sb.id) {
     const { res, item } = await waitInInbox(
       '/admin/behavioral/inbox',
       tokens['bh.salas'],

@@ -75,13 +75,15 @@ El resto (`LOCKOUT_*`, `RATE_LIMIT_*`, `SYNC_*`, `TRIAGE_*`, `WELLBEING_*`, `OFF
 | `npm run sim:scenario` | Un escenario ahora (`-- solar_event --astronaut VEGA --intensity high`, `crew_illness`, `co2_spike`, `wellbeing_decline`, `offline_batch`, `emergency_solar`). |
 | `npm run sim:offline-batch` / `sim:emergency` | Atajos de `offline_batch` y `emergency_solar`. |
 | `npm run demo:reset` | Reinicio de la demo (`-- --confirm ARES-1`): ver abajo. |
-| `npm run smoke` | Prueba de humo de una API (`-- --base=<url>`; por defecto la local). |
+| `npm run smoke` | Prueba de humo de una API (`-- --base=<url>`; por defecto la local). `--quick`: sin esperar el retraso de la misión. |
 | `npm run lint` / `format` | ESLint / Prettier. |
 | `npm run api:lint` / `api:mock` | Valida el contrato / mock de Prism en `:4010`. |
 
 **Reinicio de demo** (`npm run demo:reset -- --confirm ARES-1` en local; `POST /api/v1/admin/demo/reset` con `{"confirm":"ARES-1"}` como `mission.control` en Render, que no tiene consola). No borra nada: recarga la historia de 14 días hasta ahora, cierra emergencias, cortes de enlace, escalamientos y solicitudes de apoyo abiertos (también los de las pruebas de humo), deja los usuarios del seed desbloqueados y con `Demo2026!` (ATLAS sigue con cambio de contraseña obligatorio), evita que el check-in perdido active el triaje y registra una PVT reciente para que el panel muestre **3 aptos y ATLAS "no confirmado"**. La respuesta trae `panel_flags`: lo que el panel seguirá marcando (una lectura crítica de un escenario anterior no se puede quitar sin borrar). Solo en modo demo (`SIMULATOR_ENABLED=true` y, en producción, `DEMO_SEED=true`).
 
-**Prueba de humo** (`npm run smoke -- --base=<url>`): salud → login → lectura normal y crítica (medida hace 4 h: escala pero **no abre emergencias**) y su corrección → body-status → `/sync/push` del ejemplo → `/sync/pull` → check-in y solicitud de apoyo → bandeja del flight surgeon y, tras el retraso, de `bh.salas` (cierra su solicitud) → confidencialidad (admin, CMO y flight surgeon → 403 en la bandeja conductual; cumplimiento sin valores) → la credencial de tableta sirve para el protocolo y da 401 en `/me`. Tarda ~1.5 min por el retraso de ARES-1, imprime una tabla y sale con código 1 si algo falla. Nunca imprime tokens. Lo que deja lo limpia el reinicio de demo.
+**Prueba de humo** (`npm run smoke -- --base=<url>`): salud → login → lectura normal y crítica (medida hace 4 h: escala pero **no abre emergencias**) y su corrección → body-status → `/sync/push` del ejemplo → `/sync/pull` → check-in y solicitud de apoyo → bandeja del flight surgeon y, tras el retraso, de `bh.salas` (cierra su solicitud) → confidencialidad (admin, CMO y flight surgeon → 403 en la bandeja conductual; cumplimiento sin valores) → la credencial de tableta sirve para el protocolo y da 401 en `/me`. Tarda ~1.5 min por el retraso de ARES-1, imprime una tabla (con el tiempo total) y sale con código 1 si algo falla. Nunca imprime tokens. Lo que deja lo limpia el reinicio de demo.
+
+**`--quick`** (`npm run smoke -- --base=<url> --quick`): lo mismo sin esperar el retraso de la misión, en segundos contra una API ya despierta. Se salta solo lo que depende de `deliver_at`: que la SpO₂ crítica llegue a la bandeja del flight surgeon y la bandeja de `bh.salas`. Mantiene la lectura crítica sin emergencia, sync, bienestar, la bandeja del flight surgeon (200), la confidencialidad que no espera (admin, CMO y flight surgeon → 403 en la bandeja conductual; cumplimiento sin valores) y la tableta (200 en el protocolo, 401 en `/me`). Como no espera, no puede cerrar su solicitud de apoyo: queda abierta y llega a `bh.salas` ~90 s después, igual que la SpO₂ al flight surgeon. Córrelo también **antes** del reinicio de demo.
 
 ## Despliegue en Render
 
@@ -102,9 +104,12 @@ El resto (`LOCKOUT_*`, `RATE_LIMIT_*`, `SYNC_*`, `TRIAGE_*`, `WELLBEING_*`, `OFF
    ```powershell
    Invoke-RestMethod https://astro-health-api-81jd.onrender.com/api/v1/health -TimeoutSec 120
    ```
-2. **Prueba de humo** (antes del reinicio: el reinicio limpia lo que deja):
+2. **Prueba de humo** (antes del reinicio: el reinicio limpia lo que deja). Completa (~1.5 min) o, con poco tiempo, `--quick` (sin esperar el retraso):
    ```bash
    npm run smoke -- --base=https://astro-health-api-81jd.onrender.com/api/v1
+   ```
+   ```bash
+   npm run smoke -- --base=https://astro-health-api-81jd.onrender.com/api/v1 --quick
    ```
 3. **Reinicio de demo** por el endpoint (Git Bash):
    ```bash
