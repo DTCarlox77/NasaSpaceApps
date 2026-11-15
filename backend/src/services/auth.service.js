@@ -15,6 +15,7 @@ const authEvents = require('../models/authEvents.model');
 const contextModel = require('../models/userContext.model');
 const passwords = require('./passwords.service');
 const tokens = require('./tokens.service');
+const offlinePin = require('./offlinePin.service');
 
 const GROUND_ROLES = ['flight_surgeon', 'behavioral_health', 'admin'];
 
@@ -127,7 +128,8 @@ async function loginResponse(user, deviceId, context) {
   return {
     ...session,
     must_change_password: false,
-    offline_unlock_until: toIso(await contextModel.offlineUnlockUntil(user.id, deviceId)),
+    // Login en línea: renueva la ventana del PIN offline de ese dispositivo (tarea 11).
+    offline_unlock_until: toIso(await offlinePin.renewOnLogin({ userId: user.id, deviceId })),
     user: userSummary(user),
     context,
   };
