@@ -115,7 +115,7 @@ La tripulación no ve nada del bienestar de los demás.
 - **`trigger_type: crew_event`**: nueva forma de activar el modo emergencia (un tripulante avisa, p. ej. por voz), además de `manual_button`, `missed_checkin`, `critical_reading` y `environment_alarm`. Si la app muestra el motivo de la emergencia, agrega este valor.
 - **`PATCH /api/v1/admin/assignments/{id}`**: `assigned_to` ya puede ser una fecha futura; la asignación sigue vigente hasta esa fecha. Antes respondía 400. Un periodo de comandante o de CMO que se solape con otro del mismo rol responde 409.
 
-## 9. Qué ya es real (tramo 1) y cómo pasar del mock a la API
+## 9. Qué ya es real (tramos 1 y 2) y cómo pasar del mock a la API
 
 En el YAML, las operaciones que **todavía** son solo mock llevan `x-status-impl: pending`. Las que no la llevan ya responden en la API local:
 
@@ -127,6 +127,8 @@ En el YAML, las operaciones que **todavía** son solo mock llevan `x-status-impl
 | Catálogo | `GET /indicators`, `/indicators/{code}`, `/rules`, `/body-zones`, `/symptoms` |
 | Lecturas | `POST /readings`, `GET /me/readings`, `GET /me/body-status` |
 | Hábitat | `POST /habitat/readings`, `GET /habitat/status` |
+| Tierra | `GET /admin/dashboard/crew`, `GET /admin/inbox`, `POST /admin/escalations/{id}/ack`, `POST /admin/escalations/{id}/messages`, `GET /escalations/{id}/messages` |
+| Misión (admin) | `GET`/`POST /admin/missions`, `PATCH /admin/missions/{id}`, `GET`/`POST /admin/environments`, `PATCH /admin/environments/{code}`, `GET`/`POST /admin/assignments`, `PATCH /admin/assignments/{id}`, `GET`/`POST /admin/comm-outages`, `PATCH /admin/comm-outages/{id}` |
 
 Para pasar del mock a la API local:
 
@@ -139,3 +141,16 @@ Comportamientos reales que el mock no muestra:
 - `POST /readings` evalúa con las reglas activas y calcula los campos derivados con tu historial: el mismo valor puede dar otro nivel según las lecturas anteriores (p. ej. noches seguidas de poco sueño).
 - `values` se valida contra el catálogo (requeridos, tipos y unidades): un 98.6 en `BODY_TEMP` (°F) responde 400.
 - `GET /me/body-status` trae `checkin_completed` en la zona `brain` y la tarjeta `environment` del módulo.
+- **Retraso con Tierra (ARES-1 = 90 s)**: una alerta a `flight_surgeon` aparece en `GET /admin/inbox` 90 s después de la lectura; antes, el acuse y la respuesta responden 404. La respuesta del flight surgeon llega a la app otros 90 s después (`deliver_at`). Lo crítico físico avisa a bordo al instante.
+- **Cortes de enlace**: con un corte abierto (`POST /admin/comm-outages` sin `ends_at`), lo nuevo queda con `deliver_at: null` ("pendiente de envío"). Al cerrarlo (`PATCH ... { ends_at }`) se recalcula: sale al volver el enlace + 90 s.
+- **Bandeja**: orden por prioridad (`emergency` > `urgent` > `routine`) y luego lo que espera desde hace más tiempo. Filtros `category` (`reading|emergency|wellbeing|manual`) y `status` (`delivered|acknowledged|responded`). El acuse es idempotente; responder marca `responded`.
+- **Dashboard**: solo indicadores físicos con lecturas, serie de hasta 10 puntos y `trend` (`rising|falling|stable|insufficient_data`). `compliance` y `fitness` vienen **`null` para el flight surgeon** (la matriz de permisos solo se los muestra a admin); pinta "sin acceso", no "0".
+- **Hilo a bordo**: `GET /escalations/{id}/messages` con el `escalation_id` que devolvió `POST /readings`. Lo ve el astronauta dueño (y el CMO si es físico).
+
+### API desplegada (Render)
+
+- URL: **pendiente del primer deploy** (se anunciará aquí; será del estilo `https://astro-health-api.onrender.com`). Rutas iguales: `<URL>/api/v1/...`, Swagger en `<URL>/api/docs`.
+- Mismos usuarios y contraseña del seed (`Demo2026!`): son **datos sintéticos**. No metas datos reales.
+- El plan gratuito se duerme tras ~15 min sin uso: la primera petición puede tardar ~1 min. Llama a `GET /api/v1/health` al abrir la app para despertarla.
+- CORS: si tu frontend corre en un dominio propio, pide que se agregue a `CORS_ORIGIN`.
+- Los datos se comparten entre todos los que usen la API desplegada: usa `client_uuid` nuevos y no esperes un estado limpio.
