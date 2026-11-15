@@ -1,18 +1,31 @@
 import type { HazardId, SourceRef } from './Hazard';
 
-/** Sistemas del cuerpo del mapa interactivo (Figma). */
-export type BodySystemId = 'cardiovascular' | 'respiratory' | 'brain' | 'eyes' | 'skeletal' | 'muscular' | 'immune';
+/**
+ * Sistemas del cuerpo del mapa interactivo (Figma). `metabolism` existe en el catálogo del servidor
+ * (zona `metabolism`, glucosa) pero no tiene región en la figura: aparece como chip y en las listas.
+ */
+export type BodySystemId = 'cardiovascular' | 'respiratory' | 'brain' | 'eyes' | 'skeletal' | 'muscular' | 'immune' | 'metabolism';
 
 export type IndicatorId =
+  // Con código en el catálogo del servidor (ver `data/mappers/catalogMap.ts`).
   | 'heartRate'
   | 'bloodPressure'
   | 'spo2'
   | 'respRate'
+  | 'bodyTemperature'
+  | 'glucose'
+  | 'sleepHours'
+  | 'radDoseDaily'
+  | 'radDoseCum'
+  | 'bodyMass'
+  | 'exerciseMin'
+  | 'visionCheck'
+  | 'symptoms'
+  // Solo en el dispositivo: el catálogo no los tiene (o son confidenciales) → siempre "sin evaluar" con API.
   | 'reactionTime'
   | 'eyePressure'
   | 'urinaryCalcium'
-  | 'gripStrength'
-  | 'bodyTemperature';
+  | 'gripStrength';
 
 /** Semáforo. 'unevaluated' = registrado pero sin regla validada a bordo (no se inventan umbrales). */
 export type HealthStatus = 'normal' | 'caution' | 'critical' | 'unevaluated';
@@ -23,7 +36,6 @@ export type EscalationLevel = 'self' | 'crew' | 'flightSurgeon';
 /**
  * Rango de referencia. `source` es obligatorio: ningún umbral entra
  * a la app sin cita (regla del proyecto: no inventar cifras médicas).
- * Lo provee el backend junto con cada indicador.
  */
 export interface ReferenceRange {
   normal: { min?: number; max?: number };
@@ -39,17 +51,20 @@ export interface Reading {
   secondaryValue?: number;
   takenAt: string; // ISO 8601
   missionDay?: number;
-  source: MeasurementSource;
+  /** Cómo se tomó; el estado del servidor (GET /me/body-status) no lo trae. */
+  source?: MeasurementSource;
   /** false = guardado solo en el dispositivo, pendiente de sincronizar. */
   synced: boolean;
   /** Foto del equipo de medición (entrada por cámara), guardada en el dispositivo. */
   photoUri?: string;
   note?: string;
+  /** true = nivel calculado en el dispositivo sin conexión (reglas del servidor), pendiente de confirmar. */
+  provisional?: boolean;
 }
 
 /**
- * Indicador de salud tal como lo entrega el backend (o el mock).
- * El estado lo calcula el backend con reglas validadas; la app lo muestra y explica.
+ * Indicador de salud tal como lo muestra la app (servidor, caché o maqueta).
+ * Con API, `status` y `recommendation` los calcula el servidor con sus reglas citadas; la app solo los muestra.
  */
 export interface HealthIndicator {
   id: IndicatorId;
@@ -65,6 +80,16 @@ export interface HealthIndicator {
   /** Tiempo entre mediciones programadas. */
   frequencyHours: number;
   synthetic: boolean;
+  /** Código del catálogo del servidor (p. ej. HEART_RATE). */
+  code?: string;
+  /** Recomendación del servidor: se muestra tal cual. */
+  recommendation?: string | null;
+  /** Fuentes de las reglas del servidor (GET /indicators). */
+  sources?: SourceRef[];
+  /** A quién escala la regla vigente. */
+  escalation?: EscalationLevel;
+  /** true = el catálogo del servidor no lo tiene: solo vive en el dispositivo y queda "sin evaluar". */
+  localOnly?: boolean;
 }
 
 export interface Measurement {
@@ -76,3 +101,11 @@ export interface Measurement {
   /** Toda medición de la demo es sintética y se marca como tal. */
   synthetic: boolean;
 }
+
+/** Nivel del servidor → estado de la app. `unrated` (sin evaluar) nunca se muestra como "bien". */
+export function statusFromServerLevel(level: string | undefined | null): HealthStatus {
+  return level === 'normal' || level === 'caution' || level === 'critical' ? level : 'unevaluated';
+}
+
+/** Clave única de un indicador en listas (SYMPTOM puede aparecer en varias zonas). */
+export const indicatorKey = (i: Pick<HealthIndicator, 'id' | 'systemId'>) => `${i.systemId}:${i.id}`;

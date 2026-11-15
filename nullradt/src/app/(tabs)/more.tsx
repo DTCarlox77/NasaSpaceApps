@@ -4,9 +4,12 @@ import { router, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '@/core/theme';
 import { AppText, FadeInView, PressableScale, Screen } from '@/presentation/components/ui';
+import { apiEnabled } from '@/core/config/env';
 import { showToast } from '@/presentation/store/toastStore';
+import { useSyncStore } from '@/presentation/store/syncStore';
+import { runSync } from '@/presentation/sync/syncEngine';
 
-type TileKey = 'tests' | 'crew' | 'connectivity' | 'measure' | 'register' | 'triage' | 'achievements' | 'profile' | 'settings' | 'comms' | 'earth' | 'access' | 'voiceLab' | 'voiceCommands' | 'notificationsLab';
+type TileKey = 'tests' | 'crew' | 'connectivity' | 'measure' | 'register' | 'triage' | 'achievements' | 'profile' | 'settings' | 'sync' | 'comms' | 'earth' | 'access' | 'voiceLab' | 'voiceCommands' | 'notificationsLab';
 
 interface Tile {
   key: TileKey;
@@ -22,10 +25,11 @@ const TILES: Tile[] = [
   { key: 'measure', icon: 'pulse-outline', href: '/measure-session' },
   { key: 'connectivity', icon: 'wifi-outline', href: '/connectivity' },
   { key: 'register', icon: 'camera-outline', href: '/register' },
-  { key: 'triage', icon: 'medkit-outline', href: '/triage', danger: true },
+  { key: 'triage', icon: 'medkit-outline', href: { pathname: '/alert', params: { trigger: 'manual' } }, danger: true },
   { key: 'achievements', icon: 'trophy-outline', href: '/achievements' },
   { key: 'profile', icon: 'person-circle-outline', href: '/profile' },
   { key: 'settings', icon: 'settings-outline', href: '/settings' },
+  { key: 'sync', icon: 'sync-outline' },
   { key: 'comms', icon: 'radio-outline', href: '/comms' },
   { key: 'earth', icon: 'planet-outline', href: '/earth' },
   { key: 'access', icon: 'shield-checkmark-outline', href: '/access' },
@@ -37,6 +41,17 @@ const TILES: Tile[] = [
 export default function MoreScreen() {
   const { t } = useTranslation();
   const { colors, spacing, radius } = useAppTheme();
+
+  /** Sincroniza la cola offline con el servidor (POST /sync/push + GET /sync/pull). */
+  const syncNow = () =>
+    runSync().then(() => {
+      const pending = useSyncStore.getState().pending;
+      showToast({
+        level: pending ? 'caution' : 'normal',
+        title: t('more.items.sync'),
+        body: pending ? t('sync.pendingBody', { count: pending }) : t('sync.doneBody'),
+      });
+    });
 
   return (
     <Screen topInset={false}>
@@ -53,7 +68,9 @@ export default function MoreScreen() {
                 onPress={() =>
                   tile.href
                     ? router.push(tile.href)
-                    : showToast({ level: 'info', title: t(`more.items.${tile.key}`), body: t('common.comingSoon') })
+                    : tile.key === 'sync' && apiEnabled()
+                      ? syncNow()
+                      : showToast({ level: 'info', title: t(`more.items.${tile.key}`), body: t('common.comingSoon') })
                 }
                 style={[
                   styles.tile,

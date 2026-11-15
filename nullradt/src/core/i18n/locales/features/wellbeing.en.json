@@ -5,7 +5,7 @@
       "mood": { "label": "How is your mood?", "low": "Very low", "high": "Very good", "short": "Mood" },
       "fatigue": { "label": "How fatigued do you feel?", "low": "Not at all", "high": "Exhausted", "short": "Fatigue" },
       "stress": { "label": "How stressed do you feel?", "low": "Not at all", "high": "Extremely", "short": "Stress" },
-      "friction": { "label": "Friction with the crew?", "low": "None", "high": "A lot", "short": "Friction" }
+      "crewConflict": { "label": "Friction with the crew?", "low": "None", "high": "A lot", "short": "Friction" }
     },
     "fromWristband": "from wristband (synthetic)",
     "corrected": "corrected manually",
@@ -18,7 +18,7 @@
       "mood": "Your mood has been below your usual range for several days.",
       "fatigue": "Your fatigue has been above your usual range for several days.",
       "stress": "Your stress has been above your usual range for several days.",
-      "friction": "Friction with the crew has been above usual for several days."
+      "crewConflict": "Friction with the crew has been above usual for several days."
     },
     "sustainedNote": "Not a diagnosis. Behavioral health will see this alert confidentially; your crew will not.",
     "seedStable": "Demo: 14 stable days",

@@ -19,8 +19,8 @@ import { SessionNext } from '@/presentation/features/health/SessionNext';
 import { useMeasureSessionStore } from '@/presentation/store/measureSessionStore';
 import { showToast } from '@/presentation/store/toastStore';
 
-const ALL: IndicatorId[] = BODY_SYSTEM_IDS.flatMap((s) => BODY_SYSTEMS[s].indicators);
-const UNITS: Record<IndicatorId, string> = {
+type RegistrableId = 'heartRate' | 'bloodPressure' | 'spo2' | 'respRate' | 'reactionTime' | 'eyePressure' | 'urinaryCalcium' | 'gripStrength' | 'bodyTemperature';
+const UNITS_TABLE: Record<RegistrableId, string> = {
   heartRate: 'bpm',
   bloodPressure: 'mmHg',
   spo2: '%',
@@ -31,8 +31,11 @@ const UNITS: Record<IndicatorId, string> = {
   gripStrength: 'kg',
   bodyTemperature: '°C',
 };
+/** Solo los que tienen entrada manual en la demo (los del catálogo del servidor sin entrada quedan fuera). */
+const ALL: IndicatorId[] = BODY_SYSTEM_IDS.flatMap((s) => BODY_SYSTEMS[s].indicators).filter((i): i is RegistrableId => i in UNITS_TABLE);
 /** Límites físicamente posibles (validación de tecleo, no son umbrales clínicos). */
-const PLAUSIBLE: Record<IndicatorId, [number, number]> = {
+const UNITS = UNITS_TABLE as Partial<Record<IndicatorId, string>>;
+const PLAUSIBLE: Partial<Record<IndicatorId, [number, number]>> = {
   heartRate: [20, 250],
   bloodPressure: [50, 260],
   spo2: [50, 100],
@@ -79,7 +82,7 @@ export default function RegisterScreen() {
   const submit = () => {
     const v = parse(value);
     const s = isBp ? parse(secondary) : undefined;
-    const [lo, hi] = PLAUSIBLE[id];
+    const [lo, hi] = PLAUSIBLE[id] ?? [0, Number.MAX_SAFE_INTEGER];
     if (!value || Number.isNaN(v) || v < lo || v > hi || (isBp && (!secondary || Number.isNaN(s!) || s! < 20 || s! >= v))) {
       setError(t('register.invalid', { min: lo, max: hi }));
       return;
@@ -203,7 +206,7 @@ export default function RegisterScreen() {
               {result.remeasureMin && <AppText variant="bodySmall" color="textSecondary">{t('rules.remeasure', { min: result.remeasureMin })}</AppText>}
             </Card>
             {result.status === 'critical' && (
-              <Button label={t('triage.openAuto')} variant="danger" leftIcon="medkit" fullWidth onPress={() => router.push({ pathname: '/triage', params: { trigger: 'criticalReading' } })} />
+              <Button label={t('measure.openAlert')} variant="danger" leftIcon="medkit" fullWidth onPress={() => router.push({ pathname: '/alert', params: { trigger: 'manual' } })} />
             )}
             {inSession ? (
               <SessionNext />

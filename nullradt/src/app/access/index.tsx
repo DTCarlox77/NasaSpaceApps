@@ -7,7 +7,7 @@ import { useAppTheme } from '@/core/theme';
 import { randomId, sha256Hex } from '@/core/security/crypto';
 import { actorFrom, AUTH_CONFIG, decodeClaims, onboardServer, useOnboardStore } from '@/data/onboard/onboardServer';
 import { can } from '@/domain/access/permissions';
-import { PermissionDeniedError, TokenReuseError, WeakPasswordError, type GlobalRole, type MissionCrewRole } from '@/domain/entities/Session';
+import { globalRoleOf, PermissionDeniedError, TokenReuseError, WeakPasswordError, type GlobalRole, type MissionCrewRole } from '@/domain/entities/Session';
 import { BackHeader } from '@/presentation/components/navigation/BackHeader';
 import { AppText, Button, Card, FadeInView, Screen, SegmentedControl, TextField } from '@/presentation/components/ui';
 import { PinPad } from '@/presentation/features/auth/PinPad';
@@ -46,8 +46,8 @@ export default function AccessScreen() {
         <Card style={{ gap: spacing.sm }}>
           <AppText variant="h3">{session.displayName}</AppText>
           <AppText color="textSecondary">
-            {session.userId} · {t(`auth.roles.${session.role}`)}
-            {session.crewRole ? ` · ${t(`access.crewRoles.${session.crewRole}`)}` : ''}
+            {session.userId} · {t(`auth.roles.${globalRoleOf(session)}`)}
+            {session.crewRole ? ` · ${t(`crewRoles.${session.crewRole}`)}` : ''}
           </AppText>
           {session.missionId && <AppText variant="caption" color="textMuted">{t('access.mission', { id: session.missionId })}</AppText>}
           <AppText variant="caption" color="textMuted">{t(`access.authModes.${session.authMode ?? 'demoAuto'}`)}</AppText>
@@ -199,7 +199,7 @@ function CreateAccountSection() {
   const session = useAuthStore((s) => s.session)!;
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<GlobalRole>('astronaut');
-  const [crewRole, setCrewRole] = useState<MissionCrewRole>('crew');
+  const [crewRole, setCrewRole] = useState<MissionCrewRole>('mission_specialist');
   const [created, setCreated] = useState<{ id: string; temporaryPassword: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -257,9 +257,9 @@ function CreateAccountSection() {
                 value={crewRole}
                 onChange={setCrewRole}
                 options={[
-                  { value: 'crew', label: t('access.crewRoles.crew') },
-                  { value: 'medical_officer', label: t('access.crewRoles.medical_officer') },
-                  { value: 'commander', label: t('access.crewRoles.commander') },
+                  { value: 'mission_specialist', label: t('crewRoles.mission_specialist') },
+                  { value: 'crew_medical_officer', label: t('crewRoles.crew_medical_officer') },
+                  { value: 'commander', label: t('crewRoles.commander') },
                 ]}
               />
             )}
@@ -304,7 +304,7 @@ function AccountsSection({ delegated }: { delegated: boolean }) {
                 <AppText variant="title">{a.displayName}</AppText>
                 <AppText variant="caption" color="textSecondary">
                   {a.id} · {t(`auth.roles.${a.globalRole}`)}
-                  {a.crewRole ? ` · ${t(`access.crewRoles.${a.crewRole}`)}` : ''}
+                  {a.crewRole ? ` · ${t(`crewRoles.${a.crewRole}`)}` : ''}
                   {a.mustChangePassword ? ` · ${t('access.tempPassword')}` : ''}
                   {a.pinHash ? ` · PIN` : ''}
                 </AppText>

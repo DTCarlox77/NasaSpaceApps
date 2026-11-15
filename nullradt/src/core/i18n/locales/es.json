@@ -18,7 +18,10 @@
     "seeAll": "Ver todo",
     "notifications": "Notificaciones",
     "profile": "Perfil",
-    "back": "Atrás"
+    "back": "Atrás",
+    "done": "Listo",
+    "yes": "Sí",
+    "no": "No"
   },
   "disclaimer": "Herramienta de apoyo a la decisión. No es un diagnóstico médico. Ante cualquier duda, consulta a tu tripulación o al flight surgeon.",
   "status": {
@@ -108,7 +111,9 @@
     "measure": "Medir",
     "noReadings": "Aún no hay lecturas",
     "recommendations": "Recomendaciones",
-    "protocolNote": "Guía del protocolo a bordo. No reemplaza a tu flight surgeon."
+    "protocolNote": "Guía del protocolo a bordo. No reemplaza a tu flight surgeon.",
+    "localOnly": "Solo en este dispositivo: el catálogo del servidor no tiene este indicador, así que queda sin evaluar.",
+    "sources": "Fuentes: {{list}}"
   },
   "log": {
     "title": "Registrar medición",
@@ -145,8 +150,8 @@
     "sending": "Enviando…",
     "sentTitle": "Informe enviado",
     "sentBody": "El sistema de la misión recibió tu informe.",
-    "queuedTitle": "Guardado sin conexión",
-    "queuedBody": "No hay conexión con el servidor. El informe quedó en cola y se enviará automáticamente. Si es urgente, avisa en persona a tu tripulación.",
+    "queuedTitle": "En cola con prioridad",
+    "queuedBody": "Sin conexión con el servidor. La emergencia quedó en cola y se enviará antes que todo al reconectar. Si es urgente, avisa en persona a tu tripulación.",
     "close": "Cerrar",
     "cancel": "Cancelar",
     "open": "Abrir alerta",
@@ -159,7 +164,41 @@
     "holdToDeactivate": "Mantén para desactivar",
     "deactivateHint": "¿Fue un error? Mantén presionado 5 segundos para desactivarla.",
     "cancelledTitle": "Alerta desactivada",
-    "cancelledBody": "Se avisó a la tripulación de que fue un error."
+    "cancelledBody": "Se avisó a la tripulación de que fue un error.",
+    "voiceLocal": "Alerta de precaución guardada en el dispositivo.",
+    "cautionLocalHint": "Una precaución no es una emergencia: queda guardada en el dispositivo y no se envía. Si lo necesitas, avisa en persona.",
+    "responderSafe": "¿Estás en un lugar seguro?",
+    "noteLocal": "La nota no se envía: la emergencia del servidor no la incluye.",
+    "sessionOpenTitle": "Emergencia abierta",
+    "sessionOpenBody": "El servidor abrió la emergencia de la misión.",
+    "joinedBody": "Ya había una emergencia abierta en la misión: te uniste a ella.",
+    "localTitle": "Guardada en el dispositivo",
+    "localCautionBody": "La alerta de precaución quedó solo en este dispositivo: no se envía como emergencia.",
+    "crewAndEarthNotified": "Se avisó a la tripulación y a Tierra (Tierra la recibe con el retraso de la misión).",
+    "secureSelf": "Primero ponte a salvo.",
+    "sessionStatus": "Estado",
+    "statuses": {
+      "pending": "Esperando confirmación",
+      "active": "Activa",
+      "closed": "Cerrada",
+      "cancelled": "Cancelada",
+      "merged": "Unida a otra"
+    },
+    "startedAt": "Inicio",
+    "roster": "Tripulación",
+    "noTriageYet": "La evaluación de cada tripulante (triaje) todavía no está en la app.",
+    "refresh": "Actualizar estado",
+    "deactivateServerHint": "¿Falsa alarma? Mantén presionado 5 segundos para cancelar la emergencia.",
+    "closeOnlyLeads": "Solo el comandante o el oficial médico pueden cerrar la emergencia.",
+    "cancelledServerBody": "La emergencia se canceló como falsa alarma.",
+    "falseAlarmNote": "Falsa alarma (cancelada desde la app)",
+    "closeForbiddenTitle": "No permitido",
+    "closeForbidden": "Solo el comandante o el oficial médico pueden cerrar la emergencia.",
+    "closeErrorTitle": "No se pudo cancelar",
+    "solarEvent": "¿Hay un evento solar o alarma de radiación activa?",
+    "solarEventHint": "Con evento solar, el protocolo agrega su módulo de radiación.",
+    "startTriage": "Evaluar a la tripulación (triaje)",
+    "triageHint": "El protocolo te guía pregunta por pregunta, con voz y botones."
   },
   "voice": {
     "start": "Dictar con voz",
@@ -310,7 +349,15 @@
       "idFormat": "Escribe tu ID de astronauta con el formato NR-A-0000.",
       "passwordRequired": "Escribe tu contraseña.",
       "invalid": "ID o contraseña incorrectos.",
-      "network": "No se pudo conectar con el servidor. Intenta de nuevo."
+      "network": "No se pudo conectar con el servidor. Intenta de nuevo.",
+      "usernameFormat": "Escribe tu usuario (minúsculas, p. ej. a.ortega).",
+      "invalidUser": "Usuario o contraseña incorrectos",
+      "locked": "Cuenta bloqueada hasta las {{time}}. Pide al comandante que la desbloquee.",
+      "noAssignment": "No tienes una misión vigente. Pide a control de misión que te asigne.",
+      "rateLimited": "Demasiados intentos. Espera {{seconds}} s e inténtalo de nuevo.",
+      "weakPassword": "La contraseña debe tener al menos {{min}} caracteres y ser distinta de la actual.",
+      "passwordMismatch": "Las contraseñas no coinciden.",
+      "changeExpired": "El permiso para cambiar la contraseña venció. Vuelve a iniciar sesión."
     },
     "demoHint": "Prototipo sin servidor: cualquier contraseña funciona. Datos sintéticos.",
     "demoSession": "Sesión demo",
@@ -328,7 +375,18 @@
       "face": "Face ID",
       "iris": "Iris",
       "generic": "Biometría"
-    }
+    },
+    "username": "Usuario",
+    "changePasswordTitle": "Cambia tu contraseña",
+    "changePasswordBody": "Es tu primer inicio: define una contraseña nueva de al menos {{min}} caracteres.",
+    "newPassword": "Nueva contraseña",
+    "confirmPassword": "Repite la contraseña",
+    "changePasswordSubmit": "Guardar y continuar",
+    "passwordChanged": "Contraseña actualizada",
+    "passwordChangedBody": "Ya puedes usar la app con tu nueva contraseña.",
+    "sessionExpiredTitle": "Sesión cerrada",
+    "sessionExpiredBody": "Tu sesión venció. Inicia sesión de nuevo.",
+    "sessionReuseBody": "Por seguridad se cerraron tus sesiones. Inicia sesión de nuevo."
   },
   "mission": {
     "selectTitle": "Selecciona tu misión",
@@ -346,7 +404,15 @@
       "active": "En curso",
       "scheduled": "Programada",
       "training": "Entrenamiento"
-    }
+    },
+    "assignedTitle": "Tu misión",
+    "assignedBody": "Control de misión te asignó a esta misión. Tu plan de salud y sus reglas la siguen.",
+    "code": "Código",
+    "yourRole": "Tu rol",
+    "dayOnly": "Día {{day}}",
+    "commDelay": "Retraso con Tierra",
+    "commDelayValue": "{{seconds}} s por sentido",
+    "noAssignment": "No se pudo leer tu misión. Revisa tu conexión."
   },
   "connectivity": {
     "offlineTitle": "Sin enlace con la Tierra — acceso offline",
@@ -454,19 +520,15 @@
   },
   "wellbeing": {
     "title": "Bienestar",
-    "subtitle": "Check diario confidencial: solo se guarda en este dispositivo.",
+    "subtitle": "Check-in diario confidencial: nadie de la tripulación ve tus respuestas.",
     "streak": "Racha (días)",
     "total": "Checks",
     "today": "Hoy",
     "formEyebrow": "1 minuto",
     "formTitle": "¿Cómo estás hoy?",
     "mood": "Ánimo",
-    "energy": "Energía",
     "stress": "Estrés",
-    "low": "Bajo",
-    "high": "Alto",
     "sleep": "Horas de sueño",
-    "sleepShort": "Sueño",
     "hours_one": "{{count}} h",
     "hours_other": "{{count}} h",
     "symptoms": "Síntomas",
@@ -480,26 +542,44 @@
       "fatigue": "Fatiga",
       "none": "Ninguno"
     },
-    "note": "Nota (opcional)",
-    "notePlaceholder": "Escribe o dicta cómo te sientes",
-    "submit": "Guardar check",
-    "completeScales": "Responde ánimo, energía y estrés para guardar.",
-    "saved": "Check guardado",
-    "savedBody": "Gracias. Se guardó en tu dispositivo.",
-    "doneTitle": "Check de hoy listo",
-    "doneBody": "Puedes editarlo durante el día.",
-    "allGood": "Todo en orden. Sigue así.",
-    "flags": {
-      "lowMood": "Ánimo bajo: considera hablar con tu tripulación o con el equipo de apoyo psicológico.",
-      "highStress": "Estrés alto: prueba una pausa de respiración y comenta tu carga de trabajo.",
-      "poorSleep": "Dormiste menos de 6 h: revisa tu rutina de desconexión.",
-      "vision": "Visión borrosa: regístralo y revisa el sistema Ojos en Monitor."
-    },
+    "note": "Nota privada (opcional)",
+    "notePlaceholder": "Solo tú la verás",
+    "submit": "Guardar check-in",
+    "completeScales": "Mueve los cuatro deslizadores para guardar.",
+    "saved": "Check-in guardado",
+    "savedBody": "Gracias por tu check-in.",
+    "doneTitle": "Check-in de hoy listo",
     "goMonitor": "Ir a Monitor",
-    "edit": "Editar check",
+    "edit": "Corregir el check-in de hoy",
     "history": "Últimos días",
-    "historyLine": "Sueño {{sleep}} h · Energía {{energy}}/5 · Estrés {{stress}}/5",
-    "private": "Tus respuestas no se comparten automáticamente. No es una evaluación médica."
+    "private": "No es una evaluación médica: nunca verás un puntaje ni un color. Si un cambio se sostiene, solo salud conductual recibe un aviso confidencial.",
+    "week": "Esta semana",
+    "correctTitle": "Corrige tu check-in de hoy",
+    "correctBody": "El nuevo reemplaza al de hoy (no se borra nada).",
+    "fatigue": "Fatiga",
+    "crewConflict": "Roces con la tripulación",
+    "sliders": {
+      "moodLow": "Muy bajo",
+      "moodHigh": "Muy bien",
+      "fatigueLow": "Descansado",
+      "fatigueHigh": "Agotado",
+      "stressLow": "Tranquilo",
+      "stressHigh": "Muy estresado",
+      "conflictLow": "Ningún roce",
+      "conflictHigh": "Muchos roces"
+    },
+    "sleepOptional": "Agregar horas de sueño (opcional)",
+    "symptomsShared": "Los síntomas son una lectura física: se envían al equipo médico aparte del check-in (que es confidencial). Congestión e insomnio se quedan en el dispositivo.",
+    "symptomsLocal": "Los síntomas se guardan en el dispositivo.",
+    "queued": "Sin conexión: tu check-in quedó en el dispositivo y se enviará al reconectar.",
+    "localMessage": "Gracias por tu check-in.",
+    "errorTitle": "No se pudo guardar",
+    "errorBody": "Revisa los datos e inténtalo de nuevo.",
+    "corrected": "Se actualizó tu check-in de hoy.",
+    "streakLine": "Racha: {{days}} días · {{week}} de {{goal}} esta semana",
+    "historyDone": "Check-in completado",
+    "historyNote": "con nota privada",
+    "pendingSync": "pendiente de envío"
   },
   "more": {
     "title": "Más",
@@ -586,6 +666,15 @@
         "Lávate las manos antes de comer.",
         "Reporta los primeros síntomas de enfermedad."
       ]
+    },
+    "metabolism": {
+      "name": "Metabolismo y nutrición",
+      "short": "Metabolismo",
+      "role": "El metabolismo convierte los alimentos en energía. La dieta a bordo, el ejercicio y el estrés pueden cambiar tu glucosa.",
+      "recommendations": [
+        "Sigue tu plan de comidas de la misión.",
+        "Mide la glucosa en ayunas cuando te lo pida el protocolo."
+      ]
     }
   },
   "indicators": {
@@ -633,6 +722,46 @@
       "name": "Temperatura corporal",
       "short": "Temperatura",
       "description": "Temperatura central del cuerpo. Puede indicar una infección o una respuesta inmune."
+    },
+    "glucose": {
+      "name": "Glucosa en sangre",
+      "short": "Glucosa",
+      "description": "Azúcar en sangre. La dieta, el ejercicio y el estrés en vuelo pueden cambiarla."
+    },
+    "sleepHours": {
+      "name": "Horas de sueño",
+      "short": "Sueño",
+      "description": "Horas dormidas (pulsera o manual). La luz y el horario a bordo alteran el sueño."
+    },
+    "radDoseDaily": {
+      "name": "Dosis de radiación diaria",
+      "short": "Radiación diaria",
+      "description": "Dosis del dosímetro en el día. Sube durante los eventos solares."
+    },
+    "radDoseCum": {
+      "name": "Dosis de radiación acumulada",
+      "short": "Radiación acumulada",
+      "description": "Dosis acumulada en tu carrera, comparada con los límites de la NASA."
+    },
+    "bodyMass": {
+      "name": "Masa corporal",
+      "short": "Masa",
+      "description": "Peso medido a bordo. La microgravedad puede reducir músculo y hueso."
+    },
+    "exerciseMin": {
+      "name": "Ejercicio",
+      "short": "Ejercicio",
+      "description": "Minutos de ejercicio al día: protege huesos y músculos en microgravedad."
+    },
+    "visionCheck": {
+      "name": "Síntomas visuales (SANS)",
+      "short": "Síntomas visuales",
+      "description": "Cuestionario sí/no de cambios en la visión ligados al vuelo largo. El número es cuántas respuestas fueron «sí»."
+    },
+    "symptoms": {
+      "name": "Síntomas reportados",
+      "short": "Síntomas",
+      "description": "Síntomas que registraste en esta zona del cuerpo. El número es cuántos síntomas marcaste."
     }
   },
   "health": {
@@ -643,9 +772,11 @@
     "source": {
       "wearable": "Sensor",
       "manual": "Manual",
-      "camera": "Con cámara"
+      "camera": "Con cámara",
+      "server": "Servidor"
     },
-    "onDevice": "En el dispositivo"
+    "onDevice": "En el dispositivo",
+    "pendingConfirm": "calculado en el dispositivo, pendiente de confirmar"
   },
   "time": {
     "minutesAgo_one": "hace {{count}} min",
@@ -695,7 +826,8 @@
   "errors": {
     "viewTitle": "No se pudo mostrar esta vista",
     "viewBody": "El resto de la app sigue funcionando. Si el problema continúa, comparte este mensaje con el equipo:",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "generic": "Algo salió mal. Intenta de nuevo."
   },
   "crew": {
     "title": "Tripulación",
@@ -730,7 +862,24 @@
     "alertSentBody": "{{what}} {{value}}. Tu tripulación fue notificada.",
     "alertCancelledTitle": "Alerta desactivada",
     "alertCancelledBody": "Se avisó a la tripulación de que fue un error.",
-    "bloodType": "Tipo de sangre"
+    "bloodType": "Tipo de sangre",
+    "healthTitle": "Salud de la tripulación",
+    "comingSoon": "Disponible pronto.",
+    "statusOffline": "Sin conexión: no se puede leer el estado de la tripulación.",
+    "rosterUnavailable": "No se pudo leer la tripulación. Revisa tu conexión.",
+    "privacyNote": "Nadie de la tripulación ve el bienestar de otros. Las alertas físicas se muestran sin valores.",
+    "emergencyOpen": "Emergencia abierta · {{status}}",
+    "physicalTitle": "Semáforo físico (solo oficial médico)",
+    "zones": {
+      "heart": "Corazón",
+      "lungs": "Pulmones",
+      "immune": "Inmune",
+      "metabolism": "Metabolismo",
+      "muscle": "Músculo",
+      "bones": "Huesos",
+      "brain": "Cerebro",
+      "eyes": "Ojos"
+    }
   },
   "measure": {
     "simulated": "Equipo y lectura simulados (demo)",
@@ -771,13 +920,32 @@
     "result": {
       "normal": "Dentro del rango de referencia.",
       "caution": "Fuera del rango habitual. Repite la medición en reposo y coméntalo con tu tripulación.",
-      "critical": "Valor fuera de rango seguro. Se avisó automáticamente a tu tripulación."
+      "critical": "Valor fuera de rango seguro. Se avisó automáticamente a tu tripulación.",
+      "unevaluated": "Sin evaluar: no hay una regla validada para este valor."
     },
     "crewNotified": "Tu tripulación recibió la lectura y puede venir a ayudarte.",
     "rule": "Clasificación según {{source}}. Apoyo a la decisión, no diagnóstico.",
     "openAlert": "Abrir alerta de emergencia",
     "done": "Listo",
-    "again": "Medir de nuevo"
+    "again": "Medir de nuevo",
+    "sending": "Evaluando en el servidor…",
+    "serverRule": "Semáforo y recomendación calculados por el servidor con las reglas citadas del catálogo. No es un diagnóstico.",
+    "outcome": {
+      "queued": "Sin conexión: la lectura quedó guardada en el dispositivo y el servidor la evaluará al sincronizar.",
+      "local": "Guardada solo en el dispositivo.",
+      "error": "El servidor no aceptó la lectura. Revisa el valor e inténtalo de nuevo.",
+      "device": "Calculado en el dispositivo con las reglas del servidor, pendiente de confirmar al sincronizar."
+    },
+    "escalated": {
+      "self": "Autocuidado",
+      "crew": "Se avisó a la tripulación",
+      "flightSurgeon": "Se avisó a Tierra"
+    },
+    "escalatedBody": {
+      "self": "Sigue la recomendación.",
+      "crew": "La regla del protocolo escaló esta lectura a tu tripulación.",
+      "flightSurgeon": "El flight surgeon la recibirá con el retraso de la misión. Sigue la recomendación mientras tanto."
+    }
   },
   "connectivityScreen": {
     "title": "Conectividad",
@@ -932,6 +1100,266 @@
       "bad": "Uy, esa no era",
       "length": "Longitud: {{n}}",
       "best": "Mejor: {{n}}"
+    },
+    "pvt": {
+      "beforeCritical": "Lo hago antes de una tarea crítica",
+      "fitnessTitle": "Aptitud para tarea crítica",
+      "fitness": {
+        "fit": "Apto",
+        "not_confirmed": "No confirmado"
+      },
+      "state": {
+        "sending": "Enviando al servidor…",
+        "queued": "Sin conexión: se enviará al reconectar.",
+        "local": "Guardado en el dispositivo.",
+        "error": "No se pudo enviar el resultado."
+      },
+      "syncedTitle": "Prueba de reflejos sincronizada"
+    }
+  },
+  "crewRoles": {
+    "commander": "Comandante",
+    "pilot": "Piloto",
+    "crew_medical_officer": "Oficial médico",
+    "flight_engineer": "Ingeniería de vuelo",
+    "mission_specialist": "Especialista de misión"
+  },
+  "areYouOk": {
+    "voice": "¿Estás bien? Pulsa Estoy bien si puedes.",
+    "title": "¿Estás bien?",
+    "body": "Una lectura crítica abrió una emergencia. Confirma si estás bien.",
+    "countdown": "Confirma en {{seconds}} s o se avisará a la tripulación y a Tierra.",
+    "expiredBody": "El plazo terminó: la tripulación y Tierra ya fueron avisadas.",
+    "imOk": "Estoy bien",
+    "error": "No se pudo confirmar. Inténtalo de nuevo o avisa en persona.",
+    "result": {
+      "confirmed": "Gracias. Quedó registrado que estás bien.",
+      "expired": "El plazo ya venció: la tripulación y Tierra fueron avisadas.",
+      "queued": "Sin conexión: tu respuesta se enviará primero al reconectar. Avisa en persona.",
+      "waiting": "",
+      "sending": "",
+      "error": ""
+    }
+  },
+  "support": {
+    "cta": "Quiero hablar con alguien",
+    "title": "Hablar con alguien",
+    "subtitle": "Escribe a salud conductual en Tierra. Es confidencial: nadie de la tripulación ve tu solicitud.",
+    "urgency": "¿Para cuándo?",
+    "urgencies": {
+      "later": "Puede esperar",
+      "today": "Hoy",
+      "now": "Ahora"
+    },
+    "channel": "¿Cómo?",
+    "channels": {
+      "message": "Mensaje",
+      "session": "Sesión"
+    },
+    "content": "Cuéntanos (lo que quieras)",
+    "placeholder": "Escribe o dicta tu mensaje",
+    "send": "Enviar",
+    "privacy": "Llega a Tierra con el retraso de la misión. Si hay un corte de enlace, se envía al volver.",
+    "suggestionsTitle": "Mientras llega la respuesta",
+    "history": "Tus solicitudes",
+    "status": {
+      "local": "Guardada en el dispositivo (modo demo, sin servidor)",
+      "queued": "Pendiente de envío: se enviará al reconectar",
+      "noLink": "Pendiente de envío: sin enlace con Tierra",
+      "onTheWay": "En camino a Tierra (llega a las {{time}})",
+      "delivered": "Entregada en Tierra"
+    },
+    "replyFrom": "Salud conductual",
+    "sentTitle": "Solicitud enviada",
+    "sentBody": {
+      "sent": "Salud conductual la recibirá con el retraso de la misión.",
+      "queued": "Sin conexión: se enviará al reconectar.",
+      "local": "Guardada en el dispositivo (modo demo)."
+    },
+    "errorTitle": "No se pudo enviar",
+    "errorBody": "Revisa el mensaje e inténtalo de nuevo.",
+    "replyTitle": "Tienes una respuesta",
+    "replyBody": "Salud conductual respondió a tu solicitud."
+  },
+  "screening": {
+    "title": "Cuestionario breve",
+    "subtitle": "Dos preguntas sobre ánimo y dos sobre ansiedad. Nunca verás un puntaje.",
+    "cardTitle": "Cuestionario breve pendiente",
+    "cardBody": "4 preguntas antes de tu conferencia psicológica.",
+    "unavailable": "Necesitas conexión para cargar el cuestionario.",
+    "submit": "Enviar respuestas",
+    "queued": "Sin conexión: tus respuestas se enviarán al reconectar.",
+    "privacy": "Confidencial: solo salud conductual lo ve, antes de tu conferencia privada.",
+    "errorTitle": "No se pudo enviar",
+    "errorBody": "Inténtalo de nuevo."
+  },
+  "sync": {
+    "conflictTitle": "Registro no aplicado",
+    "conflictBody": "El servidor ya tenía una versión distinta de un registro (o ya se había corregido). Se muestra la vigente.",
+    "rejectedTitle": "Registro rechazado",
+    "rejectedBody": "El servidor rechazó un registro guardado sin conexión por datos no válidos.",
+    "clockBody": "La hora del teléfono está adelantada. Revisa la fecha y hora del dispositivo.",
+    "emergencySentTitle": "Emergencia enviada",
+    "emergencySentBody": "La emergencia que estaba en cola llegó al servidor.",
+    "earthReplyTitle": "Mensaje de Tierra",
+    "pendingBody_one": "Queda {{count}} registro en el dispositivo; se enviará al reconectar.",
+    "pendingBody_other": "Quedan {{count}} registros en el dispositivo; se enviarán al reconectar.",
+    "doneBody": "Todo sincronizado con el servidor."
+  },
+  "triage": {
+    "title": "Triaje",
+    "disclaimer": "Apoyo a la decisión: sigue el protocolo del servidor. No diagnostica ni receta; lo que no cubre se pregunta a Tierra.",
+    "status": {
+      "pending": "Esperando “estoy bien”",
+      "active": "Activa",
+      "closed": "Cerrada (atendida)",
+      "cancelled": "Cancelada (falsa alarma)",
+      "merged": "Unida a otra sesión",
+      "queued": "Pendiente de envío: sin enlace",
+      "demo": "Modo demo: solo en el dispositivo"
+    },
+    "sessionStatus": "Estado",
+    "startedAt": "Inició",
+    "protocol": "Protocolo",
+    "protocolVersion": "v{{version}}",
+    "protocolFallback": "v{{version}} (copia de respaldo)",
+    "offline": "Sin enlace: se muestran los datos del dispositivo.",
+    "joined": "Te uniste a la emergencia que ya estaba abierta.",
+    "solarEvent": "Evento solar activo: incluye el módulo de radiación.",
+    "refresh": "Actualizar",
+    "heartbeat": "Mientras esta pantalla esté abierta se avisa cada 30 s que alguien atiende.",
+    "notFound": "No se encontró la sesión de emergencia en este dispositivo.",
+    "closedSession": "Esta emergencia ya está cerrada.",
+    "safety": {
+      "title": "Antes de ayudar",
+      "secureSelfTitle": "Ponte a salvo",
+      "secureSelfBody": "El protocolo pide que primero te pongas a salvo. Cuando lo estés, continúa.",
+      "nowSafe": "Ya estoy a salvo"
+    },
+    "roster": {
+      "title": "A quién evaluar",
+      "server": "Roster del servidor",
+      "crew": "Tripulación vigente guardada (sin enlace)",
+      "demo": "Tripulación de la maqueta (modo demo)",
+      "none": "Sin tripulación",
+      "empty": "No hay tripulación guardada. Conéctate una vez para descargarla.",
+      "assess": "Evaluar",
+      "reassess": "Reevaluar",
+      "resume": "Continuar",
+      "needSafe": "Contesta primero si estás a salvo."
+    },
+    "attention": {
+      "title": "Orden de atención",
+      "server": "Orden del servidor",
+      "device": "Calculado en la tableta con el protocolo, pendiente de confirmar",
+      "unassessed": "Sin evaluar",
+      "inProgress": "Evaluación en curso",
+      "empty": "Todavía no hay evaluaciones."
+    },
+    "category": {
+      "green": "Verde (leve)",
+      "yellow": "Amarillo (diferido)",
+      "red": "Rojo (inmediato)",
+      "black": "Negro (expectante)"
+    },
+    "flag": {
+      "none": "sin radiación",
+      "possible": "radiación posible",
+      "probable": "radiación probable"
+    },
+    "earth": {
+      "title": "Pregunta a Tierra",
+      "hint": "Lo que no cubre el protocolo se pregunta al flight surgeon. La respuesta llega a toda la tripulación.",
+      "placeholder": "Escribe o dicta tu pregunta",
+      "send": "Enviar a Tierra",
+      "demo": "Modo demo: no hay enlace con Tierra.",
+      "error": "No se pudo enviar la pregunta.",
+      "empty": "Escribe la pregunta primero."
+    },
+    "delivery": {
+      "inTransit": "En camino, llega a las {{time}}",
+      "delivered": "Entregada a las {{time}}",
+      "noLink": "Pendiente de envío: sin enlace",
+      "onboard": "Aviso a bordo inmediato"
+    },
+    "close": {
+      "title": "Cerrar la emergencia",
+      "hint": "Solo comandante u oficial médico. Mantén presionado para confirmar.",
+      "holdClosed": "Atendida",
+      "holdCancelled": "Falsa alarma",
+      "forbidden": "Solo el comandante o el oficial médico pueden cerrarla.",
+      "queued": "Cierre en cola: se enviará cuando vuelva el enlace.",
+      "done": "Emergencia cerrada.",
+      "error": "No se pudo cerrar.",
+      "note": "Falsa alarma (cerrada desde el triaje)"
+    },
+    "assess": {
+      "title": "Evaluar a {{callSign}}",
+      "step": "Pregunta {{n}}",
+      "loading": "Cargando el protocolo…",
+      "yes": "Sí",
+      "no": "No",
+      "done": "Listo",
+      "numberPlaceholder": "Número",
+      "noneExclusive": "“Ninguno” no va con otras opciones.",
+      "back": "Atrás",
+      "repeat": "Repetir",
+      "note": "Nota del protocolo",
+      "observable": "Signo observable: respóndelo tú.",
+      "stoppedTitle": "Ponte a salvo",
+      "stoppedBody": "El protocolo se detiene: primero ponte a salvo.",
+      "classifying": "Clasificando…",
+      "protocolError": "El protocolo no se pudo evaluar con estas respuestas.",
+      "exit": "Salir"
+    },
+    "result": {
+      "title": "Clasificación",
+      "device": "Calculada en la tableta",
+      "pending": "Pendiente de confirmar por el servidor",
+      "server": "Confirmada por el servidor",
+      "mismatch": "La tableta calculó otra cosa: manda la clasificación del servidor.",
+      "deviceWas": "La tableta calculó: {{value}}",
+      "mismatchFields": "Difiere en: {{fields}}",
+      "queued": "En cola con prioridad de emergencia: se enviará al volver el enlace.",
+      "local": "Modo demo: queda solo en el dispositivo.",
+      "sendError": "El servidor no aceptó la evaluación ({{code}}).",
+      "retry": "Reintentar el envío",
+      "notices": "Avisos",
+      "next": "Evaluar a {{callSign}}",
+      "backToSession": "Volver a la sesión",
+      "reassess": "Reevaluar",
+      "level": {
+        "crew": "Tripulación",
+        "flight_surgeon": "Tierra (flight surgeon)",
+        "self_care": "Autocuidado",
+        "behavioral_health": "Salud conductual"
+      }
+    },
+    "voice": {
+      "title": "Voz",
+      "mic": "Responder por voz",
+      "buttonsOnly": "Solo botones",
+      "listening": "Escuchando…",
+      "speaking": "Leyendo…",
+      "heard": "Escuché: “{{text}}”",
+      "understood": "Entendí: {{answer}}. ¿Correcto?",
+      "confirmYes": "Sí, correcto",
+      "confirmNo": "No",
+      "notUnderstood": "No te entendí. Repite, por favor.",
+      "switchToButtons": "No te entendí. Usa los botones en pantalla.",
+      "buttonsMode": "Respondes con botones. Toca “Responder por voz” para volver a usar la voz.",
+      "options": "Opciones: {{options}}.",
+      "multiHint": "Puedes decir varias.",
+      "permissionDenied": "Sin permiso de micrófono: responde con los botones.",
+      "unavailable": "Esta versión de la app no reconoce voz: responde con los botones (la pregunta sí se lee en voz alta).",
+      "systemDictation": "Toca “Responder por voz” para dictar con el reconocedor del sistema.",
+      "noOfflineModel": "Sin modelo de voz sin conexión para este idioma: instálalo desde el Laboratorio de voz.",
+      "and": "y",
+      "commands": "Di la respuesta, o “repetir”, “botones” o “atrás”."
+    },
+    "sync": {
+      "confirmedTitle": "Triaje sincronizado",
+      "confirmedBody": "El servidor confirmó la evaluación hecha sin conexión."
     }
   }
 }

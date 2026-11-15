@@ -35,7 +35,11 @@ export function AppHeader() {
 
         <PressableScale
           accessibilityLabel={t('alert.open')}
-          onPress={() => (useTriageStore.getState().active ? router.push('/triage') : router.push({ pathname: '/alert', params: { trigger: 'manual' } }))}
+          onPress={() => {
+            const active = useTriageStore.getState().active;
+            if (active) router.push({ pathname: '/triage/[sessionId]', params: { sessionId: active.ref } });
+            else router.push({ pathname: '/alert', params: { trigger: 'manual' } });
+          }}
           style={[styles.row, styles.sos, { backgroundColor: colors.dangerStrong, borderRadius: radius.pill, paddingHorizontal: spacing.md, gap: spacing.xs }]}
         >
           <MaterialCommunityIcons name="alarm-light-outline" size={18} color="#FFFFFF" />

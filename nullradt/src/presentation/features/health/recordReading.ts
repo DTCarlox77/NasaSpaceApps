@@ -7,7 +7,6 @@ import { biometricsOf } from '@/presentation/hooks/useMyBiometrics';
 import { useAuthStore } from '@/presentation/store/authStore';
 import { useHealthLogStore } from '@/presentation/store/healthLogStore';
 import { sendToEarth } from '@/presentation/store/outboxStore';
-import { useTriageStore } from '@/presentation/store/triageStore';
 
 export interface RecordInput {
   indicatorId: IndicatorId;
@@ -66,10 +65,6 @@ export function recordReading(input: RecordInput, opts: { notify?: boolean } = {
     if (result.status === 'critical' || result.escalation === 'crew') {
       alertCrew({ kind: 'measurement', severity: result.status === 'critical' ? 'critical' : 'caution', indicatorId: input.indicatorId, value: valueText });
     }
-  }
-  // Activación AUTOMÁTICA del triaje ante una lectura crítica (si no hay uno en curso).
-  if (result.status === 'critical' && !useTriageStore.getState().active) {
-    useTriageStore.getState().start('criticalReading', userId);
   }
   if (result.escalation === 'flightSurgeon') {
     sendToEarth({

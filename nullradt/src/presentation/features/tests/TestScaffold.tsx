@@ -38,12 +38,13 @@ export function TestScaffold({
   onSaved,
   introExtra,
 }: {
-  introExtra?: ReactNode;
   id: TestId;
   Run: (p: TestRunProps) => ReactNode;
   format: (score: number) => string;
   extra?: (r: TestResult) => ReactNode;
   onSaved?: (r: TestResult) => void;
+  /** Opciones antes de empezar (p. ej. "antes de una tarea crítica" en el PVT). */
+  introExtra?: ReactNode;
 }) {
   const { t } = useTranslation();
   const { colors, spacing, radius } = useAppTheme();

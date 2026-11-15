@@ -1,5 +1,6 @@
 import type { DeliveryResult, EmergencyReport, ReportSeverity, ReportTrigger } from '../entities/EmergencyReport';
 import type { EmergencyReportRepository } from '../repositories/EmergencyReportRepository';
+import { newUuid } from './uuid';
 
 export interface SendEmergencyReportInput {
   severity: ReportSeverity;
@@ -7,16 +8,17 @@ export interface SendEmergencyReportInput {
   language: 'es' | 'en';
   missionDay?: number;
   note?: string;
+  responderSafe?: boolean;
+  solarEventActive?: boolean;
 }
-
-const makeId = () => `rpt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
 export class SendEmergencyReport {
   constructor(private readonly repository: EmergencyReportRepository) {}
 
   execute(input: SendEmergencyReportInput): Promise<DeliveryResult> {
     const report: EmergencyReport = {
-      id: makeId(),
+      // El id es el client_uuid de la sesión de emergencia: se genera una vez y se reusa en cada reintento.
+      id: newUuid(),
       createdAt: new Date().toISOString(),
       synthetic: true,
       ...input,
@@ -25,10 +27,26 @@ export class SendEmergencyReport {
   }
 }
 
-export class FlushPendingReports {
+export class GetEmergencySession {
   constructor(private readonly repository: EmergencyReportRepository) {}
 
-  execute(): Promise<number> {
-    return this.repository.flushPending();
+  execute(id: string) {
+    return this.repository.getSession(id);
+  }
+}
+
+export class ConfirmOk {
+  constructor(private readonly repository: EmergencyReportRepository) {}
+
+  execute(sessionId: string) {
+    return this.repository.confirmOk(sessionId);
+  }
+}
+
+export class CloseEmergency {
+  constructor(private readonly repository: EmergencyReportRepository) {}
+
+  execute(sessionId: string, status: 'closed' | 'cancelled', notes?: string) {
+    return this.repository.close(sessionId, status, notes);
   }
 }

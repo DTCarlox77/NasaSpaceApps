@@ -15,12 +15,14 @@ import { summarize } from '@/domain/gamification/achievements';
 import { formatValue } from '@/presentation/features/health/healthUi';
 import { biometricsOf } from '@/presentation/hooks/useMyBiometrics';
 import { useAuthStore } from '@/presentation/store/authStore';
-import { useCheckInStore, wristbandSleep } from '@/presentation/store/checkInStore';
+import { useCheckInStore } from '@/presentation/store/checkInStore';
 import { applyLocalReadings, useHealthLogStore } from '@/presentation/store/healthLogStore';
 import { activeSession, MEASURE_ORDER, pendingOf, useMeasureSessionStore } from '@/presentation/store/measureSessionStore';
 import { useOutboxStore } from '@/presentation/store/outboxStore';
 import { ROUTINE, todayKey, useRoutineStore } from '@/presentation/store/routineStore';
 import { useTriageStore } from '@/presentation/store/triageStore';
+import { showToast } from '@/presentation/store/toastStore';
+import { refreshPendingCount } from '@/presentation/sync/syncEngine';
 import { useUiStore } from '@/presentation/store/uiStore';
 import { cancelDialog, registerVoiceRunner } from './voiceAssistant';
 
@@ -121,6 +123,31 @@ function openMeasure(id: IndicatorId, replace = false) {
 }
 
 // ---------- check-in por voz ----------
+/** Mismo envío que la pantalla Bienestar: POST /wellbeing/checkins (o cola / local en demo). Sin sueño inventado. */
+async function submitVoiceCheckIn(answers: Partial<Record<VasDimension, number>>) {
+  const uid = userId();
+  const values = { mood: answers.mood ?? 50, fatigue: answers.fatigue ?? 50, stress: answers.stress ?? 50, crewConflict: answers.crewConflict ?? 50 };
+  try {
+    const today = useCheckInStore.getState().entries[uid]?.[todayKey()];
+    const out = await container.submitCheckIn.execute({ ...values, sleepHours: null, privateNote: null, measuredAt: new Date().toISOString() });
+    useCheckInStore.getState().save(uid, {
+      ...values,
+      symptoms: [],
+      clientUuid: out.clientUuid,
+      state: out.status,
+      message: out.status === 'sent' ? out.message : undefined,
+      streak: out.status === 'sent' ? out.streak : null,
+      screeningDue: out.status === 'sent' ? out.screeningDue : false,
+      corrected: out.status === 'sent' ? !!out.supersedesId : !!today,
+    });
+    if (out.status === 'queued') void refreshPendingCount();
+    const routine = useRoutineStore.getState();
+    if (!(routine.done[todayKey()] ?? []).includes('dailyCheck')) routine.toggleDone('dailyCheck');
+  } catch {
+    showToast({ level: 'caution', title: t('wellbeing.errorTitle'), body: t('wellbeing.errorBody') });
+  }
+}
+
 function checkInDialog(): VoiceDialog {
   const answers: Partial<Record<VasDimension, number>> = {};
   let step = 0;
@@ -141,11 +168,8 @@ function checkInDialog(): VoiceDialog {
       answers[VAS_DIMENSIONS[step]!] = n * 10;
       step++;
       if (step < VAS_DIMENSIONS.length) return { say: t(`assistant.checkIn.q.${VAS_DIMENSIONS[step]}`), done: false };
-      const sleep = wristbandSleep();
-      useCheckInStore.getState().save(userId(), { vas: answers, sleepHours: sleep, sleepSource: 'wristband', symptoms: [] });
-      const routine = useRoutineStore.getState();
-      if (!(routine.done[todayKey()] ?? []).includes('dailyCheck')) routine.toggleDone('dailyCheck');
-      return { say: t('assistant.checkIn.saved', { hours: String(sleep).replace('.', i18n.language === 'es' ? ',' : '.') }), done: true };
+      void submitVoiceCheckIn(answers);
+      return { say: t('assistant.checkIn.saved'), done: true };
     },
   };
 }
@@ -176,8 +200,9 @@ export const VOICE_COMMANDS: VoiceCommand[] = [
     group: 'emergency',
     patterns: [/\b(emergencia|triaje|sos|auxilio|socorro|mayday|emergency|triage)\b/],
     run: () => {
-      if (!useTriageStore.getState().active) useTriageStore.getState().start('manual', userId() || 'voice');
-      go('/triage');
+      const active = useTriageStore.getState().active;
+      if (active) router.push({ pathname: '/triage/[sessionId]', params: { sessionId: active.ref } });
+      else router.push({ pathname: '/alert', params: { trigger: 'manual' } });
       return { say: t('assistant.reply.emergency') };
     },
   },
@@ -186,7 +211,7 @@ export const VOICE_COMMANDS: VoiceCommand[] = [
     group: 'wellbeing',
     patterns: [/\b(quiero hablar|hablar con (alguien|un psicologo|salud)|necesito hablar|talk to someone|i want to talk)\b/],
     run: () => {
-      go('/wellbeing/talk');
+      go('/support');
       return { say: t('assistant.reply.talk') };
     },
   },
@@ -289,7 +314,7 @@ export const VOICE_COMMANDS: VoiceCommand[] = [
     group: 'wellbeing',
     patterns: [/\b(cuestionario|phq|gad|questionnaire)\b/],
     run: () => {
-      go('/wellbeing/screening');
+      go('/screening');
       return { say: t('assistant.reply.screening') };
     },
   },

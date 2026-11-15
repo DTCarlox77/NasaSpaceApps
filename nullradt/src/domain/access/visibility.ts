@@ -39,9 +39,9 @@ export function canView(viewer: Viewer, subjectId: string, data: DataClass, ctx:
   if (viewer.userId === subjectId) return { allowed: true, reason: 'self' };
   if (BY_ROLE[viewer.role].includes(data)) return { allowed: true, reason: 'role' };
   if (viewer.role === 'astronaut') {
-    const leader = viewer.crewRole === 'commander' || viewer.crewRole === 'medical_officer';
+    const leader = viewer.crewRole === 'commander' || viewer.crewRole === 'crew_medical_officer';
     // El oficial médico a bordo atiende signos vitales (no bienestar).
-    if (viewer.crewRole === 'medical_officer' && data === 'medical') return { allowed: true, reason: 'onboardCare' };
+    if (viewer.crewRole === 'crew_medical_officer' && data === 'medical') return { allowed: true, reason: 'onboardCare' };
     if (leader && ctx.emergency && (data === 'wellbeingStatus' || data === 'medical' || data === 'fitness')) return { allowed: true, reason: 'emergency' };
     if (leader && ctx.sharedWithCrew && (data === 'wellbeingStatus' || data === 'fitness')) return { allowed: true, reason: 'shared' };
   }
@@ -54,6 +54,6 @@ export const VIEWER_PROFILES: { key: string; viewer: Omit<Viewer, 'userId'> }[] 
   { key: 'flight_surgeon', viewer: { role: 'flight_surgeon' } },
   { key: 'admin', viewer: { role: 'admin' } },
   { key: 'commander', viewer: { role: 'astronaut', crewRole: 'commander' } },
-  { key: 'medical_officer', viewer: { role: 'astronaut', crewRole: 'medical_officer' } },
-  { key: 'crew', viewer: { role: 'astronaut', crewRole: 'crew' } },
+  { key: 'medical_officer', viewer: { role: 'astronaut', crewRole: 'crew_medical_officer' } },
+  { key: 'crew', viewer: { role: 'astronaut', crewRole: 'mission_specialist' } },
 ];

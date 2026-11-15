@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { apiEnabled } from '@/core/config/env';
 import { useAppTheme } from '@/core/theme';
 import { AppText, Avatar, Button, Card, FadeInView, IconButton, PressableScale, ProgressBar, Screen } from '@/presentation/components/ui';
 import { MissionCard } from '@/presentation/features/auth/MissionStep';
@@ -77,7 +78,7 @@ export default function ProfileScreen() {
             <AppText variant="h2" align="center">{name}</AppText>
             {session && (
               <AppText color="textMuted" align="center">
-                {t(`auth.roles.${session.role}`)} · {session.userId}
+                {session.crewRole ? t(`crewRoles.${session.crewRole}`) : t(`auth.roles.${session.role}`)} · {session.username ?? session.userId}
               </AppText>
             )}
           </View>
@@ -114,18 +115,19 @@ export default function ProfileScreen() {
             </View>
             <AppText variant="h2" style={{ color: colors.onNight }}>{current.name}</AppText>
             <AppText style={{ color: colors.onNightMuted }}>{current.vehicle}</AppText>
-            <InfoRow label={t('mission.day')} value={t('mission.dayOf', { day: current.day, total: current.totalDays })} />
+            <InfoRow label={t('mission.day')} value={current.totalDays ? t('mission.dayOf', { day: current.day, total: current.totalDays }) : t('mission.dayOnly', { day: current.day })} />
             <InfoRow label={t('mission.crew')} value={t('mission.crewCount', { count: current.crew })} />
             <InfoRow label={t('mission.location')} value={current.location} />
             <InfoRow label={t('profile.gravity')} value={`${current.gravity} g`} />
             <ProgressBar value={current.totalDays ? current.day / current.totalDays : 0} color={colors.primary} onDark />
-            <Button
+            {/* Con API la misión la asigna el servidor: no se cambia desde la app. */}
+            {!apiEnabled() && <Button
               label={changing ? t('profile.closeMissions') : t('profile.changeMission')}
               variant="primary"
               size="sm"
               leftIcon={changing ? 'chevron-up' : 'swap-horizontal'}
               onPress={() => setChanging((c) => !c)}
-            />
+            />}
           </Card>
         </FadeInView>
       )}

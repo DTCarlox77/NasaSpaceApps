@@ -14,6 +14,7 @@ import { AppText, Card, FadeInView, IconButton, PressableScale, StatusBadge } fr
 import { IndicatorRow, StatusLegend, SystemIcon } from '@/presentation/features/health/healthUi';
 import { useHealthOverview } from '@/presentation/hooks/useHealthOverview';
 import { useCrew } from '@/presentation/hooks/useCrew';
+import { useAuthStore } from '@/presentation/store/authStore';
 import { useUiStore } from '@/presentation/store/uiStore';
 
 /** Vista 3D del cuerpo: ver mejor dónde están los síntomas por sistema. */
@@ -24,7 +25,9 @@ export default function Body3DScreen() {
   const { selectedSystem, setSelectedSystem } = useUiStore();
   // El modelo 3D corresponde al sexo del tripulante de la sesión.
   const { me } = useCrew();
-  const bodyModel = me?.sex ?? 'male';
+  // Con API: `context.sex` del login (solo lo recibe el propio astronauta).
+  const sessionSex = useAuthStore((s) => s.session?.sex);
+  const bodyModel = me?.sex ?? sessionSex ?? 'male';
 
   const statuses = useMemo(
     () => Object.fromEntries((overview?.systems ?? []).map((s) => [s.id, s.status])) as Record<BodySystemId, HealthStatus>,

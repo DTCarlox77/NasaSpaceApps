@@ -5,11 +5,82 @@ import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '@/core/theme';
 import type { Mission, MissionPhase } from '@/domain/entities/Mission';
 import { AppText, Button, PressableScale, ProgressBar } from '@/presentation/components/ui';
+import { apiEnabled } from '@/core/config/env';
 import { useMissions } from '@/presentation/hooks/useMissions';
+import { useAuthStore } from '@/presentation/store/authStore';
 import { useSettingsStore } from '@/presentation/store/settingsStore';
 
-/** Paso 2 del login (Figma): elegir misión. Solo una misión activa abre el expediente de salud. */
-export function MissionStep({ onBack, onContinue }: { onBack: () => void; onContinue: () => void }) {
+interface StepProps {
+  onBack: () => void;
+  onContinue: () => void;
+}
+
+/**
+ * Paso 2 del login (Figma). Con API el astronauta NO elige misión: la asigna el servidor
+ * (`context.mission` del login) y aquí solo se muestra. Sin API (demo) se elige entre las sintéticas.
+ */
+export function MissionStep(props: StepProps) {
+  return apiEnabled() ? <AssignedMissionStep {...props} /> : <SelectableMissionStep {...props} />;
+}
+
+/** Misión vigente asignada por el servidor (solo lectura). */
+function AssignedMissionStep({ onBack, onContinue }: StepProps) {
+  const { t } = useTranslation();
+  const { colors, spacing, radius } = useAppTheme();
+  const session = useAuthStore((s) => s.session);
+  const missions = useMissions();
+  const mission = missions[0] ?? null;
+  const name = mission?.name ?? session?.mission?.name;
+  const active = (mission?.phase ?? (session?.mission?.status === 'active' ? 'active' : null)) === 'active';
+
+  return (
+    <View style={{ gap: spacing.xl }}>
+      <View style={{ gap: spacing.xs }}>
+        <AppText variant="h1">{t('mission.assignedTitle')}</AppText>
+        <AppText color="textSecondary">{t('mission.assignedBody')}</AppText>
+      </View>
+
+      {name ? (
+        <View style={{ gap: spacing.md, padding: spacing.xl, borderRadius: radius.button, backgroundColor: colors.surfaceSage, borderWidth: 1, borderColor: colors.border }}>
+          <View style={[styles.row, { gap: spacing.sm }]}>
+            <Ionicons name="rocket-outline" size={20} color={colors.tertiary} />
+            <AppText variant="caption" color="textMuted">{t('mission.current')}</AppText>
+          </View>
+          <AppText variant="title">{name}</AppText>
+          {session?.mission?.code && <InfoRow label={t('mission.code')} value={session.mission.code} />}
+          {session?.crewRole && <InfoRow label={t('mission.yourRole')} value={t(`crewRoles.${session.crewRole}`)} />}
+          {mission && mission.day > 0 && (
+            <InfoRow label={t('mission.day')} value={mission.totalDays ? t('mission.dayOf', { day: mission.day, total: mission.totalDays }) : t('mission.dayOnly', { day: mission.day })} />
+          )}
+          {mission && mission.crew > 0 && <InfoRow label={t('mission.crew')} value={t('mission.crewCount', { count: mission.crew })} />}
+          {session?.environment && <InfoRow label={t('mission.location')} value={session.environment.name} />}
+          {session?.environment && (
+            <InfoRow label={t('mission.commDelay')} value={t('mission.commDelayValue', { seconds: session.environment.commDelaySeconds })} />
+          )}
+        </View>
+      ) : (
+        <AppText variant="bodySmall" color="textMuted">{t('mission.noAssignment')}</AppText>
+      )}
+
+      <View style={[styles.row, { gap: spacing.sm }]}>
+        <Button label={t('common.back')} variant="outline" size="lg" leftIcon="arrow-back" onPress={onBack} />
+        <View style={styles.flex}>
+          <Button
+            label={active || !mission ? t('mission.continue') : t('mission.notAvailable')}
+            icon="arrow-forward"
+            size="lg"
+            fullWidth
+            disabled={!name}
+            onPress={onContinue}
+          />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/** Demo sin servidor: elegir entre las misiones sintéticas. Solo una misión activa abre el expediente de salud. */
+function SelectableMissionStep({ onBack, onContinue }: StepProps) {
   const { t } = useTranslation();
   const { colors, spacing, radius } = useAppTheme();
   const missions = useMissions();

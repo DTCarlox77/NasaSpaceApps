@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
+import { apiEnabled } from '@/core/config/env';
 import { useAppTheme } from '@/core/theme';
 import { Button } from '@/presentation/components/ui';
 import { ChangePasswordStep } from '@/presentation/features/auth/ChangePasswordStep';
@@ -24,8 +25,10 @@ export default function LoginScreen() {
   const { colors, spacing, radius } = useAppTheme();
   const insets = useSafeAreaInsets();
   const enterApp = useAuthStore((s) => s.enterApp);
-  const hasMission = useSettingsStore((s) => !!s.selectedMissionId);
+  // Con API la misión la asigna el servidor: tras la biometría se entra directo.
+  const hasMission = useSettingsStore((s) => apiEnabled() || !!s.selectedMissionId);
   const [step, setStep] = useState<0 | 1 | 'change'>(0);
+  /** Solo modo demo (servidor a bordo): contraseña temporal. Con API el cambio es el 428 dentro del paso 1. */
   const mustChange = () => !!useAuthStore.getState().session?.mustChangePassword;
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
 
@@ -41,14 +44,14 @@ export default function LoginScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior="padding">
         <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}>
           <View style={{ paddingTop: insets.top, backgroundColor: colors.night }}>
-            {/* Emergencia sin sesión: triaje en tabletas registradas (si no, SOS básico) */}
+            {/* Emergencia siempre accesible, incluso sin sesión (se encola y sube con la próxima sesión) */}
             <View style={[styles.sosRow, { paddingHorizontal: spacing.lg, paddingTop: spacing.sm }]}>
               <Button
                 label={t('nav.sos')}
                 leftIcon="megaphone"
                 variant="danger"
                 size="sm"
-                onPress={() => router.push('/triage')}
+                onPress={() => router.push({ pathname: '/alert', params: { trigger: 'manual' } })}
               />
             </View>
             <LoginHero />

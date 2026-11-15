@@ -19,16 +19,42 @@ import Animated, {
 import Svg, { Circle } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '@/core/theme';
-import type { IndicatorId } from '@/domain/entities/HealthIndicator';
+import { apiEnabled } from '@/core/config/env';
+import type { SourceRef } from '@/domain/entities/Hazard';
+import type { EscalationLevel, HealthStatus, IndicatorId } from '@/domain/entities/HealthIndicator';
+import type { AutoEmergency } from '@/domain/entities/ReadingSubmission';
 import { DEVICE, isMeasurable, simulateMeasurement, type MeasurableId, type SimulatedReading } from '@/domain/usecases/SimulateMeasurement';
+import { container } from '@/di/container';
 import { AppText, Button, Card, IconButton, StatusBadge } from '@/presentation/components/ui';
 import { Disclaimer } from '@/presentation/components/feedback/Disclaimer';
 import { recordReading } from '@/presentation/features/health/recordReading';
 import { assistantSay } from '@/presentation/features/voice/voiceAssistant';
 import { SessionNext } from '@/presentation/features/health/SessionNext';
 import { useMeasureSessionStore } from '@/presentation/store/measureSessionStore';
+import { AreYouOkCard } from '@/presentation/features/emergency/AreYouOkCard';
+import { useAuthStore } from '@/presentation/store/authStore';
+import { useHealthLogStore } from '@/presentation/store/healthLogStore';
+import { refreshPendingCount } from '@/presentation/sync/syncEngine';
 
 type Phase = 'searching' | 'connected' | 'measuring' | 'result';
+
+/** Resultado mostrado: del servidor (con API) o de la clasificación local citada (demo). */
+interface MeasureResult {
+  value: number;
+  secondaryValue?: number;
+  status: HealthStatus;
+  /**
+   * 'sending' = esperando al servidor · 'evaluated' = resultado del servidor · 'queued' = en la cola, sin evaluar ·
+   * 'device' = en la cola y calculado en el dispositivo (reglas del servidor, pendiente de confirmar) · 'local' = demo.
+   */
+  outcome: 'sending' | 'evaluated' | 'queued' | 'device' | 'local' | 'error';
+  /** Fuente del umbral local (solo demo). */
+  source?: SourceRef;
+  recommendation?: string | null;
+  /** A quién se avisó (solo si el servidor creó un escalamiento). */
+  escalation?: EscalationLevel;
+  emergency?: AutoEmergency | null;
+}
 
 const ACircle = Animated.createAnimatedComponent(Circle);
 const RING = 180;
@@ -68,7 +94,10 @@ export default function MeasureScreen() {
 
   const [phase, setPhase] = useState<Phase>('searching');
   const [live, setLive] = useState('—');
-  const [result, setResult] = useState<SimulatedReading | null>(null);
+  const [result, setResult] = useState<MeasureResult | null>(null);
+  const withApi = apiEnabled();
+  const userId = useAuthStore((s) => s.session?.userId ?? '');
+  const addReading = useHealthLogStore((s) => s.addReading);
   const [alerted, setAlerted] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const progress = useSharedValue(0);
@@ -111,25 +140,21 @@ export default function MeasureScreen() {
 
   const finish = () => {
     const r = simulateMeasurement(id);
-    // Motor de reglas + escalamiento (tripulación / flight surgeon con retraso a Tierra).
-    const evaluation = recordReading({ indicatorId: id, value: r.value, secondaryValue: r.secondaryValue, source: 'wearable' });
     if (inSession) useMeasureSessionStore.getState().markDone(id);
-    setResult({ ...r, status: evaluation.status === 'unevaluated' ? r.status : evaluation.status });
-    setPhase('result');
-    if (auto) {
-      const value = r.secondaryValue !== undefined ? t('assistant.over', { a: r.value, b: r.secondaryValue }) : String(r.value).replace('.', i18n.language === 'es' ? ',' : '.');
-      const session = useMeasureSessionStore.getState().session;
-      const left = session ? session.items.filter((x) => !session.done.includes(x)).length : 0;
-      assistantSay(
-        `${t('assistant.indicatorLine', { name: t(`indicators.${id}.name`), value, unit: t(`assistant.units.${id}`), status: t(`status.${evaluation.status}`) })} ${
-          inSession ? (left ? t('assistant.sayNext', { count: left }) : t('assistant.sessionComplete')) : ''
-        }`,
-      );
+    if (withApi) {
+      void submitToServer(r, new Date().toISOString()).then(announce);
+      return;
     }
-    if (evaluation.status === 'critical' || evaluation.escalation === 'crew') setAlerted(true);
+    // Modo demo sin servidor: motor de reglas citadas (NEWS2 / AHA) + escalamiento simulado (tripulación / Tierra con retraso).
+    const evaluation = recordReading({ indicatorId: id, value: r.value, secondaryValue: r.secondaryValue, source: 'wearable' });
+    const status = evaluation.status === 'unevaluated' ? r.status : evaluation.status;
+    setResult({ ...r, status, outcome: 'local' });
+    setPhase('result');
+    announce({ value: r.value, secondaryValue: r.secondaryValue, status });
+    if (status === 'critical' || evaluation.escalation === 'crew') setAlerted(true);
     else {
       Haptics.notificationAsync(
-        r.status === 'normal' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning,
+        status === 'normal' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning,
       ).catch(() => {});
     }
   };
@@ -144,7 +169,67 @@ export default function MeasureScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auto, phase]);
 
-  const fmt = (r: SimulatedReading) => (r.secondaryValue !== undefined ? `${r.value}/${r.secondaryValue}` : String(r.value));
+  /** Manos libres: dice el valor y el estado (el del servidor con API) y cuántas mediciones quedan en la sesión. */
+  const announce = (res: { value: number; secondaryValue?: number; status: HealthStatus }) => {
+    if (!auto) return;
+    const value = res.secondaryValue !== undefined ? t('assistant.over', { a: res.value, b: res.secondaryValue }) : String(res.value).replace('.', i18n.language === 'es' ? ',' : '.');
+    const session = useMeasureSessionStore.getState().session;
+    const left = session ? session.items.filter((x) => !session.done.includes(x)).length : 0;
+    assistantSay(
+      `${t('assistant.indicatorLine', { name: t(`indicators.${id}.name`), value, unit: t(`assistant.units.${id}`), status: t(`status.${res.status}`) })} ${
+        inSession ? (left ? t('assistant.sayNext', { count: left }) : t('assistant.sessionComplete')) : ''
+      }`,
+    );
+  };
+
+  /**
+   * Con API: POST /readings. El semáforo y la recomendación son los del servidor (se muestran tal cual).
+   * Sin conexión queda en la cola de sync: se evalúa en el dispositivo con las reglas guardadas (GET /rules) y el
+   * mismo motor, marcado "pendiente de confirmar"; si no se puede (sin reglas o con derivados), "sin evaluar".
+   */
+  const submitToServer = async (r: SimulatedReading, takenAt: string) => {
+    setResult({ value: r.value, secondaryValue: r.secondaryValue, status: 'unevaluated', outcome: 'sending' });
+    setPhase('result');
+    try {
+      const out = await container.submitReading.execute({ indicatorId: id, value: r.value, secondaryValue: r.secondaryValue, source: 'wearable', takenAt });
+      // Sin conexión: el dispositivo evalúa con las reglas guardadas (mismo motor); el servidor confirma al sincronizar.
+      const device = out.status === 'queued' ? out.device : null;
+      const status = out.status === 'evaluated' ? out.level : (device?.level ?? 'unevaluated');
+      const recommendation = out.status === 'evaluated' ? out.recommendation : (device?.recommendation ?? null);
+      addReading(userId, {
+        indicatorId: id,
+        status,
+        clientUuid: out.clientUuid,
+        recommendation,
+        provisional: !!device,
+        reading: { value: r.value, secondaryValue: r.secondaryValue, takenAt, source: 'wearable', synced: out.status === 'evaluated' },
+      });
+      setResult({
+        value: r.value,
+        secondaryValue: r.secondaryValue,
+        status,
+        outcome: device ? 'device' : out.status,
+        recommendation,
+        escalation: out.status === 'evaluated' && out.escalationId ? out.escalation : undefined,
+        emergency: out.status === 'evaluated' ? out.emergency : null,
+      });
+      if (out.status === 'queued') void refreshPendingCount();
+      if (status === 'critical') setAlerted(true);
+      Haptics.notificationAsync(
+        status === 'critical'
+          ? Haptics.NotificationFeedbackType.Error
+          : status === 'normal'
+            ? Haptics.NotificationFeedbackType.Success
+            : Haptics.NotificationFeedbackType.Warning,
+      ).catch(() => {});
+      return { value: r.value, secondaryValue: r.secondaryValue, status };
+    } catch {
+      setResult({ value: r.value, secondaryValue: r.secondaryValue, status: 'unevaluated', outcome: 'error' });
+      return { value: r.value, secondaryValue: r.secondaryValue, status: 'unevaluated' as HealthStatus };
+    }
+  };
+
+  const fmt = (r: Pick<SimulatedReading, 'value' | 'secondaryValue'>) => (r.secondaryValue !== undefined ? `${r.value}/${r.secondaryValue}` : String(r.value));
   const ringProps = useAnimatedProps(() => ({ strokeDashoffset: CIRC * (1 - progress.value) }));
   const close = () => (router.canGoBack() ? router.back() : router.replace('/body'));
 
@@ -224,13 +309,39 @@ export default function MeasureScreen() {
           {phase === 'result' && result && (
             <Animated.View entering={FadeIn.duration(250)} style={{ alignSelf: 'stretch', gap: spacing.lg }}>
               <Card style={[styles.center, { gap: spacing.md, paddingVertical: spacing.xxl, backgroundColor: colors.status[result.status].background, borderColor: colors.status[result.status].ring, borderWidth: 1 }]}>
-                <StatusBadge status={result.status} size="lg" />
+                {result.outcome === 'sending' ? (
+                  <AppText variant="label" color="textMuted">{t('measure.sending')}</AppText>
+                ) : (
+                  <StatusBadge status={result.status} size="lg" />
+                )}
                 <View style={[styles.row, { gap: 6, alignItems: 'baseline' }]}>
                   <AppText variant="display" style={{ fontSize: 52, lineHeight: 60, fontVariant: ['tabular-nums'] }}>{fmt(result)}</AppText>
                   <AppText color="textMuted">{t(`measure.units.${id}`)}</AppText>
                 </View>
-                <AppText align="center" style={{ color: colors.status[result.status].text }}>{t(`measure.result.${result.status}`)}</AppText>
+                {/* Con API: la recomendación del servidor tal cual. Demo: texto local. */}
+                {(result.outcome === 'evaluated' || result.outcome === 'device') && result.recommendation ? (
+                  <AppText align="center" style={{ color: colors.status[result.status].text }}>{result.recommendation}</AppText>
+                ) : result.outcome === 'local' ? (
+                  <AppText align="center" style={{ color: colors.status[result.status].text }}>{t(`measure.result.${result.status}`)}</AppText>
+                ) : result.outcome !== 'sending' && result.outcome !== 'evaluated' && result.outcome !== 'device' ? (
+                  <AppText align="center" color="textSecondary">{t(`measure.outcome.${result.outcome}`)}</AppText>
+                ) : null}
+                {result.outcome === 'device' && (
+                  <AppText variant="caption" align="center" color="textMuted">{t('measure.outcome.device')}</AppText>
+                )}
               </Card>
+
+              {result.emergency && <AreYouOkCard sessionId={result.emergency.sessionId} deadlineAt={result.emergency.deadlineAt} />}
+
+              {result.escalation && result.escalation !== 'self' && (
+                <Card tone="night" style={[styles.row, { gap: spacing.md }]}>
+                  <Ionicons name={result.escalation === 'flightSurgeon' ? 'planet-outline' : 'people'} size={24} color={colors.primary} />
+                  <View style={styles.flex}>
+                    <AppText variant="title" style={{ color: colors.onNight }}>{t(`measure.escalated.${result.escalation}`)}</AppText>
+                    <AppText variant="bodySmall" style={{ color: colors.onNightMuted }}>{t(`measure.escalatedBody.${result.escalation}`)}</AppText>
+                  </View>
+                </Card>
+              )}
 
               {alerted && (
                 <Card tone="night" style={[styles.row, { gap: spacing.md }]}>
@@ -243,7 +354,7 @@ export default function MeasureScreen() {
               )}
 
               <AppText variant="caption" color="textMuted">
-                {t('measure.rule', { source: result.source.title })}
+                {result.source ? t('measure.rule', { source: result.source.title }) : t('measure.serverRule')}
               </AppText>
             </Animated.View>
           )}
@@ -265,10 +376,7 @@ export default function MeasureScreen() {
         )}
         {phase === 'result' && (
           <View style={{ gap: spacing.sm }}>
-            {result?.status === 'critical' && (
-              <Button label={t('triage.openAuto')} variant="danger" leftIcon="medkit" fullWidth onPress={() => router.push({ pathname: '/triage', params: { trigger: 'criticalReading' } })} />
-            )}
-            {result?.status === 'caution' && (
+            {(result?.status === 'caution' || result?.status === 'critical') && (
               <Button label={t('measure.openAlert')} variant="danger" leftIcon="megaphone" fullWidth onPress={() => router.push({ pathname: '/alert', params: { trigger: 'manual' } })} />
             )}
             {inSession ? <SessionNext /> : <Button label={t('measure.done')} leftIcon="checkmark" size="lg" fullWidth onPress={close} />}

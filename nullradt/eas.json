@@ -4,13 +4,21 @@
     "appVersionSource": "local"
   },
   "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_REQUIRE_AUTH": "false"
+        "EXPO_PUBLIC_API_URL": "https://astro-health-api-81jd.onrender.com",
+        "EXPO_PUBLIC_REQUIRE_AUTH": "true"
       }
     },
     "production": {

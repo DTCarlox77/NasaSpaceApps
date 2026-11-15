@@ -4,7 +4,15 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Animated, { Easing, cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '@/core/theme';
-import { AccountLockedError, InvalidCredentialsError } from '@/domain/entities/Session';
+import { apiEnabled } from '@/core/config/env';
+import {
+  AccountLockedError,
+  InvalidCredentialsError,
+  NoActiveAssignmentError,
+  PasswordChangeRequiredError,
+  RateLimitedError,
+  WeakPasswordError,
+} from '@/domain/entities/Session';
 import { PinPad } from './PinPad';
 import {
   AppText,
@@ -20,6 +28,10 @@ import { OfflineUnlockExpiredError, useAuthStore } from '@/presentation/store/au
 import { showToast } from '@/presentation/store/toastStore';
 
 const ASTRONAUT_ID = /^NR-A-\d{4}$/;
+/** Usuario del servidor (contrato: `^[a-z0-9._-]{3,40}$`). */
+const USERNAME = /^[a-z0-9._-]{3,40}$/;
+/** Política del servidor: mínimo 10 caracteres. */
+const MIN_PASSWORD = 10;
 
 const ID_PREFIX = 'NR-A-';
 /** El campo solo guarda los 4 dígitos; el prefijo "NR-A-" es fijo (evita que el teclado duplique texto al reformatear). */
@@ -61,7 +73,7 @@ export function IdentifyStep({ onVerified }: { onVerified: (method: Method) => v
           </View>
           <View style={styles.flex}>
             <AppText variant="title">{session.displayName}</AppText>
-            <AppText variant="bodySmall" color="textMuted">{t(`auth.roles.${session.role}`)}</AppText>
+            <AppText variant="bodySmall" color="textMuted">{session.crewRole ? t(`crewRoles.${session.crewRole}`) : t(`auth.roles.${session.role}`)}</AppText>
           </View>
           <View style={[styles.row, { gap: spacing.xs }]}>
             <Ionicons name="lock-closed" size={14} color={colors.primaryText} />
@@ -173,8 +185,12 @@ function BiometricCard({ onVerified }: { onVerified: () => void }) {
   );
 }
 
+/** Hora local "hh:mm" de un ISO 8601. */
+const hhmm = (iso: string | null, lang: string) =>
+  iso ? new Date(iso).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }) : '—';
+
 function PinCard({ onVerified }: { onVerified: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { spacing } = useAppTheme();
   const unlockWithPin = useAuthStore((s) => s.unlockWithPin);
   const until = useAuthStore((s) => s.session?.offlineUnlockUntil);
@@ -198,7 +214,7 @@ function PinCard({ onVerified }: { onVerified: () => void }) {
           } catch (e) {
             setError(
               e instanceof AccountLockedError
-                ? t('access.lockedUntil', { time: new Date(e.until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })
+                ? t('access.lockedUntil', { time: hhmm(e.lockedUntil, i18n.language) })
                 : e instanceof OfflineUnlockExpiredError
                   ? t('access.pinExpired')
                   : t('access.pinWrong'),
@@ -220,73 +236,120 @@ function PasswordForm({
   verifyPassword: ReturnType<typeof useAuthStore.getState>['verifyPassword'];
   onVerified: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { spacing } = useAppTheme();
   const biometrics = useBiometrics();
   const setBiometricEnabled = useAuthStore((s) => s.setBiometricEnabled);
   const passwordRef = useRef<TextFieldHandle>(null);
+  const withApi = apiEnabled();
   const [astronautId, setAstronautId] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [saveBiometric, setSaveBiometric] = useState(true);
   const [idError, setIdError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [verified, setVerified] = useState(false);
+  /** 428 PASSWORD_CHANGE_REQUIRED: token de un solo uso para POST /auth/change-password. */
+  const [changeToken, setChangeToken] = useState<string | null>(null);
+
+  /** Tras credenciales correctas: se ofrece guardar la biometría (confirmada con el sensor) y se continúa. */
+  const finishVerified = async () => {
+    if (saveBiometric && biometrics.available) {
+      const res = await biometrics.authenticate();
+      if (res.ok) {
+        await setBiometricEnabled(true);
+        showToast({ level: 'normal', title: t('auth.biometricSaved', { method: biometrics.methodLabelTitle }), body: t('auth.biometricSavedBody') });
+      } else {
+        showToast({ level: 'caution', title: t('auth.biometricNotSaved'), body: t('auth.biometricNotSavedBody') });
+      }
+    }
+    setVerified(true);
+    setTimeout(onVerified, 500);
+  };
+
+  /** Mensajes por `error.code` del contrato (nunca por el texto del servidor). */
+  const messageFor = (e: unknown) => {
+    if (e instanceof InvalidCredentialsError) return withApi ? t('auth.errors.invalidUser') : t('auth.errors.invalid');
+    if (e instanceof AccountLockedError) return t('auth.errors.locked', { time: hhmm(e.lockedUntil, i18n.language) });
+    if (e instanceof NoActiveAssignmentError) return t('auth.errors.noAssignment');
+    if (e instanceof RateLimitedError) return t('auth.errors.rateLimited', { seconds: e.retryAfterSeconds ?? 30 });
+    return t('auth.errors.network');
+  };
 
   const submit = async () => {
-    const id = `${ID_PREFIX}${astronautId}`;
-    setIdError(ASTRONAUT_ID.test(id) ? null : t('auth.errors.idFormat'));
+    const identifier = withApi ? username.trim().toLowerCase() : `${ID_PREFIX}${astronautId}`;
+    const idOk = withApi ? USERNAME.test(identifier) : ASTRONAUT_ID.test(identifier);
+    setIdError(idOk ? null : withApi ? t('auth.errors.usernameFormat') : t('auth.errors.idFormat'));
     setError(password ? null : t('auth.errors.passwordRequired'));
-    if (!ASTRONAUT_ID.test(id) || !password) return;
+    if (!idOk || !password) return;
 
     setLoading(true);
     try {
-      // 1) Primero se validan ID y contraseña: si son incorrectos, no se pide la biometría.
-      await verifyPassword({ identifier: id, password }, false);
-      // 2) Solo con credenciales correctas se ofrece guardar la biometría (y se confirma con el sensor).
-      if (saveBiometric && biometrics.available) {
-        const res = await biometrics.authenticate();
-        if (res.ok) {
-          await setBiometricEnabled(true);
-          showToast({ level: 'normal', title: t('auth.biometricSaved', { method: biometrics.methodLabelTitle }), body: t('auth.biometricSavedBody') });
-        } else {
-          showToast({ level: 'caution', title: t('auth.biometricNotSaved'), body: t('auth.biometricNotSavedBody') });
-        }
-      }
-      setVerified(true);
-      setTimeout(onVerified, 500);
+      // 1) Primero se validan usuario y contraseña: si son incorrectos, no se pide la biometría.
+      await verifyPassword({ identifier, password }, false);
+      // 2) Solo con credenciales correctas se ofrece guardar la biometría.
+      await finishVerified();
     } catch (e) {
-      setError(
-        e instanceof AccountLockedError
-          ? t('access.lockedUntil', { time: new Date(e.until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })
-          : e instanceof InvalidCredentialsError
-            ? t('auth.errors.invalid')
-            : t('auth.errors.network'),
-      );
+      if (e instanceof PasswordChangeRequiredError) {
+        setChangeToken(e.changeToken);
+        setError(null);
+      } else setError(messageFor(e));
     } finally {
       setLoading(false);
     }
   };
 
+  if (changeToken) {
+    return (
+      <ChangePasswordForm
+        changeToken={changeToken}
+        currentPassword={password}
+        onCancel={() => {
+          setChangeToken(null);
+          setPassword('');
+        }}
+        onChanged={finishVerified}
+      />
+    );
+  }
+
   return (
     <Card style={{ gap: spacing.lg }}>
-      <TextField
-        label={t('auth.astronautId')}
-        icon="id-card-outline"
-        prefix={ID_PREFIX}
-        placeholder="0000"
-        value={astronautId}
-        onChangeText={(v) => setAstronautId(idDigits(v))}
-        keyboardType="number-pad"
-        maxLength={4}
-        autoCorrect={false}
-        autoComplete="off"
-        importantForAutofill="no"
-        textContentType="none"
-        returnKeyType="next"
-        onSubmitEditing={() => passwordRef.current?.focus()}
-        error={idError}
-      />
+      {withApi ? (
+        <TextField
+          label={t('auth.username')}
+          icon="person-outline"
+          placeholder="a.ortega"
+          value={username}
+          onChangeText={setUsername}
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="username"
+          textContentType="username"
+          returnKeyType="next"
+          onSubmitEditing={() => passwordRef.current?.focus()}
+          error={idError}
+        />
+      ) : (
+        <TextField
+          label={t('auth.astronautId')}
+          icon="id-card-outline"
+          prefix={ID_PREFIX}
+          placeholder="0000"
+          value={astronautId}
+          onChangeText={(v) => setAstronautId(idDigits(v))}
+          keyboardType="number-pad"
+          maxLength={4}
+          autoCorrect={false}
+          autoComplete="off"
+          importantForAutofill="no"
+          textContentType="none"
+          returnKeyType="next"
+          onSubmitEditing={() => passwordRef.current?.focus()}
+          error={idError}
+        />
+      )}
       <TextField
         ref={passwordRef}
         label={t('auth.password')}
@@ -319,6 +382,85 @@ function PasswordForm({
         loading={loading}
         onPress={verified ? undefined : submit}
       />
+    </Card>
+  );
+}
+
+/**
+ * Cambio de contraseña obligatorio (428 PASSWORD_CHANGE_REQUIRED, p. ej. m.silva / ATLAS en su primer
+ * inicio): POST /auth/change-password con Bearer = `password_change_token`. Responde como un login completo.
+ */
+function ChangePasswordForm({
+  changeToken,
+  currentPassword,
+  onCancel,
+  onChanged,
+}: {
+  changeToken: string;
+  currentPassword: string;
+  onCancel: () => void;
+  onChanged: () => void;
+}) {
+  const { t } = useTranslation();
+  const { spacing } = useAppTheme();
+  const changePassword = useAuthStore((s) => s.changePassword);
+  const confirmRef = useRef<TextFieldHandle>(null);
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    if (next.length < MIN_PASSWORD) return setError(t('auth.errors.weakPassword', { min: MIN_PASSWORD }));
+    if (next !== confirm) return setError(t('auth.errors.passwordMismatch'));
+    setError(null);
+    setLoading(true);
+    try {
+      await changePassword(changeToken, currentPassword, next);
+      showToast({ level: 'normal', title: t('auth.passwordChanged'), body: t('auth.passwordChangedBody') });
+      onChanged();
+    } catch (e) {
+      if (e instanceof WeakPasswordError) setError(t('auth.errors.weakPassword', { min: e.minLength ?? MIN_PASSWORD }));
+      else if (e instanceof InvalidCredentialsError) setError(t('auth.errors.changeExpired'));
+      else if (e instanceof RateLimitedError) setError(t('auth.errors.rateLimited', { seconds: e.retryAfterSeconds ?? 30 }));
+      else setError(t('auth.errors.network'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card style={{ gap: spacing.lg }}>
+      <View style={{ gap: spacing.xs }}>
+        <AppText variant="h3">{t('auth.changePasswordTitle')}</AppText>
+        <AppText variant="bodySmall" color="textSecondary">{t('auth.changePasswordBody', { min: MIN_PASSWORD })}</AppText>
+      </View>
+      <TextField
+        label={t('auth.newPassword')}
+        icon="lock-closed-outline"
+        password
+        value={next}
+        onChangeText={setNext}
+        autoComplete="new-password"
+        textContentType="newPassword"
+        returnKeyType="next"
+        onSubmitEditing={() => confirmRef.current?.focus()}
+      />
+      <TextField
+        ref={confirmRef}
+        label={t('auth.confirmPassword')}
+        icon="lock-closed-outline"
+        password
+        value={confirm}
+        onChangeText={setConfirm}
+        autoComplete="new-password"
+        textContentType="newPassword"
+        returnKeyType="go"
+        onSubmitEditing={submit}
+        error={error}
+      />
+      <Button label={t('auth.changePasswordSubmit')} icon="arrow-forward" size="lg" fullWidth loading={loading} onPress={submit} />
+      <Button label={t('common.back')} variant="ghost" leftIcon="arrow-back" onPress={onCancel} />
     </Card>
   );
 }

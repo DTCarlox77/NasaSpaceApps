@@ -16,7 +16,7 @@ export interface HistoryPoint {
 export interface LocalReadingLike {
   indicatorId: string;
   status: HealthStatus;
-  reading: { value: number; secondaryValue?: number; takenAt: string; source: MeasurementSource; photoUri?: string };
+  reading: { value: number; secondaryValue?: number; takenAt: string; source?: MeasurementSource; photoUri?: string };
 }
 
 /** PRNG determinista (mulberry32): la misma serie sintética en cada arranque. */
@@ -71,7 +71,7 @@ export function buildHistory(ind: HealthIndicator, local: LocalReadingLike[], us
       value: l.reading.value,
       secondary: l.reading.secondaryValue,
       status: l.status,
-      source: l.reading.source,
+      source: l.reading.source ?? 'wearable',
       synthetic: false,
       photoUri: l.reading.photoUri,
     });

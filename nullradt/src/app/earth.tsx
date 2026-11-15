@@ -7,6 +7,7 @@ import { BackHeader } from '@/presentation/components/navigation/BackHeader';
 import { AppText, Card, FadeInView, Screen, SegmentedControl } from '@/presentation/components/ui';
 import { formatDuration, useNow } from '@/presentation/hooks/useNow';
 import { useAuthStore } from '@/presentation/store/authStore';
+import { globalRoleOf } from '@/domain/entities/Session';
 import { deliveredFor, messageStatus, useOutboxStore, type Audience } from '@/presentation/store/outboxStore';
 
 const ROLE_TO_AUDIENCE: Partial<Record<string, Audience>> = { admin: 'missionControl', flight_surgeon: 'flightSurgeon', behavioral_health: 'behavioralHealth' };
@@ -19,7 +20,7 @@ const ROLE_TO_AUDIENCE: Partial<Record<string, Audience>> = { admin: 'missionCon
 export default function EarthInboxScreen() {
   const { t, i18n } = useTranslation();
   const { colors, spacing } = useAppTheme();
-  const role = useAuthStore((s) => s.session?.role ?? 'astronaut');
+  const role = useAuthStore((s) => (s.session ? globalRoleOf(s.session) : 'astronaut'));
   const fixed = ROLE_TO_AUDIENCE[role];
   const [picked, setPicked] = useState<Audience>(fixed ?? 'flightSurgeon');
   const audience = fixed ?? picked;

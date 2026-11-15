@@ -28,6 +28,8 @@ type GuideTab = 'how' | 'meaning' | 'actions';
 /** Detalle de un indicador: valor + semáforo, gráfica en el tiempo, escalamiento, función y guía paso a paso. */
 export default function IndicatorDetailScreen() {
   const { t, i18n } = useTranslation();
+  // Claves dinámicas: los indicadores nuevos del catálogo del servidor aún no tienen guía (defaultValue vacío).
+  const tx = t as unknown as (key: string, opts?: Record<string, unknown>) => string;
   const { colors, spacing, radius } = useAppTheme();
   const { id } = useLocalSearchParams<{ id: IndicatorId }>();
   const { overview, baseIndicators, localReadings, sex } = useHealthOverview();
@@ -65,7 +67,7 @@ export default function IndicatorDetailScreen() {
   const due = nextDueAt(indicator, last?.at);
   const overdue = due !== null && due < now;
 
-  const steps = t(`guides.${id}.how`, { returnObjects: true }) as string[];
+  const steps = ((tx(`guides.${id}.how`, { returnObjects: true, defaultValue: [] }) as unknown as string[]) ?? []);
   const sexRef = me ? sexReference(id, me.sex, me.age) : null;
   const sources = [evaluation?.source ?? rule.source, rule.source, sexRef?.source, id === 'gripStrength' ? DODDS_GRIP : undefined].filter(
     (src, i, all): src is NonNullable<typeof src> => !!src && all.findIndex((x) => x?.url === src.url) === i,
@@ -80,8 +82,8 @@ export default function IndicatorDetailScreen() {
       tab === 'how'
         ? steps.map((s, i) => `${i + 1}. ${s}`).join(' ')
         : tab === 'meaning'
-          ? t(`guides.${id}.meaning`)
-          : t(`guides.${id}.actions.${status}`);
+          ? tx(`guides.${id}.meaning`, { defaultValue: '' })
+          : tx(`guides.${id}.actions.${status}`, { defaultValue: '' });
     setSpeaking(true);
     speak(text, i18n.language === 'es' ? 'es' : 'en', { chime: false, onDone: () => setSpeaking(false) });
   };
@@ -102,7 +104,7 @@ export default function IndicatorDetailScreen() {
                 <AppText color="textMuted">{indicator.unit}</AppText>
               </View>
               <AppText variant="caption" color="textMuted">
-                {indicator.latest ? `${timeAgo(indicator.latest.takenAt, t)} · ${t(`health.source.${indicator.latest.source}`)}` : t('body.noReadings')}
+                {indicator.latest ? `${timeAgo(indicator.latest.takenAt, t)} · ${(indicator.latest.source ? t(`health.source.${indicator.latest.source}`) : t('health.source.server'))}` : t('body.noReadings')}
               </AppText>
             </View>
           </View>
@@ -204,7 +206,7 @@ export default function IndicatorDetailScreen() {
                 <AppText style={styles.flex}>{s}</AppText>
               </View>
             ))}
-          {tab === 'meaning' && <AppText>{t(`guides.${id}.meaning`)}</AppText>}
+          {tab === 'meaning' && <AppText>{tx(`guides.${id}.meaning`, { defaultValue: '' })}</AppText>}
           {tab === 'actions' && (
             <View style={{ gap: spacing.sm }}>
               {(['normal', 'caution', 'critical', 'unevaluated'] as HealthStatus[]).map((s) => (
@@ -223,7 +225,7 @@ export default function IndicatorDetailScreen() {
                     <StatusBadge status={s} size="sm" />
                     {s === status && <AppText variant="caption" style={{ color: colors.status[s].text }}>{t('indicatorDetail.current')}</AppText>}
                   </View>
-                  <AppText variant="bodySmall" style={{ color: colors.status[s].text }}>{t(`guides.${id}.actions.${s}`)}</AppText>
+                  <AppText variant="bodySmall" style={{ color: colors.status[s].text }}>{tx(`guides.${id}.actions.${s}`, { defaultValue: '' })}</AppText>
                 </View>
               ))}
             </View>

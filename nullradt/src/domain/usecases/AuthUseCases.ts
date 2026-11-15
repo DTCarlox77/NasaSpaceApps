@@ -17,6 +17,20 @@ export class SignIn {
   }
 }
 
+/** Cambio obligatorio de contraseña (428 en el login). Deja la sesión iniciada. */
+export class ChangePassword {
+  constructor(
+    private readonly auth: AuthRepository,
+    private readonly sessions: SessionRepository,
+  ) {}
+
+  async execute(changeToken: string, currentPassword: string, newPassword: string): Promise<Session> {
+    const session = await this.auth.changePassword(changeToken, currentPassword, newPassword);
+    await this.sessions.save(session);
+    return session;
+  }
+}
+
 export interface RestoredSession {
   session: Session | null;
   biometricEnabled: boolean;
@@ -32,9 +46,14 @@ export class RestoreSession {
 }
 
 export class SignOut {
-  constructor(private readonly sessions: SessionRepository) {}
+  constructor(
+    private readonly auth: AuthRepository,
+    private readonly sessions: SessionRepository,
+  ) {}
 
-  async execute(): Promise<void> {
+  /** `remote = false` cuando el servidor ya invalidó la sesión (no hay nada que revocar). */
+  async execute(remote = true): Promise<void> {
+    if (remote) await this.auth.logout();
     await this.sessions.clear();
     await this.sessions.setBiometricEnabled(false);
   }
@@ -54,5 +73,14 @@ export class GetDemoSession {
 
   execute(): Session {
     return this.auth.demoSession();
+  }
+}
+
+/** Despierta el servidor al abrir la app (Render se duerme ~50 s). */
+export class WakeServer {
+  constructor(private readonly auth: AuthRepository) {}
+
+  execute(): Promise<boolean> {
+    return this.auth.wakeUp();
   }
 }

@@ -26,11 +26,11 @@
         "mood": "¿Cómo está tu ánimo? Cero muy bajo, diez muy bueno.",
         "fatigue": "¿Cuánta fatiga sientes? Cero nada, diez agotado.",
         "stress": "¿Cuánto estrés sientes? Cero nada, diez muchísimo.",
-        "friction": "¿Cuántos roces has tenido con la tripulación? Cero ninguno, diez muchos."
+        "crewConflict": "¿Cuántos roces has tenido con la tripulación? Cero ninguno, diez muchos."
       },
       "repeat": "No entendí el número.",
       "cancelled": "Check-in cancelado.",
-      "saved": "Check-in guardado. Según la pulsera dormiste {{hours}} horas. Gracias."
+      "saved": "Check-in guardado. Gracias."
     },
     "reply": {
       "help": "Puedes decir, por ejemplo: análisis diario, check-in diario, salud de mis ojos, mi presión, medir oxígeno, signos vitales, qué sigue, emergencia o quiero hablar con alguien. Te muestro la lista completa.",

@@ -59,6 +59,15 @@ export const RULES: Record<IndicatorId, IndicatorRule> = {
   // Línea base personal + corte de fuerza baja por sexo (EWGSOP2).
   gripStrength: { kind: 'baseline', source: PERSONAL_BASELINE, baselineTolerance: 0.1, higherIsWorse: false },
   urinaryCalcium: { kind: 'sex', source: STATPEARLS_CALCIURIA },
+  // Indicadores del catálogo del servidor sin regla en la demo: los evalúa SOLO el servidor (no se inventan umbrales).
+  glucose: { kind: 'none' },
+  sleepHours: { kind: 'none' },
+  radDoseDaily: { kind: 'none' },
+  radDoseCum: { kind: 'none' },
+  bodyMass: { kind: 'none' },
+  exerciseMin: { kind: 'none' },
+  visionCheck: { kind: 'none' },
+  symptoms: { kind: 'none' },
 };
 
 export interface RuleResult {

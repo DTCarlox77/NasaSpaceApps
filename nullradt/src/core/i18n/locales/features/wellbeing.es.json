@@ -5,7 +5,7 @@
       "mood": { "label": "¿Cómo está tu ánimo?", "low": "Muy bajo", "high": "Muy bueno", "short": "Ánimo" },
       "fatigue": { "label": "¿Cuánta fatiga sientes?", "low": "Nada", "high": "Agotado/a", "short": "Fatiga" },
       "stress": { "label": "¿Cuánto estrés sientes?", "low": "Nada", "high": "Muchísimo", "short": "Estrés" },
-      "friction": { "label": "¿Roces con la tripulación?", "low": "Ninguno", "high": "Muchos", "short": "Roces" }
+      "crewConflict": { "label": "¿Roces con la tripulación?", "low": "Ninguno", "high": "Muchos", "short": "Roces" }
     },
     "fromWristband": "de la pulsera (sintético)",
     "corrected": "corregido a mano",
@@ -18,7 +18,7 @@
       "mood": "Tu ánimo lleva varios días por debajo de tu rango habitual.",
       "fatigue": "Tu fatiga lleva varios días por encima de tu rango habitual.",
       "stress": "Tu estrés lleva varios días por encima de tu rango habitual.",
-      "friction": "Los roces con la tripulación llevan varios días por encima de lo habitual."
+      "crewConflict": "Los roces con la tripulación llevan varios días por encima de lo habitual."
     },
     "sustainedNote": "No es un diagnóstico. Salud conductual verá este aviso de forma confidencial; tu tripulación no.",
     "seedStable": "Demo: 14 días estables",

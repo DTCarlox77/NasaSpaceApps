@@ -10,6 +10,7 @@ import {
   PermissionDeniedError,
   TokenReuseError,
   WeakPasswordError,
+  globalRoleOf,
   type GlobalRole,
   type MissionCrewRole,
   type Session,
@@ -117,12 +118,12 @@ const seed = (id: string, fullName: string, displayName: string, globalRole: Glo
  * NR-A-9001 Control2026 · NR-A-9002 Surgeon2026 · NR-A-9003 Mente2026.
  */
 const SEED_ACCOUNTS: Account[] = [
-  seed('NR-A-0101', 'Claudia Sofía Vargas Ayerdis', 'Claudia Vargas', 'astronaut', '$2b$08$eEGUcMdoS8jN2MrLzn6WBOVXO/7lck2rgINPmnf5NT4ZdwX3niH.G', 'crew'),
-  seed('NR-A-0102', 'María Alejandra Sarante Salinas', 'María Sarante', 'astronaut', '$2b$08$.vEBl.U6/eU6qdZNEKaIpOVUm5MkBZYKBee573t.8lvpvAmk5HTd2', 'medical_officer'),
+  seed('NR-A-0101', 'Claudia Sofía Vargas Ayerdis', 'Claudia Vargas', 'astronaut', '$2b$08$eEGUcMdoS8jN2MrLzn6WBOVXO/7lck2rgINPmnf5NT4ZdwX3niH.G', 'mission_specialist'),
+  seed('NR-A-0102', 'María Alejandra Sarante Salinas', 'María Sarante', 'astronaut', '$2b$08$.vEBl.U6/eU6qdZNEKaIpOVUm5MkBZYKBee573t.8lvpvAmk5HTd2', 'crew_medical_officer'),
   seed('NR-A-0103', 'Carlos Adrián Espinosa Luna', 'Carlos Espinosa', 'astronaut', '$2b$08$I/41vwEWE0/kNqZ1ykTGneiq7lCLxiEfZcuRFqcNkPxIePwrdCoam', 'commander'),
-  seed('NR-A-0104', 'Mauro Engelbert Delgado Saenz', 'Mauro Delgado', 'astronaut', '$2b$08$bHOnCmzdf4HNYWHMU9EgeOQM4db.y3fUcZZYAoKQKyifTIJd3gH4a', 'crew'),
-  seed('NR-A-0105', 'Víctor Mateo Alcocer López', 'Víctor Alcocer', 'astronaut', '$2b$08$J7ie9hvy/OZu3iKk3hbVH.NEE7pO2lCELJYUnmLwfRCY8QuTUZr92', 'crew'),
-  seed('NR-A-0106', 'Jorge Adán Ortega Torres', 'Jorge Ortega', 'astronaut', '$2b$08$vpFzlXMnxYr6NJ.7O9ZQVux/Uh8YR8YMdWemc0Ob.3S6JDZOc5tAe', 'crew'),
+  seed('NR-A-0104', 'Mauro Engelbert Delgado Saenz', 'Mauro Delgado', 'astronaut', '$2b$08$bHOnCmzdf4HNYWHMU9EgeOQM4db.y3fUcZZYAoKQKyifTIJd3gH4a', 'mission_specialist'),
+  seed('NR-A-0105', 'Víctor Mateo Alcocer López', 'Víctor Alcocer', 'astronaut', '$2b$08$J7ie9hvy/OZu3iKk3hbVH.NEE7pO2lCELJYUnmLwfRCY8QuTUZr92', 'mission_specialist'),
+  seed('NR-A-0106', 'Jorge Adán Ortega Torres', 'Jorge Ortega', 'astronaut', '$2b$08$vpFzlXMnxYr6NJ.7O9ZQVux/Uh8YR8YMdWemc0Ob.3S6JDZOc5tAe', 'mission_specialist'),
   seed('NR-A-9001', 'Mission Control', 'Mission Control', 'admin', '$2b$08$mO1WK9IUTNyDxle7us7aOOJ7D8RSX5pV0DAJx6HXHUSGWJLG.VKDu'),
   seed('NR-A-9002', 'Flight Surgeon (Earth)', 'Flight Surgeon', 'flight_surgeon', '$2b$08$7WtEzXjnkms4crcwVzfT8eGB/ZZN6Kmgd1wIV6JFghp0qo29PaXYa'),
   seed('NR-A-9003', 'Behavioral Health (Earth)', 'Behavioral Health', 'behavioral_health', '$2b$08$Dzb3DkxjdvGqbaTuRBi1S.yL1VpXbfEU4udg.3Tr4wHp7Wyf/GyaS'),
@@ -249,7 +250,8 @@ function toSession(account: Account, tokens: ReturnType<typeof issueTokens>): Se
   return {
     userId: account.id,
     displayName: account.displayName,
-    role: account.globalRole,
+    role: account.globalRole === 'flight_surgeon' ? 'flightSurgeon' : account.globalRole === 'astronaut' ? 'astronaut' : 'crew',
+    accountRole: account.globalRole,
     crewRole: account.crewRole,
     missionId: account.missionId,
     token: tokens.token,
@@ -269,12 +271,12 @@ function registerFailure(account: Account): never {
   const lockedUntil = lock ? Date.now() + AUTH_CONFIG.lockMinutes * 60_000 : undefined;
   set((s) => ({ accounts: { ...s.accounts, [account.id]: { ...account, failedAttempts: lock ? 0 : attempts, lockedUntil } } }));
   audit({ actorId: account.id, action: lock ? 'locked' : 'loginFailed', detail: `${attempts}/${AUTH_CONFIG.maxAttempts}` }, lock);
-  if (lock) throw new AccountLockedError(lockedUntil!);
+  if (lock) throw new AccountLockedError(new Date(lockedUntil!).toISOString());
   throw new InvalidCredentialsError();
 }
 
 function checkLock(account: Account) {
-  if (account.lockedUntil && account.lockedUntil > Date.now()) throw new AccountLockedError(account.lockedUntil);
+  if (account.lockedUntil && account.lockedUntil > Date.now()) throw new AccountLockedError(new Date(account.lockedUntil).toISOString());
 }
 
 // ---------------- API del servidor ----------------
@@ -295,8 +297,8 @@ export const onboardServer = {
   async changePassword(userId: string, next: string): Promise<void> {
     const account = get().accounts[userId];
     if (!account) throw new InvalidCredentialsError();
-    if (!isStrongPassword(next)) throw new WeakPasswordError();
-    if (await verifySecret(next, account.passwordHash)) throw new WeakPasswordError();
+    if (!isStrongPassword(next)) throw new WeakPasswordError(null);
+    if (await verifySecret(next, account.passwordHash)) throw new WeakPasswordError(null);
     const passwordHash = await hashSecret(next);
     set((s) => ({ accounts: { ...s.accounts, [userId]: { ...account, passwordHash, mustChangePassword: false } } }));
     audit({ actorId: userId, action: 'passwordChanged' });
@@ -306,7 +308,7 @@ export const onboardServer = {
   async setPin(userId: string, pin: string): Promise<string> {
     const account = get().accounts[userId];
     if (!account) throw new InvalidCredentialsError();
-    if (!isValidPin(pin)) throw new WeakPasswordError();
+    if (!isValidPin(pin)) throw new WeakPasswordError(null);
     const pinHash = await hashSecret(pin);
     set((s) => ({ accounts: { ...s.accounts, [userId]: { ...account, pinHash } } }));
     audit({ actorId: userId, action: 'pinSet' });
@@ -367,7 +369,7 @@ export const onboardServer = {
       fullName: input.fullName.trim(),
       displayName: input.displayName.trim() || input.fullName.trim().split(' ').slice(0, 2).join(' '),
       globalRole: input.globalRole,
-      crewRole: input.globalRole === 'astronaut' ? (input.crewRole ?? 'crew') : undefined,
+      crewRole: input.globalRole === 'astronaut' ? (input.crewRole ?? 'mission_specialist') : undefined,
       // Asignación automática a la misión vigente.
       missionId: input.globalRole === 'astronaut' ? AUTH_CONFIG.currentMissionId : undefined,
       passwordHash: await hashSecret(temp),
@@ -424,4 +426,4 @@ function authorize(actor: Actor, action: AdminAction, target?: { missionId?: str
 }
 
 /** Actor a partir de la sesión actual. */
-export const actorFrom = (s: Pick<Session, 'userId' | 'role' | 'crewRole' | 'missionId'>): Actor => ({ userId: s.userId, role: s.role, crewRole: s.crewRole, missionId: s.missionId });
+export const actorFrom = (s: Pick<Session, 'userId' | 'role' | 'accountRole' | 'crewRole' | 'missionId'>): Actor => ({ userId: s.userId, role: globalRoleOf(s), crewRole: s.crewRole ?? undefined, missionId: s.missionId });

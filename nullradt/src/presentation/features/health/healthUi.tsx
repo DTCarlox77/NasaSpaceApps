@@ -17,6 +17,7 @@ export const SYSTEM_ICON: Record<BodySystemId, keyof typeof MaterialCommunityIco
   skeletal: 'bone',
   muscular: 'arm-flex-outline',
   immune: 'shield-plus-outline',
+  metabolism: 'food-apple-outline',
 };
 
 export function SystemIcon({ id, size = 22, color }: { id: BodySystemId; size?: number; color: string }) {

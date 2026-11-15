@@ -26,11 +26,11 @@
         "mood": "How is your mood? Zero very low, ten very good.",
         "fatigue": "How fatigued do you feel? Zero not at all, ten exhausted.",
         "stress": "How stressed do you feel? Zero not at all, ten extremely.",
-        "friction": "How much friction have you had with the crew? Zero none, ten a lot."
+        "crewConflict": "How much friction have you had with the crew? Zero none, ten a lot."
       },
       "repeat": "I didn't catch the number.",
       "cancelled": "Check-in cancelled.",
-      "saved": "Check-in saved. Your wristband says you slept {{hours}} hours. Thank you."
+      "saved": "Check-in saved. Thank you."
     },
     "reply": {
       "help": "You can say, for example: daily analysis, daily check-in, my eye health, my blood pressure, measure oxygen, vital signs, what is next, emergency, or I want to talk to someone. Showing the full list.",

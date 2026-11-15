@@ -12,7 +12,7 @@ export const sessionMockDataSource = {
       userId: member.id,
       displayName: member.displayName,
       role: member.role,
-      crewRole: member.specialty === 'commander' ? 'commander' : member.specialty === 'medicalOfficer' ? 'medical_officer' : 'crew',
+      crewRole: member.specialty === 'commander' ? 'commander' : member.specialty === 'medicalOfficer' ? 'crew_medical_officer' : 'mission_specialist',
       missionId: 'artemis-gateway-7',
       token: 'demo-token',
       issuedAt: new Date().toISOString(),

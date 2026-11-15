@@ -1,17 +1,46 @@
+import { onSessionExpired } from '@/data/datasources/remote/httpClient';
 import { CrewRepositoryImpl } from '@/data/repositories/CrewRepositoryImpl';
-import { GetCrew } from '@/domain/usecases/GetCrew';
+import { GetCrew, GetCrewRoster, GetCrewStatus } from '@/domain/usecases/GetCrew';
 import { AuthRepositoryImpl, SessionRepositoryImpl } from '@/data/repositories/AuthRepositoryImpl';
 import { EmergencyReportRepositoryImpl } from '@/data/repositories/EmergencyReportRepositoryImpl';
 import { HazardRepositoryImpl } from '@/data/repositories/HazardRepositoryImpl';
 import { HealthRepositoryImpl } from '@/data/repositories/HealthRepositoryImpl';
 import { MissionRepositoryImpl } from '@/data/repositories/MissionRepositoryImpl';
 import { ProfileRepositoryImpl } from '@/data/repositories/ProfileRepositoryImpl';
-import { GetDemoSession, RestoreSession, SetBiometricUnlock, SignIn, SignOut } from '@/domain/usecases/AuthUseCases';
+import { SyncRepositoryImpl } from '@/data/repositories/SyncRepositoryImpl';
+import { TriageRepositoryImpl } from '@/data/repositories/TriageRepositoryImpl';
+import { WellbeingRepositoryImpl } from '@/data/repositories/WellbeingRepositoryImpl';
+import {
+  ChangePassword,
+  GetDemoSession,
+  RestoreSession,
+  SetBiometricUnlock,
+  SignIn,
+  SignOut,
+  WakeServer,
+} from '@/domain/usecases/AuthUseCases';
 import { GetHazards } from '@/domain/usecases/GetHazards';
 import { GetHealthOverview } from '@/domain/usecases/GetHealthOverview';
 import { GetMissions, GetMissionStatus } from '@/domain/usecases/GetMissionStatus';
 import { GetProfilePhoto, RemoveProfilePhoto, SetProfilePhoto } from '@/domain/usecases/ProfilePhoto';
-import { FlushPendingReports, SendEmergencyReport } from '@/domain/usecases/SendEmergencyReport';
+import { CloseEmergency, ConfirmOk, GetEmergencySession, SendEmergencyReport } from '@/domain/usecases/SendEmergencyReport';
+import { SubmitReading } from '@/domain/usecases/SubmitReading';
+import { GetPendingSync, SyncNow } from '@/domain/usecases/SyncUseCases';
+import {
+  AnswerResponderSafe,
+  ApplyTriagePushResult,
+  AskEarth,
+  CloseTriageSession,
+  CompleteAssessment,
+  GetAssessment,
+  GetTriageProtocol,
+  GetTriageSession,
+  RefreshOfflineData,
+  SaveAnswers,
+  SendHeartbeat,
+  StartAssessment,
+} from '@/domain/usecases/TriageUseCases';
+import { GetInstruments, RequestSupport, SubmitCheckIn, SubmitPvtRun, SubmitScreening } from '@/domain/usecases/WellbeingUseCases';
 
 /**
  * Composición de dependencias: el único lugar donde la presentación
@@ -25,21 +54,53 @@ const sessionRepository = new SessionRepositoryImpl();
 const healthRepository = new HealthRepositoryImpl();
 const profileRepository = new ProfileRepositoryImpl();
 const crewRepository = new CrewRepositoryImpl();
+const wellbeingRepository = new WellbeingRepositoryImpl();
+const syncRepository = new SyncRepositoryImpl();
+const triageRepository = new TriageRepositoryImpl();
 
 export const container = {
   getHazards: new GetHazards(hazardRepository),
   getHealthOverview: new GetHealthOverview(healthRepository),
+  submitReading: new SubmitReading(healthRepository),
   getMissionStatus: new GetMissionStatus(missionRepository),
   getMissions: new GetMissions(missionRepository),
   sendEmergencyReport: new SendEmergencyReport(emergencyReportRepository),
-  flushPendingReports: new FlushPendingReports(emergencyReportRepository),
+  getEmergencySession: new GetEmergencySession(emergencyReportRepository),
+  confirmOk: new ConfirmOk(emergencyReportRepository),
+  closeEmergency: new CloseEmergency(emergencyReportRepository),
   signIn: new SignIn(authRepository, sessionRepository),
+  changePassword: new ChangePassword(authRepository, sessionRepository),
   restoreSession: new RestoreSession(sessionRepository),
-  signOut: new SignOut(sessionRepository),
+  signOut: new SignOut(authRepository, sessionRepository),
   setBiometricUnlock: new SetBiometricUnlock(sessionRepository),
   getDemoSession: new GetDemoSession(authRepository),
+  wakeServer: new WakeServer(authRepository),
   getProfilePhoto: new GetProfilePhoto(profileRepository),
   setProfilePhoto: new SetProfilePhoto(profileRepository),
   removeProfilePhoto: new RemoveProfilePhoto(profileRepository),
   getCrew: new GetCrew(crewRepository),
+  getCrewRoster: new GetCrewRoster(crewRepository),
+  getCrewStatus: new GetCrewStatus(crewRepository),
+  submitCheckIn: new SubmitCheckIn(wellbeingRepository),
+  requestSupport: new RequestSupport(wellbeingRepository),
+  submitPvtRun: new SubmitPvtRun(wellbeingRepository),
+  getInstruments: new GetInstruments(wellbeingRepository),
+  submitScreening: new SubmitScreening(wellbeingRepository),
+  syncNow: new SyncNow(syncRepository),
+  getPendingSync: new GetPendingSync(syncRepository),
+  // Triaje (guía §10) y datos para trabajar sin conexión (protocolo y reglas).
+  refreshOfflineData: new RefreshOfflineData(triageRepository, healthRepository, crewRepository),
+  getTriageProtocol: new GetTriageProtocol(triageRepository),
+  getTriageSession: new GetTriageSession(triageRepository, crewRepository),
+  answerResponderSafe: new AnswerResponderSafe(triageRepository),
+  startAssessment: new StartAssessment(triageRepository),
+  getAssessment: new GetAssessment(triageRepository),
+  saveAnswers: new SaveAnswers(triageRepository),
+  completeAssessment: new CompleteAssessment(triageRepository),
+  sendHeartbeat: new SendHeartbeat(triageRepository),
+  askEarth: new AskEarth(triageRepository),
+  applyTriagePushResult: new ApplyTriagePushResult(triageRepository),
+  closeTriageSession: new CloseTriageSession(emergencyReportRepository, triageRepository),
+  /** Aviso de sesión vencida (refresh fallido o reuso del token): la presentación vuelve al login. */
+  onSessionExpired,
 };

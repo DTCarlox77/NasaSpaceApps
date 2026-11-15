@@ -29,7 +29,7 @@ export function useGamification() {
       if (ids.includes('sleep')) sleepDays.add(day);
     });
     // Registrar las horas de sueño en el check-in también cuenta como "sueño registrado".
-    Object.values(checkIns ?? {}).forEach((c) => c.sleepHours > 0 && sleepDays.add(c.day));
+    Object.values(checkIns ?? {}).forEach((c) => (c.sleepHours ?? 0) > 0 && sleepDays.add(c.day));
     return summarize({
       readingsByDay: countBy((readings ?? []).map((r) => dayOf(r.reading.takenAt))),
       cameraReadings: (readings ?? []).filter((r) => r.reading.source === 'camera').length,

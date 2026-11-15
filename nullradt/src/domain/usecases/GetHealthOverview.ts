@@ -13,10 +13,10 @@ export interface HealthOverview {
 
 /** Agrega los indicadores por sistema del cuerpo y calcula el resumen de salud (función pura). */
 export function buildOverview(snapshot: HealthSnapshot): HealthOverview {
-  const byId = new Map(snapshot.indicators.map((i) => [i.id, i]));
-
   const systems = BODY_SYSTEM_IDS.map((id) => {
-    const indicators = BODY_SYSTEMS[id].indicators.map((iid) => byId.get(iid)).filter((i): i is HealthIndicator => !!i);
+    const order = BODY_SYSTEMS[id].indicators;
+    const rank = (i: HealthIndicator) => (order.includes(i.id) ? order.indexOf(i.id) : order.length);
+    const indicators = snapshot.indicators.filter((i) => i.systemId === id).sort((a, b) => rank(a) - rank(b));
     return { id, indicators, status: worstStatus(indicators.map((i) => i.status)) };
   });
 
