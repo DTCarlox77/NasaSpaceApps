@@ -6,8 +6,9 @@
  * - toda la tripulación: roster, la sesión de emergencia abierta de la misión (id y estado) y
  *   las alertas físicas ya escaladas a bordo (level crew) en las últimas 24 h, sin valores;
  * - solo el oficial médico (CMO): además, el semáforo físico de cada tripulante (peor nivel por
- *   zona y, por indicador estándar, nivel, último valor y hora), de v_readings_standard. Sin
- *   SLEEP_HOURS: llega con el check-in y diría quién lo hizo y a qué hora (cumplimiento).
+ *   zona y, por indicador estándar, nivel, último valor y hora), de v_readings_standard.
+ * Ni en el semáforo ni en las alertas sale SLEEP_HOURS: llega con el check-in y diría quién lo
+ * hizo y a qué hora (cumplimiento). canAccess decide por indicador.
  * Nunca bienestar (WB_*, PHQ2/GAD2, PVT_*, aptitud), check-ins, solicitudes de apoyo,
  * escalamientos conductuales, sex ni notas. Tierra y service → 403 (tienen el panel).
  */
@@ -125,7 +126,11 @@ async function crewStatus({ userId }) {
     physicalIds.length ? catalog.zoneList() : [],
     physicalIds.length ? catalog.symptomZones() : new Map(),
   ]);
-  const alertsBy = groupBy(alerts, 'astronaut_id');
+  // Cada alerta, por su indicador (canAccess): la de SLEEP_HOURS no sale a bordo.
+  const alertsBy = groupBy(
+    alerts.filter((a) => allowed(a.astronaut_id, 'crew_status', 'physical', a.indicator_code)),
+    'astronaut_id',
+  );
   const readingsBy = groupBy(readings, 'astronaut_id');
   const alertSet = new Set(alertIds);
 

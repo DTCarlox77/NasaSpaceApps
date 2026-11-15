@@ -4,6 +4,7 @@
 // para nadie y 403 para Tierra y service.
 const { openTestDb, resetDatabase } = require('./helpers/db'); // antes que cualquier src/
 process.env.RATE_LIMIT_LOGIN_PER_MINUTE = '1000';
+process.env.SYNC_PULL_SETTLE_MS = '0'; // el pull lee lo que la prueba acaba de escribir
 
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -342,6 +343,81 @@ test('Tierra y service → 403; sin sesión → 401', async (t) => {
   }
   const anon = await request(app).get('/api/v1/crew/status');
   assert.equal(anon.status, 401);
+});
+
+/** Escalamientos que le llegan al astronauta (GET /sync/pull → escalations), todas las páginas. */
+async function ownEscalations(who) {
+  const out = [];
+  let cursor = null;
+  for (let page = 0; page < 20; page += 1) {
+    const query = cursor ? `&cursor=${encodeURIComponent(cursor)}` : '';
+    const res = await api(who, 'get', `/sync/pull?limit=200${query}`);
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    out.push(...res.body.escalations);
+    if (!res.body.has_more) return out;
+    cursor = res.body.cursor;
+  }
+  throw new Error('el pull no terminó');
+}
+
+test('3 noches cortas: la alerta de sueño escala a bordo pero no sale en crew_alerts', async (t) => {
+  if (skip(t)) return;
+  const DAY = 24 * 60 * 60 * 1000;
+  // ORION duerme 5 h tres noches seguidas (una por día UTC). La tercera cumple
+  // consecutive_nights_le_6h >= 3 → caution, escala a crew.
+  const night = (k) =>
+    api('orion', 'post', '/readings', {
+      client_uuid: randomUUID(),
+      indicator_code: 'SLEEP_HOURS',
+      measured_at: iso(Date.now() - k * DAY - 1000),
+      values: { value: 5 },
+      input_method: 'manual',
+    });
+  for (const k of [2, 1]) {
+    const res = await night(k);
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    assert.equal(res.body.evaluation.escalation, 'self_care', `noche -${k}`);
+  }
+  const third = await night(0);
+  assert.equal(third.status, 201, JSON.stringify(third.body));
+  assert.equal(third.body.evaluation.level, 'caution');
+  assert.equal(third.body.evaluation.escalation, 'crew', 'regla de 3 noches cortas');
+
+  // El escalamiento no cambia: existe, es físico, a bordo y ya entregado.
+  const escalationId = await crewEscalation(third.body.reading.id);
+  const [row] = await q(
+    `SELECT level::text AS level, category, status::text AS status, is_confidential
+     FROM escalations WHERE id = $1`,
+    [escalationId],
+  );
+  assert.deepEqual(row, {
+    level: 'crew',
+    category: 'physical',
+    status: 'delivered',
+    is_confidential: false,
+  });
+
+  // En la pantalla "Tripulación" no la ve nadie (status() busca además SLEEP_HOURS en el JSON).
+  for (const who of ['orion', 'vega', 'lyra']) {
+    const body = await status(who);
+    for (const m of body.crew) {
+      assert.ok(
+        m.crew_alerts.every((a) => a.escalation_id !== escalationId),
+        `${who} ve la alerta de sueño de ORION`,
+      );
+    }
+    assert.deepEqual(
+      member(body, A.orion).crew_alerts.map((a) => a.indicator_code),
+      ['SPO2'],
+      who,
+    );
+  }
+
+  // El dueño sí la recibe en sus alertas; otro tripulante, no.
+  const own = (await ownEscalations('orion')).find((e) => e.id === escalationId);
+  assert.ok(own, 'ORION recibe su alerta de sueño por sync');
+  assert.equal(own.level, 'crew');
+  assert.ok(!(await ownEscalations('vega')).some((e) => e.id === escalationId), 'VEGA no');
 });
 
 test('astronauta sin asignación vigente → 403 NO_ACTIVE_ASSIGNMENT', async (t) => {

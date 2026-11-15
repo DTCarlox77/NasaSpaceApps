@@ -49,8 +49,11 @@ const VIEWS = [
   'crew_physical',
 ];
 const CREW_VIEWS = ['crew_status', 'crew_physical'];
-// Indicadores estándar que el CMO NO ve en crew_physical. SLEEP_HOURS llega con el check-in:
-// su lectura le diría quién hizo su check-in y a qué hora (cumplimiento, que solo ve admin).
+// Indicadores estándar que nadie a bordo ve de otro en la pantalla "Tripulación": ni en el
+// semáforo del CMO (crew_physical) ni en las alertas escaladas a bordo (crew_status).
+// SLEEP_HOURS llega con el check-in: su lectura o su alerta dirían quién hizo su check-in y a
+// qué hora (cumplimiento, que solo ve admin). El escalamiento no cambia: el dueño ve la suya y
+// el flight surgeon recibe la crítica en Tierra.
 const CREW_PHYSICAL_HIDDEN = ['SLEEP_HOURS'];
 
 function assertResource(resource) {
@@ -89,18 +92,15 @@ function canAccess(actor, resource) {
   // Pantalla "Tripulación" (GET /crew/status): solo la tripulación vigente de la misión y solo
   // lectura. crew_status = roster, emergencia abierta y alertas físicas escaladas a bordo, sin
   // valores; crew_physical = semáforo físico de cada tripulante (también el propio), solo el
-  // oficial médico (CMO), sin los indicadores de CREW_PHYSICAL_HIDDEN. Nunca bienestar ni nada
-  // confidencial. El comandante no ve crew_physical: sus permisos delegados son de acceso, no
-  // médicos. Tierra y service → no (tienen el panel).
+  // oficial médico (CMO). En las dos vistas, nunca los indicadores de CREW_PHYSICAL_HIDDEN, ni
+  // bienestar ni nada confidencial. El comandante no ve crew_physical: sus permisos delegados
+  // son de acceso, no médicos. Tierra y service → no (tienen el panel).
   if (CREW_VIEWS.includes(view)) {
     if (actor.role !== 'astronaut' || action !== 'read' || confidential) return false;
     if (!sameMission || habitat) return false;
+    if (CREW_PHYSICAL_HIDDEN.includes(resource.indicator_code)) return false;
     if (view === 'crew_physical') {
-      return (
-        category === 'physical' &&
-        actor.crew_role === 'crew_medical_officer' &&
-        !CREW_PHYSICAL_HIDDEN.includes(resource.indicator_code)
-      );
+      return category === 'physical' && actor.crew_role === 'crew_medical_officer';
     }
     return category === 'physical' || category === 'emergency';
   }

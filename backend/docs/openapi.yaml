@@ -63,10 +63,10 @@ info:
     - Nuevo `GET /crew/status` (solo `astronaut` con asignación vigente; su misión): roster, la
       sesión de emergencia abierta de la misión (`id` y estado) y las alertas físicas escaladas
       a bordo (`crew`) en las últimas 24 h, sin valores. Solo el oficial médico (CMO) recibe
-      además `physical` de cada tripulante (peor nivel por zona y, por indicador estándar salvo
-      `SLEEP_HOURS`, nivel, último valor y hora); para los demás, el comandante incluido,
-      `physical: null`. Nunca
-      bienestar, check-ins, solicitudes de apoyo, escalamientos conductuales, `sex` ni notas.
+      además `physical` de cada tripulante (peor nivel por zona y, por indicador estándar, nivel,
+      último valor y hora); para los demás, el comandante incluido, `physical: null`. Nunca
+      bienestar, check-ins, solicitudes de apoyo, escalamientos conductuales, `sex` ni notas, y
+      `SLEEP_HOURS` no sale ni en `physical` ni en las alertas (llega con el check-in).
       Tierra y `service` → 403 (tienen el panel). Esquemas nuevos: `CrewStatus`,
       `CrewStatusMember`, `CrewAlert` y `CrewPhysical`.
 
@@ -1343,9 +1343,10 @@ paths:
           `physical: null`; el comandante tampoco lo recibe (sus permisos delegados son de
           acceso, no médicos).
         - **Nunca**, para nadie: bienestar (`WB_*`, PHQ-2/GAD-2, `PVT_*`, aptitud), check-ins,
-          solicitudes de apoyo, escalamientos conductuales, `sex` ni notas. `physical` tampoco
-          trae `SLEEP_HOURS`: llega con el check-in y diría quién lo hizo y a qué hora. Sí puede
-          aparecer en `crew_alerts` si una racha de noches cortas escala a bordo (sin valores).
+          solicitudes de apoyo, escalamientos conductuales, `sex` ni notas. `SLEEP_HOURS` no
+          sale ni en `physical` ni en `crew_alerts`: llega con el check-in y diría quién lo hizo
+          y a qué hora. Su alerta sigue llegando al propio astronauta (`GET /sync/pull`) y, si es
+          crítica, al flight surgeon.
         - `admin`, `flight_surgeon`, `behavioral_health` y `service` → 403 (tienen el panel).
           Astronauta sin asignación vigente → 403 `NO_ACTIVE_ASSIGNMENT`.
         La regla vive en `canAccess` (vistas `crew_status` y `crew_physical`).
@@ -8871,7 +8872,9 @@ components:
             status: { type: string, enum: [pending, active] }
         crew_alerts:
           type: array
-          description: Alertas físicas escaladas a bordo en las últimas 24 h, la más reciente primero.
+          description: |
+            Alertas físicas escaladas a bordo en las últimas 24 h, la más reciente primero. Sin
+            las de `SLEEP_HOURS`.
           items: { $ref: '#/components/schemas/CrewAlert' }
         physical: { $ref: '#/components/schemas/CrewPhysical' }
     CrewStatus:
