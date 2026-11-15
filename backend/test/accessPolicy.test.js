@@ -243,6 +243,65 @@ test('behavioral_health de otra misión no ve nada', () => {
   assert.equal(canAccess(other, RESOURCES.other_mission_confidential), true);
 });
 
+test('crew_status: toda la tripulación vigente de la misión, en lectura; nadie más', () => {
+  const status = (extra = {}) => ({
+    astronaut_id: 'A2',
+    mission_id: M1,
+    ...std,
+    category: 'physical',
+    action: 'read',
+    view: 'crew_status',
+    ...extra,
+  });
+  for (const name of ['astronaut', 'commander', 'cmo']) {
+    const actor = ACTORS[name];
+    assert.equal(canAccess(actor, status()), true, `${name}: alertas físicas`);
+    assert.equal(canAccess(actor, status({ astronaut_id: 'A1' })), true, `${name}: la propia`);
+    assert.equal(canAccess(actor, status({ category: 'emergency' })), true, `${name}: emergencia`);
+    assert.equal(canAccess(actor, status({ category: 'behavioral' })), false, `${name}: bienestar`);
+    assert.equal(canAccess(actor, status({ ...conf })), false, `${name}: confidencial`);
+    assert.equal(canAccess(actor, status({ action: 'write' })), false, `${name}: escribe`);
+    assert.equal(canAccess(actor, status({ mission_id: M2 })), false, `${name}: otra misión`);
+    assert.equal(canAccess(actor, status({ astronaut_id: null })), false, `${name}: hábitat`);
+  }
+  for (const name of ['admin', 'flight_surgeon', 'behavioral_health', 'service']) {
+    assert.equal(canAccess(ACTORS[name], status()), false, `${name} tiene el panel`);
+    assert.equal(canAccess(ACTORS[name], status({ category: 'emergency' })), false, name);
+  }
+  const unassigned = { role: 'astronaut', astronaut_id: 'A1', crew_role: null, mission_ids: [] };
+  assert.equal(canAccess(unassigned, status()), false, 'sin asignación vigente');
+});
+
+test('crew_physical: solo el oficial médico (CMO); el comandante no', () => {
+  const physical = (extra = {}) => ({
+    astronaut_id: 'A2',
+    mission_id: M1,
+    ...std,
+    category: 'physical',
+    action: 'read',
+    view: 'crew_physical',
+    ...extra,
+  });
+  const cmo = ACTORS.cmo;
+  assert.equal(canAccess(cmo, physical()), true, 'CMO: otro tripulante');
+  assert.equal(canAccess(cmo, physical({ astronaut_id: 'A1' })), true, 'CMO: el propio');
+  assert.equal(canAccess(cmo, physical({ ...conf })), false, 'CMO: confidencial');
+  assert.equal(canAccess(cmo, physical({ ...conf, share_with_cmo: true })), false, 'compartido');
+  assert.equal(canAccess(cmo, physical({ category: 'behavioral' })), false, 'CMO: bienestar');
+  assert.equal(canAccess(cmo, physical({ category: 'emergency' })), false, 'CMO: triaje');
+  assert.equal(canAccess(cmo, physical({ action: 'write' })), false, 'CMO: escribe');
+  assert.equal(canAccess(cmo, physical({ mission_id: M2 })), false, 'CMO: otra misión');
+  // El propio tampoco: en esta pantalla su semáforo es solo del CMO (lo suyo está en /me/*).
+  for (const name of ['astronaut', 'commander']) {
+    assert.equal(canAccess(ACTORS[name], physical()), false, `${name}: otro`);
+    assert.equal(canAccess(ACTORS[name], physical({ astronaut_id: 'A1' })), false, `${name}`);
+    assert.equal(canAccess(ACTORS[name], physical({ emergency_active: true })), false, name);
+  }
+  for (const name of ['admin', 'flight_surgeon', 'behavioral_health', 'service']) {
+    assert.equal(canAccess(ACTORS[name], physical()), false, `${name} tiene el panel`);
+  }
+});
+
 test('rol desconocido o actor ausente → niega', () => {
   assert.equal(canAccess({ role: 'crew', mission_ids: [M1] }, RESOURCES.own_physical), false);
   assert.equal(canAccess(null, RESOURCES.own_physical), false);

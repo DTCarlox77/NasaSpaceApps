@@ -18,7 +18,11 @@
  *     action,              // 'read' | 'write'
  *     view,                // opcional: 'detail' (por defecto) | 'escalated_alert' | 'compliance' |
  *                          //           'fitness' | 'clinical_profile' (sexo biológico del perfil) |
- *                          //           'operational' (estado de una emergencia, sin datos clínicos)
+ *                          //           'operational' (estado de una emergencia, sin datos clínicos) |
+ *                          //           'crew_status' (pantalla "Tripulación": roster, emergencia
+ *                          //           abierta y alertas físicas escaladas a bordo, sin valores) |
+ *                          //           'crew_physical' (semáforo físico de un tripulante en esa
+ *                          //           pantalla: solo el oficial médico)
  *     emergency_active,    // opcional: hay una emergencia activa del triaje en la misión
  *     share_with_cmo,      // opcional: privacy_preferences.share_with_cmo del dueño
  *   }
@@ -40,7 +44,10 @@ const VIEWS = [
   'fitness',
   'clinical_profile',
   'operational',
+  'crew_status',
+  'crew_physical',
 ];
+const CREW_VIEWS = ['crew_status', 'crew_physical'];
 
 function assertResource(resource) {
   if (!resource || typeof resource !== 'object') throw new TypeError('resource inválido');
@@ -73,6 +80,21 @@ function canAccess(actor, resource) {
     if (actor.role === 'astronaut') return own;
     if (actor.role === 'flight_surgeon' || actor.role === 'behavioral_health') return sameMission;
     return false;
+  }
+
+  // Pantalla "Tripulación" (GET /crew/status): solo la tripulación vigente de la misión y solo
+  // lectura. crew_status = roster, emergencia abierta y alertas físicas escaladas a bordo, sin
+  // valores; crew_physical = semáforo físico de cada tripulante (también el propio), solo el
+  // oficial médico (CMO). Nunca bienestar ni nada confidencial. El comandante no ve
+  // crew_physical: sus permisos delegados son de acceso, no médicos. Tierra y service → no
+  // (tienen el panel).
+  if (CREW_VIEWS.includes(view)) {
+    if (actor.role !== 'astronaut' || action !== 'read' || confidential) return false;
+    if (!sameMission || habitat) return false;
+    if (view === 'crew_physical') {
+      return category === 'physical' && actor.crew_role === 'crew_medical_officer';
+    }
+    return category === 'physical' || category === 'emergency';
   }
 
   switch (actor.role) {
