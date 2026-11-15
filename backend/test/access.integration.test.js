@@ -878,3 +878,74 @@ test('GET /missions/current: misión, entorno, rol y enlace (con un corte en cur
   assert.equal((await tablet(TAB1, 'get', '/missions/current')).status, 401);
   await api('admin', 'patch', `/admin/comm-outages/${outage.body.id}`, { ends_at: iso() });
 });
+
+// ---------------------------------------------------------------- extra: auditoría confidencial
+
+test('auditoría de accesos confidenciales: la ve behavioral_health y cada astronauta lo suyo; admin no', async (t) => {
+  if (skip(t)) return;
+  const detail = await api('bh', 'get', `/admin/behavioral/astronauts/${A.lyra}`);
+  assert.equal(detail.status, 200, JSON.stringify(detail.body));
+  const count = async () =>
+    (await q('SELECT count(*)::int AS n FROM confidential_access_log'))[0].n;
+  const before = await count();
+
+  const bh = await api(
+    'bh',
+    'get',
+    `/admin/audit/confidential-access?mission_id=${ARES1}&limit=200`,
+  );
+  assert.equal(bh.status, 200, JSON.stringify(bh.body));
+  const row = bh.body.items.find(
+    (i) =>
+      i.astronaut_id === A.lyra && i.resource === 'GET /api/v1/admin/behavioral/astronauts/{id}',
+  );
+  assert.ok(row, JSON.stringify(bh.body));
+  assert.equal(row.actor_username, 'bh.salas');
+  assert.equal(row.actor_role, 'behavioral_health');
+  assert.equal(row.call_sign, 'LYRA');
+  assert.deepEqual(Object.keys(row).sort(), [
+    'accessed_at',
+    'actor_role',
+    'actor_user_id',
+    'actor_username',
+    'astronaut_id',
+    'call_sign',
+    'id',
+    'resource',
+  ]);
+  const onlyLyra = await api(
+    'bh',
+    'get',
+    `/admin/audit/confidential-access?astronaut_id=${A.lyra}`,
+  );
+  assert.ok(onlyLyra.body.items.length > 0);
+  assert.ok(onlyLyra.body.items.every((i) => i.astronaut_id === A.lyra));
+  const otherMission = await api(
+    'bh',
+    'get',
+    `/admin/audit/confidential-access?mission_id=${otherMissionId}`,
+  );
+  assert.equal(otherMission.status, 403, 'no es del equipo de ACC-2');
+
+  // El astronauta: solo quién vio lo suyo.
+  const mine = await api('lyra', 'get', '/me/confidential-access?limit=200');
+  assert.equal(mine.status, 200);
+  assert.ok(mine.body.items.some((i) => i.id === row.id));
+  assert.ok(mine.body.items.every((i) => i.astronaut_id === A.lyra));
+  const orion = await api('orion', 'get', '/me/confidential-access?limit=200');
+  assert.equal(orion.status, 200);
+  assert.ok(
+    orion.body.items.every((i) => i.astronaut_id === A.orion),
+    'nada de LYRA',
+  );
+
+  // Admin, flight surgeon y la tripulación no ven la auditoría de salud conductual.
+  for (const who of ['admin', 'reyes', 'orion', 'vega']) {
+    assert.equal((await api(who, 'get', '/admin/audit/confidential-access')).status, 403, who);
+  }
+  for (const who of ['admin', 'reyes', 'bh']) {
+    assert.equal((await api(who, 'get', '/me/confidential-access')).status, 403, who);
+  }
+  assert.equal((await tablet(TAB1, 'get', '/me/confidential-access')).status, 401);
+  assert.equal(await count(), before, 'leer la auditoría no agrega filas');
+});
