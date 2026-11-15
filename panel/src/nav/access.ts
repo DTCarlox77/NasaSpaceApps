@@ -1,7 +1,7 @@
 /**
  * Matriz rol → secciones del panel: ÚNICA fuente de permisos de navegación en el panel.
  *
- * `contractRoles` copia el `x-roles` de docs/openapi.yaml (v1.7) de los endpoints que usará
+ * `contractRoles` copia el `x-roles` de docs/openapi.yaml (v1.8) de los endpoints que usará
  * cada sección; `roles` son los que ven la sección en el panel, siempre un subconjunto de los
  * del contrato, con estas reglas fijas además del contrato:
  * - Salud conductual: SOLO behavioral_health (admin y flight_surgeon nunca ven nada conductual).
@@ -46,6 +46,7 @@ export const SECTIONS: readonly Section[] = [
     endpoints: [
       'GET /admin/inbox',
       'POST /admin/escalations/{id}/ack',
+      'GET /admin/escalations/{id}/messages',
       'POST /admin/escalations/{id}/messages',
     ],
     contractRoles: ['flight_surgeon', 'admin'],
@@ -141,7 +142,7 @@ export function homePathFor(role: Role | null | undefined): string {
 
 // ---------------------------------------------------------------- acciones (botones)
 
-export type ActionId = 'escalation.ack' | 'escalation.reply';
+export type ActionId = 'escalation.ack' | 'escalation.reply' | 'escalation.thread';
 
 export interface Action {
   endpoint: string;
@@ -159,6 +160,11 @@ export const ACTIONS: Record<ActionId, Action> = {
   },
   'escalation.reply': {
     endpoint: 'POST /admin/escalations/{id}/messages',
+    contractRoles: ['flight_surgeon', 'admin'],
+    roles: ['flight_surgeon', 'admin'],
+  },
+  'escalation.thread': {
+    endpoint: 'GET /admin/escalations/{id}/messages',
     contractRoles: ['flight_surgeon', 'admin'],
     roles: ['flight_surgeon', 'admin'],
   },

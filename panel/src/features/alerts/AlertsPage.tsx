@@ -1,12 +1,14 @@
 /**
  * Bandeja de alertas: lo que ya llegó a Tierra, por prioridad y luego por llegada. Filtros por
  * categoría y estado (?categoria=&estado=), "Cargar más" con el cursor, sondeo cada 15 s y
- * detalle de la alerta elegida (?alerta=<id>).
+ * detalle de la alerta elegida (?alerta=<id>), con su hilo. Si la alerta no está en lo cargado
+ * (p. ej. viene de Emergencias o ya está cerrada), el detalle abre el hilo por id.
+ * SLEEP_HOURS y bienestar no se muestran a admin aunque llegaran (el backend ya los excluye).
  */
 import { useRef, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import type { InboxFilters } from '../../api/queryKeys.ts';
-import type { InboxCategory, InboxItem } from '../../api/types.ts';
+import type { GroundRole, InboxCategory, InboxItem } from '../../api/types.ts';
 import { useAuth } from '../../auth/context.ts';
 import { Banner } from '../../components/Banner.tsx';
 import { Button } from '../../components/Button.tsx';
@@ -14,15 +16,17 @@ import { Loading, QueryError, UpdatedAgo } from '../../components/QueryStatus.ts
 import { clockTime, registeredLabel } from '../../lib/time.ts';
 import { useNow } from '../../lib/useNow.ts';
 import { useMission } from '../../mission/useMission.ts';
-import { AlertDetail } from './AlertDetail.tsx';
+import { AlertDetail, EscalationOnlyDetail } from './AlertDetail.tsx';
 import {
   CATEGORY_LABELS,
+  CATEGORY_TAGS,
   categoryOptions,
   crewLabel,
   isWellbeing,
   STATUS_FILTERS,
   STATUS_LABELS,
   triageLabel,
+  visibleFor,
   WELLBEING_TEXT,
 } from './inbox.ts';
 import { PriorityBadge } from './PriorityBadge.tsx';
@@ -43,21 +47,28 @@ function InboxRow({
   selected,
   href,
   now,
+  role,
 }: {
   item: InboxItem;
   selected: boolean;
   href: string;
   now: number;
+  role: GroundRole | null;
 }) {
   const wellbeing = isWellbeing(item);
-  const triage = wellbeing ? '' : triageLabel(item);
+  // Triaje: solo el flight surgeon (admin no lo recibe; si llegara, no se muestra).
+  const triage = wellbeing || role === 'admin' ? '' : triageLabel(item);
+  const category = CATEGORY_TAGS[item.category];
   return (
     <li className={`inbox-row inbox-${item.priority}${selected ? ' selected' : ''}`}>
       <Link to={href} aria-current={selected ? 'true' : undefined} className="inbox-link">
         <span className="row">
           <PriorityBadge priority={item.priority} />
           <strong>{crewLabel(item)}</strong>
-          <span className="tag">{CATEGORY_LABELS[item.category] ?? item.category}</span>
+          <span className={`tag tag-category tag-${item.category}`}>
+            <span aria-hidden="true">{category?.icon ?? '·'}</span>{' '}
+            {category?.text ?? CATEGORY_LABELS[item.category] ?? item.category}
+          </span>
           <span className="tag">{STATUS_LABELS[item.status] ?? item.status}</span>
         </span>
         <span className="inbox-reason">{wellbeing ? WELLBEING_TEXT : item.reason}</span>
@@ -79,7 +90,8 @@ export function AlertsPage() {
   const allowedCategories = categoryOptions(role);
   const filters = readFilters(params, allowedCategories);
   const selectedId = params.get('alerta');
-  const { missionId, query, items } = useInbox(filters);
+  const { missionId, query, items: allItems } = useInbox(filters);
+  const items = visibleFor(allItems, role);
   const now = useNow(INBOX_POLL_MS);
 
   // La alerta elegida puede salir de la vista (p. ej. tras el acuse con el filtro "Sin acuse"):
@@ -107,6 +119,9 @@ export function AlertsPage() {
   const closeParams = new URLSearchParams(params);
   closeParams.delete('alerta');
   const closeHref = `?${closeParams.toString()}`;
+  // Sin la alerta en lo cargado (otra página, cerrada o fuera del filtro): hilo por id, una vez
+  // que la bandeja respondió (antes sería un parpadeo).
+  const showDetail = !!selected || (!!selectedId && !!query.data);
 
   let list: ReactNode;
   if (!missionId) {
@@ -130,6 +145,7 @@ export function AlertsPage() {
               selected={item.id === selectedId}
               href={hrefFor(item.id)}
               now={now}
+              role={role}
             />
           ))}
         </ul>
@@ -205,14 +221,24 @@ export function AlertsPage() {
         </div>
       </div>
 
-      <div className={`alerts-layout${selected ? ' with-detail' : ''}`}>
+      <div className={`alerts-layout${showDetail ? ' with-detail' : ''}`}>
         <div className="stack">{list}</div>
-        {selected && missionId ? (
+        {showDetail && missionId ? (
           <aside className="alerts-detail-panel" aria-label="Detalle de la alerta">
             <p>
               <Link to={closeHref}>× Cerrar detalle</Link>
             </p>
-            <AlertDetail key={selected.id} item={selected} missionId={missionId} role={role} now={now} />
+            {selected ? (
+              <AlertDetail key={selected.id} item={selected} missionId={missionId} role={role} now={now} />
+            ) : (
+              <EscalationOnlyDetail
+                key={selectedId}
+                escalationId={selectedId as string}
+                missionId={missionId}
+                role={role}
+                now={now}
+              />
+            )}
           </aside>
         ) : null}
       </div>

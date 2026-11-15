@@ -122,10 +122,19 @@ export interface ScreenedDashboard {
 }
 
 /**
+ * Indicadores que el dashboard nunca muestra, para ningún rol. SLEEP_HOURS llega con el
+ * check-in de bienestar y su valor diría quién lo hizo y a qué hora (cumplimiento). Defensa: el
+ * backend ya lo excluye de GET /admin/dashboard/crew desde el contrato v1.8, y en el catálogo
+ * figura como `standard`, así que el filtro por catálogo no bastaría.
+ */
+export const NEVER_ON_DASHBOARD: ReadonlySet<string> = new Set(['SLEEP_HOURS']);
+
+/**
  * El dashboard es solo físico. Si la respuesta trae algo que no corresponde, no se muestra:
+ * - SLEEP_HOURS (NEVER_ON_DASHBOARD), con o sin catálogo;
  * - un indicador que no está en el catálogo estándar (p. ej. uno confidencial de bienestar);
  * - el cumplimiento para un rol que no es admin.
- * Sin catálogo cargado no se filtran indicadores (no hay con qué compararlos).
+ * Sin catálogo cargado no se filtran los demás indicadores (no hay con qué compararlos).
  */
 export function screenDashboard(
   data: CrewDashboard,
@@ -134,13 +143,13 @@ export function screenDashboard(
 ): ScreenedDashboard {
   let hidden = 0;
   const astronauts = data.astronauts.map((astronaut) => {
-    const indicators = catalog
-      ? astronaut.indicators.filter((indicator) => {
-          const ok = catalog.get(indicator.code)?.sensitivity === 'standard';
-          if (!ok) hidden += 1;
-          return ok;
-        })
-      : astronaut.indicators;
+    const indicators = astronaut.indicators.filter((indicator) => {
+      const ok =
+        !NEVER_ON_DASHBOARD.has(indicator.code) &&
+        (!catalog || catalog.get(indicator.code)?.sensitivity === 'standard');
+      if (!ok) hidden += 1;
+      return ok;
+    });
     let compliance = astronaut.compliance;
     if (role !== 'admin' && compliance) {
       hidden += 1;

@@ -1,36 +1,49 @@
 /**
  * Detalle de una alerta de la bandeja.
  * - Acuse: POST /admin/escalations/{id}/ack (idempotente: un duplicado devuelve el primero).
- * - Respuesta: POST /admin/escalations/{id}/messages { body } → `deliver_at` (retraso o cola).
- * - Botones solo para los roles del x-roles (nav/access.ts → ACTIONS).
- * - Hilo: GET /escalations/{id}/messages es solo del astronauta (x-roles: astronaut), así que el
- *   panel muestra las respuestas enviadas desde aquí en esta sesión.
+ * - Hilo: GET /admin/escalations/{id}/messages (v1.8) cada 15 s. Mensajes de a bordo y de Tierra
+ *   en orden, cada uno con su estado de entrega ("Llega a bordo a las hh:mm", "Pendiente de
+ *   envío: sin enlace", "Entregado a bordo"; lo de a bordo, "Llegó a Tierra a las hh:mm").
+ * - Respuesta: POST /admin/escalations/{id}/messages { body } → `deliver_at`. Lo enviado en esta
+ *   sesión se muestra al instante aunque el siguiente sondeo todavía no lo traiga.
+ * - Cerrada: el hilo se lee, la respuesta queda deshabilitada (la API responde 409).
+ * - admin en category=emergency (y en bienestar o SLEEP_HOURS, que el contrato le niega): sin
+ *   hilo, acuse ni respuesta, "Solo estado operativo". Un 403 de la API muestra lo mismo.
  * - Bienestar: solo estado y el texto fijo; nunca valores ni el motivo.
+ * - Botones solo para los roles del x-roles (nav/access.ts → ACTIONS).
  */
-import { useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ackEscalation, replyEscalation } from '../../api/ground.ts';
+import { ackEscalation, getEscalationMessages, replyEscalation } from '../../api/ground.ts';
 import { describeError, HttpError } from '../../api/http.ts';
 import { MISSION_DATA, queryKeys } from '../../api/queryKeys.ts';
 import type { EscalationAck, EscalationMessage, GroundRole, InboxItem } from '../../api/types.ts';
 import { Banner } from '../../components/Banner.tsx';
 import { Button } from '../../components/Button.tsx';
+import { DeliveryLine } from '../../components/DeliveryLine.tsx';
 import { StatusBadge } from '../../components/StatusBadge.tsx';
-import { clockTime, deliveryState, registeredLabel, timeAgo } from '../../lib/time.ts';
-import { useNow } from '../../lib/useNow.ts';
+import { clockTime, dayClock, registeredLabel, timeAgo } from '../../lib/time.ts';
 import { canDo } from '../../nav/access.ts';
 import {
-  CATEGORY_LABELS,
+  CATEGORY_TAGS,
+  CLOSED_TEXT,
   crewLabel,
   isWellbeing,
+  mergeThread,
+  operationalOnly,
+  OPERATIONAL_ONLY_DETAIL,
+  OPERATIONAL_ONLY_TEXT,
   SOURCE_LABELS,
   STATUS_LABELS,
+  THREAD_POLL_MS,
   triageLabel,
   WELLBEING_TEXT,
 } from './inbox.ts';
 import { PriorityBadge } from './PriorityBadge.tsx';
 
 const MAX_BODY = 4000;
+
+const isStatus = (err: unknown, status: number) => err instanceof HttpError && err.status === status;
 
 function actionError(err: unknown): string {
   if (err instanceof HttpError) {
@@ -41,33 +54,177 @@ function actionError(err: unknown): string {
   return describeError(err);
 }
 
-/** Estado a bordo de un mensaje enviado; se recalcula cada segundo para la cuenta regresiva. */
-function DeliveryLine({ deliverAt }: { deliverAt: string | null | undefined }) {
-  const now = useNow(1_000);
-  const state = deliveryState(deliverAt, now);
-  const icon = state.kind === 'delivered' ? '✓' : state.kind === 'pending' ? '⏸' : '→';
+function threadError(err: unknown): string {
+  if (isStatus(err, 404)) return 'El hilo todavía no está disponible: la alerta no llegó a Tierra.';
+  return `No se pudo cargar el hilo. ${describeError(err)}`;
+}
+
+const AUTHOR_ROLES: Record<string, string> = {
+  flight_surgeon: 'flight surgeon',
+  admin: 'control de misión',
+};
+
+function authorLabel(message: EscalationMessage, callSign: string | null | undefined): string {
+  if (message.direction === 'to_earth') return `De a bordo${callSign ? ` · ${callSign}` : ''}`;
+  const role = message.author_role ? AUTHOR_ROLES[message.author_role] : undefined;
+  return `De Tierra${role ? ` · ${role}` : ''}`;
+}
+
+function OperationalOnly() {
   return (
-    <span className={`delivery delivery-${state.kind}`}>
-      <span aria-hidden="true">{icon}</span> {state.label}
-      {state.countdown ? <span className="muted"> · {state.countdown}</span> : null}
-    </span>
+    <Banner tone="info">
+      <strong>{OPERATIONAL_ONLY_TEXT}</strong>. {OPERATIONAL_ONLY_DETAIL}
+    </Banner>
   );
 }
 
-function SentMessages({ messages }: { messages: EscalationMessage[] }) {
-  if (messages.length === 0) return null;
+function ThreadMessage({ message, callSign, now }: { message: EscalationMessage; callSign?: string | null; now: number }) {
   return (
-    <ol className="sent-messages">
-      {messages.map((m) => (
-        <li key={m.id}>
-          <p className="sent-body">{m.body}</p>
-          <p className="small">
-            <span className="muted">Enviado a las {clockTime(m.created_at)} · </span>
-            <DeliveryLine deliverAt={m.deliver_at} />
-          </p>
-        </li>
-      ))}
-    </ol>
+    <li className={`thread-message thread-${message.direction}`}>
+      <p className="small muted">
+        {authorLabel(message, callSign)} · {dayClock(message.created_at, now)}
+      </p>
+      <p className="sent-body">{message.body}</p>
+      <p className="small">
+        {message.direction === 'to_crew' ? (
+          <DeliveryLine deliverAt={message.deliver_at} />
+        ) : (
+          <span className="delivery delivery-delivered">
+            <span aria-hidden="true">✓</span> Llegó a Tierra a las {dayClock(message.deliver_at, now)}
+          </span>
+        )}
+      </p>
+    </li>
+  );
+}
+
+/**
+ * Hilo + respuesta de un escalamiento. `onForbidden` avisa si la API responde 403 (el detalle
+ * pasa a "Solo estado operativo"); `onClosed`, si responde 409 (cerrado).
+ */
+export function EscalationThread({
+  escalationId,
+  missionId,
+  role,
+  callSign,
+  closed,
+  now,
+  onForbidden,
+  onClosed,
+  onReplied,
+}: {
+  escalationId: string;
+  missionId: string;
+  role: GroundRole | null;
+  callSign?: string | null;
+  closed: boolean;
+  now: number;
+  onForbidden(): void;
+  onClosed(): void;
+  onReplied?(): void;
+}) {
+  const queryClient = useQueryClient();
+  const [text, setText] = useState('');
+  const sentKey = queryKeys.sentMessages(missionId, escalationId);
+  const threadKey = queryKeys.thread(missionId, escalationId);
+  const canRead = canDo(role, 'escalation.thread');
+  const canReply = canDo(role, 'escalation.reply');
+
+  const thread = useQuery({
+    queryKey: threadKey,
+    queryFn: ({ signal }) => getEscalationMessages(escalationId, undefined, 200, signal),
+    enabled: canRead,
+    refetchInterval: THREAD_POLL_MS,
+  });
+  const sent = useQuery({
+    queryKey: sentKey,
+    queryFn: () => Promise.resolve([] as EscalationMessage[]),
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+
+  const forbidden = isStatus(thread.error, 403);
+  useEffect(() => {
+    if (forbidden) onForbidden();
+  }, [forbidden, onForbidden]);
+
+  const replyMutation = useMutation({
+    mutationFn: (body: string) => replyEscalation(escalationId, body),
+    onSuccess: (message) => {
+      queryClient.setQueryData<EscalationMessage[]>(sentKey, (old) => [...(old ?? []), message]);
+      setText('');
+      void queryClient.invalidateQueries({ queryKey: threadKey });
+      onReplied?.();
+    },
+    onError: (err) => {
+      if (isStatus(err, 403)) onForbidden();
+      if (isStatus(err, 409)) onClosed();
+    },
+  });
+
+  const messages = useMemo(
+    () => mergeThread(Array.isArray(thread.data?.items) ? thread.data.items : [], sent.data ?? []),
+    [thread.data, sent.data],
+  );
+  const trimmed = text.trim();
+  const isClosed = closed || isStatus(replyMutation.error, 409);
+
+  function onReply(event: FormEvent) {
+    event.preventDefault();
+    if (!trimmed || replyMutation.isPending || isClosed) return;
+    replyMutation.mutate(trimmed);
+  }
+
+  return (
+    <section className="stack-tight" aria-labelledby={`thread-title-${escalationId}`}>
+      <h3 id={`thread-title-${escalationId}`}>Hilo con la tripulación</h3>
+      <p className="muted small">
+        Se actualiza cada 15 s. Lo que manda la tripulación aparece cuando llega a Tierra.
+      </p>
+      {thread.isPending && canRead ? <p className="muted small">Cargando el hilo…</p> : null}
+      {thread.isError && !forbidden ? <p className="muted small">⚠ {threadError(thread.error)}</p> : null}
+      {messages.length > 0 ? (
+        <ol className="thread" aria-label="Mensajes del hilo">
+          {messages.map((m) => (
+            <ThreadMessage key={m.id} message={m} callSign={callSign} now={now} />
+          ))}
+        </ol>
+      ) : thread.isSuccess ? (
+        <p className="muted small">Todavía no hay mensajes en este hilo.</p>
+      ) : null}
+      {thread.data?.next_cursor ? (
+        <p className="muted small">El hilo tiene más mensajes de los que se muestran.</p>
+      ) : null}
+
+      {canReply ? (
+        <form className="stack-tight" onSubmit={onReply}>
+          {isClosed ? <Banner tone="info">{CLOSED_TEXT}</Banner> : null}
+          <div className="field">
+            <label htmlFor={`reply-body-${escalationId}`}>Respuesta a la tripulación</label>
+            <textarea
+              id={`reply-body-${escalationId}`}
+              value={text}
+              maxLength={MAX_BODY}
+              rows={3}
+              disabled={isClosed}
+              onChange={(e) => setText(e.target.value)}
+              aria-describedby={`reply-hint-${escalationId}`}
+            />
+            <span id={`reply-hint-${escalationId}`} className="field-hint">
+              Viaja con el retraso de la misión; si no hay enlace, queda en cola. {text.length}/{MAX_BODY}
+            </span>
+          </div>
+          {replyMutation.isError && !isStatus(replyMutation.error, 409) ? (
+            <Banner tone="error">{actionError(replyMutation.error)}</Banner>
+          ) : null}
+          <div>
+            <Button type="submit" loading={replyMutation.isPending} disabled={!trimmed || isClosed}>
+              Enviar a bordo
+            </Button>
+          </div>
+        </form>
+      ) : null}
+    </section>
   );
 }
 
@@ -83,15 +240,9 @@ export function AlertDetail({
   now: number;
 }) {
   const queryClient = useQueryClient();
-  const [text, setText] = useState('');
   const [ack, setAck] = useState<EscalationAck | null>(null);
-  const sentKey = queryKeys.sentMessages(missionId, item.id);
-  const sent = useQuery({
-    queryKey: sentKey,
-    queryFn: () => Promise.resolve([] as EscalationMessage[]),
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
+  const [forbidden, setForbidden] = useState(false);
+  const [closedByApi, setClosedByApi] = useState(false);
 
   const refreshInbox = () =>
     queryClient.invalidateQueries({
@@ -107,37 +258,28 @@ export function AlertDetail({
       setAck(result);
       void refreshInbox();
     },
-  });
-
-  const replyMutation = useMutation({
-    mutationFn: (body: string) => replyEscalation(item.id, body),
-    onSuccess: (message) => {
-      queryClient.setQueryData<EscalationMessage[]>(sentKey, (old) => [...(old ?? []), message]);
-      setText('');
-      void refreshInbox();
+    onError: (err) => {
+      if (isStatus(err, 403)) setForbidden(true);
+      if (isStatus(err, 409)) setClosedByApi(true);
     },
   });
 
   const canAck = canDo(role, 'escalation.ack');
-  const canReply = canDo(role, 'escalation.reply');
   const acknowledgedAt = ack?.acknowledged_at ?? item.acknowledged_at ?? null;
   const status = ack && item.status === 'delivered' ? ack.status : item.status;
   const wellbeing = isWellbeing(item);
   const triage = triageLabel(item);
-  const trimmed = text.trim();
-
-  function onReply(event: FormEvent) {
-    event.preventDefault();
-    if (!trimmed || replyMutation.isPending) return;
-    replyMutation.mutate(trimmed);
-  }
+  const restricted = operationalOnly(item, role) || forbidden;
+  const category = CATEGORY_TAGS[item.category];
 
   return (
     <article className="alert-detail stack" aria-labelledby="alert-detail-title">
       <header className="stack-tight">
         <div className="row">
           <PriorityBadge priority={item.priority} />
-          <span className="tag">{CATEGORY_LABELS[item.category] ?? item.category}</span>
+          <span className={`tag tag-category tag-${item.category}`}>
+            <span aria-hidden="true">{category?.icon ?? '·'}</span> {category?.text ?? item.category}
+          </span>
           <span className="tag">{STATUS_LABELS[status] ?? status}</span>
         </div>
         <h2 id="alert-detail-title">{crewLabel(item)}</h2>
@@ -149,7 +291,7 @@ export function AlertDetail({
         <div className="stack-tight">
           <p className="alert-reason">{item.reason}</p>
           <p className="muted small">{SOURCE_LABELS[item.source_type] ?? item.source_type}</p>
-          {triage ? <p className="small">{triage}</p> : null}
+          {triage && !restricted ? <p className="small">{triage}</p> : null}
           {item.evaluation ? (
             <p className="small row">
               <span>Evaluación del indicador {item.evaluation.code}:</span>
@@ -168,56 +310,79 @@ export function AlertDetail({
         {acknowledgedAt ? <> · Acuse a las {clockTime(acknowledgedAt)}</> : null}
       </p>
 
-      {canAck && status === 'delivered' ? (
-        <div className="stack-tight">
-          <div>
-            <Button
-              onClick={() => ackMutation.mutate()}
-              loading={ackMutation.isPending}
-              disabled={ackMutation.isPending}
-            >
-              Marcar como recibida
-            </Button>
-          </div>
-          {ackMutation.isError ? <Banner tone="error">{actionError(ackMutation.error)}</Banner> : null}
-        </div>
-      ) : null}
+      {restricted ? (
+        <OperationalOnly />
+      ) : (
+        <>
+          {canAck && status === 'delivered' && !closedByApi ? (
+            <div className="stack-tight">
+              <div>
+                <Button
+                  onClick={() => ackMutation.mutate()}
+                  loading={ackMutation.isPending}
+                  disabled={ackMutation.isPending}
+                >
+                  Marcar como recibida
+                </Button>
+              </div>
+              {ackMutation.isError ? <Banner tone="error">{actionError(ackMutation.error)}</Banner> : null}
+            </div>
+          ) : null}
+          <EscalationThread
+            escalationId={item.id}
+            missionId={missionId}
+            role={role}
+            callSign={item.call_sign}
+            closed={status === 'closed' || closedByApi}
+            now={now}
+            onForbidden={() => setForbidden(true)}
+            onClosed={() => setClosedByApi(true)}
+            onReplied={() => void refreshInbox()}
+          />
+        </>
+      )}
+    </article>
+  );
+}
 
-      <section className="stack-tight" aria-labelledby="reply-title">
-        <h3 id="reply-title">Respuestas a bordo</h3>
+/**
+ * Detalle de un escalamiento que no está en la bandeja cargada (p. ej. abierto desde
+ * Emergencias → "Responder en Alertas", ya cerrado o en otra página): hilo y respuesta por id.
+ */
+export function EscalationOnlyDetail({
+  escalationId,
+  missionId,
+  role,
+  now,
+}: {
+  escalationId: string;
+  missionId: string;
+  role: GroundRole | null;
+  now: number;
+}) {
+  const [forbidden, setForbidden] = useState(false);
+  const [closed, setClosed] = useState(false);
+  return (
+    <article className="alert-detail stack" aria-labelledby="alert-detail-title">
+      <header className="stack-tight">
+        <h2 id="alert-detail-title">Escalamiento</h2>
         <p className="muted small">
-          El panel no puede leer el hilo de este escalamiento (en el contrato es solo del
-          astronauta). Aquí ves las respuestas enviadas desde este panel en esta sesión.
+          No aparece en la bandeja cargada: puede estar cerrado, en otra página o fuera del filtro.
         </p>
-        <SentMessages messages={sent.data ?? []} />
-        {canReply && status !== 'closed' ? (
-          <form className="stack-tight" onSubmit={onReply}>
-            <div className="field">
-              <label htmlFor="reply-body">Respuesta a la tripulación</label>
-              <textarea
-                id="reply-body"
-                value={text}
-                maxLength={MAX_BODY}
-                rows={3}
-                onChange={(e) => setText(e.target.value)}
-                aria-describedby="reply-hint"
-              />
-              <span id="reply-hint" className="field-hint">
-                Viaja con el retraso de la misión; si no hay enlace, queda en cola. {text.length}/
-                {MAX_BODY}
-              </span>
-            </div>
-            {replyMutation.isError ? (
-              <Banner tone="error">{actionError(replyMutation.error)}</Banner>
-            ) : null}
-            <div>
-              <Button type="submit" loading={replyMutation.isPending} disabled={!trimmed}>
-                Enviar a bordo
-              </Button>
-            </div>
-          </form>
-        ) : null}
-      </section>
+      </header>
+      {forbidden ? (
+        <OperationalOnly />
+      ) : (
+        <EscalationThread
+          escalationId={escalationId}
+          missionId={missionId}
+          role={role}
+          closed={closed}
+          now={now}
+          onForbidden={() => setForbidden(true)}
+          onClosed={() => setClosed(true)}
+        />
+      )}
     </article>
   );
 }

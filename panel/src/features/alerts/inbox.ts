@@ -4,6 +4,7 @@
  * (lo que espera desde hace más tiempo, primero).
  */
 import type {
+  EscalationMessage,
   EscalationStatus,
   GroundRole,
   InboxCategory,
@@ -60,10 +61,54 @@ export const RADIATION_LABELS = {
   probable: 'radiación probable',
 } as const;
 
+/** Etiqueta visible de la categoría en la lista y el detalle (símbolo + texto). */
+export const CATEGORY_TAGS: Record<InboxCategory, { icon: string; text: string }> = {
+  reading: { icon: '◇', text: 'Lectura' },
+  emergency: { icon: '✚', text: 'Emergencia · triaje' },
+  wellbeing: { icon: '◌', text: 'Bienestar' },
+  manual: { icon: '✎', text: 'Manual' },
+};
+
 /** Lo único que se muestra de una alerta de bienestar (nunca valores ni el motivo). */
 export const WELLBEING_TEXT = 'Alerta de bienestar escalada · el detalle es confidencial';
 
 export const isWellbeing = (item: InboxItem): boolean => item.category === 'wellbeing';
+
+export const isSleepHours = (item: InboxItem): boolean => item.evaluation?.code === 'SLEEP_HOURS';
+
+/** Lo que el contrato no le manda a admin (bienestar y SLEEP_HOURS): si llegara, no se muestra. */
+export const hiddenFromAdmin = (item: InboxItem): boolean => isWellbeing(item) || isSleepHours(item);
+
+export function visibleFor(items: InboxItem[], role: GroundRole | null): InboxItem[] {
+  return role === 'admin' ? items.filter((item) => !hiddenFromAdmin(item)) : items;
+}
+
+// ---------------------------------------------------------------- hilo (v1.8)
+
+/** Sondeo del hilo de un escalamiento. */
+export const THREAD_POLL_MS = 15_000;
+
+export const CLOSED_TEXT = 'Escalamiento cerrado: el hilo se puede leer, pero ya no admite respuestas.';
+
+/** Hilo del servidor + lo enviado en esta sesión (sin duplicados), en orden de creación. */
+export function mergeThread(server: EscalationMessage[], sent: EscalationMessage[]): EscalationMessage[] {
+  const byId = new Map<string, EscalationMessage>();
+  for (const m of sent) byId.set(m.id, m);
+  for (const m of server) byId.set(m.id, m);
+  return [...byId.values()].sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
+}
+
+/** Texto de admin en lo que no le toca (emergencias): sin hilo, acuse ni respuesta. */
+export const OPERATIONAL_ONLY_TEXT = 'Solo estado operativo';
+export const OPERATIONAL_ONLY_DETAIL =
+  'Control de misión ve el estado de esta alerta, pero el hilo, el acuse y la respuesta son del flight surgeon.';
+
+/**
+ * admin en category=emergency (regla del panel) y en lo que el contrato le niega (bienestar,
+ * SLEEP_HOURS): sin hilo, acuse ni respuesta. El backend responde 403 igual.
+ */
+export const operationalOnly = (item: InboxItem, role: GroundRole | null): boolean =>
+  role === 'admin' && (item.category === 'emergency' || hiddenFromAdmin(item));
 
 /** Categorías del filtro: admin no recibe las de bienestar (el contrato se las oculta). */
 export function categoryOptions(role: GroundRole | null): InboxCategory[] {

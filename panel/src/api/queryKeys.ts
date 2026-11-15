@@ -18,8 +18,12 @@ export const queryKeys = {
   inbox: (missionId: string, filters: InboxFilters) =>
     [MISSION_DATA, missionId, 'inbox', filters] as const,
   inboxUnacknowledged: (missionId: string) => [MISSION_DATA, missionId, 'inbox-unacknowledged'] as const,
+  /** Respuestas enviadas desde esta sesión (se muestran aunque el hilo aún no las traiga). */
   sentMessages: (missionId: string, escalationId: string) =>
     [MISSION_DATA, missionId, 'sent-messages', escalationId] as const,
+  /** GET /admin/escalations/{id}/messages (hilo desde Tierra, v1.8). */
+  thread: (missionId: string, escalationId: string) =>
+    [MISSION_DATA, missionId, 'thread', escalationId] as const,
   indicatorCatalog: () => ['catalog', 'indicators'] as const,
   emergencies: (missionId: string, status: string) =>
     [MISSION_DATA, missionId, 'emergencies', status] as const,
