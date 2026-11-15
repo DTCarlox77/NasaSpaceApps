@@ -4,7 +4,7 @@ Cierre de la **tarea 11** (registro y acceso: emergencia sin sesión con la cred
 
 ## Estado
 
-**Endpoints reales** (78 de 83; el resto lleva `x-status-impl: pending` en `docs/openapi.yaml` y sigue en el mock):
+**Endpoints reales** (80 de 84; el resto lleva `x-status-impl: pending` en `docs/openapi.yaml` y sigue en el mock):
 
 | Módulo | Endpoints |
 |---|---|
@@ -22,7 +22,7 @@ Cierre de la **tarea 11** (registro y acceso: emergencia sin sesión con la cred
 | Emergencia (tarea 9) | `GET /emergency/protocol`, `POST /emergency/sessions`, `GET /emergency/sessions/{id}`, `POST /emergency/sessions/{id}/assessments`, `/confirm`, `/heartbeat`, `/questions`, `/close`, `PUT /emergency/assessments/{id}/answers`, `POST /emergency/assessments/{id}/complete` |
 | Emergencias en Tierra (tarea 9) | `GET /admin/emergencies`, `GET /admin/emergencies/{id}` |
 | Bienestar (tarea 10) | `POST /wellbeing/checkins`, `GET /wellbeing/instruments`, `POST /wellbeing/screenings`, `POST /wellbeing/pvt-runs`, `POST /wellbeing/support-requests`, `GET /wellbeing/support-requests/{id}/messages`, `GET /me/wellbeing` |
-| Acceso (tarea 11) | `GET`/`POST /admin/devices` (el `GET` es nuevo), `POST /admin/devices/{id}/revoke`, `POST /crew/users/{id}/unlock`, `POST /crew/users/{id}/reset-pin`, `POST /crew/devices`, `PUT /me/offline-pin`, `GET /admin/audit/delegated-actions`, `GET /missions/current`; `X-Device-Credential` en las rutas del triaje |
+| Acceso (tarea 11) | `GET /admin/audit/confidential-access` (solo behavioral_health), `GET /me/confidential-access` (nuevo, el astronauta), `GET`/`POST /admin/devices` (el `GET` es nuevo), `POST /admin/devices/{id}/revoke`, `POST /crew/users/{id}/unlock`, `POST /crew/users/{id}/reset-pin`, `POST /crew/devices`, `PUT /me/offline-pin`, `GET /admin/audit/delegated-actions`, `GET /missions/current`; `X-Device-Credential` en las rutas del triaje |
 | Salud conductual y cumplimiento (tarea 10) | `GET /admin/behavioral/inbox`, `GET /admin/behavioral/astronauts/{id}`, `POST /admin/behavioral/support-requests/{id}/messages`, `/ack`, `/close`, `POST /admin/behavioral/escalations/{id}/ack`, `/close` (nuevas), `GET /admin/compliance` |
 
 **Piezas:**
@@ -32,14 +32,14 @@ Cierre de la **tarea 11** (registro y acceso: emergencia sin sesión con la cred
   - campos derivados en `src/engine/derived.js` (puro);
   - servicio de evaluación `src/services/evaluation.service.js`;
   - triaje `src/engine/triage.js`.
-- **Contrato**: `docs/openapi.yaml` v1.5 (83 operaciones; los cambios de cada versión, en la sección "Cambios" de `info.description`). Mock con `npm run api:mock`, guía en `docs/api-guia-frontend.md`. `npm run api:lint`: 0 errores (las 4 advertencias de siempre). Las respuestas reales de bienestar se validaron con `prism proxy --errors`: sin violaciones.
+- **Contrato**: `docs/openapi.yaml` v1.5 (84 operaciones; los cambios de cada versión, en la sección "Cambios" de `info.description`). Mock con `npm run api:mock`, guía en `docs/api-guia-frontend.md`. `npm run api:lint`: 0 errores (las 4 advertencias de siempre). Las respuestas reales de bienestar se validaron con `prism proxy --errors`: sin violaciones.
 - **Base de datos**:
   - migraciones 000–013 (48 tablas; la 008 agrega índices de escalamiento, la 009 `astronauts.sex`, la 010 completa `sync_batches` / `sync_items`, la 011 los estados `pending` y `merged` de la emergencia, la 012 el triaje, la 013 el bienestar: `wellbeing_checkins.supersedes_id`, `closed_by` y un índice de la bandeja conductual, y la 014 el acceso: tipos nuevos de `auth_events` e índice de `delegated_actions`) y seeds 001–004 (la 004 es el protocolo de triaje v2; la tarea 10 no agregó seed);
   - el seed del catálogo se genera con `node tools/build_catalog_seed.js` (`--check` avisa si quedó desactualizado).
 - **Permisos**:
   - `src/middlewares/auth.js`: `authenticate`, `requireRole`, `requireCrewRole` y la lista blanca del rol `service`;
   - `src/services/accessPolicy.js`: `canAccess`, `enforceAccess` y la bitácora confidencial.
-- **Pruebas**: `node --test` → **431 de 431**, sin saltadas, contra la base de pruebas `astro_health_test`. Incluyen la matriz de permisos, los derivados, el catálogo, el enrutamiento de escalamientos (unitarias, 8), el simulador (unitarias 15, apagado 1), `sex` (unitarias 5), sync (unitarias 5), el protocolo v2 (unitarias 7), bienestar (unitarias 7), acceso (unitarias 3) y las suites de base de datos (humo 4, autenticación 14, semáforo 15, escalamiento y panel 16, simulador 9, `sex` 6, sync 12, triaje 12, bienestar 14, acceso 14). Si la base de pruebas no existe, esas suites se saltan con el comando para crearla.
+- **Pruebas**: `node --test` → **432 de 432**, sin saltadas, contra la base de pruebas `astro_health_test`. Incluyen la matriz de permisos, los derivados, el catálogo, el enrutamiento de escalamientos (unitarias, 8), el simulador (unitarias 15, apagado 1), `sex` (unitarias 5), sync (unitarias 5), el protocolo v2 (unitarias 7), bienestar (unitarias 7), acceso (unitarias 3) y las suites de base de datos (humo 4, autenticación 14, semáforo 15, escalamiento y panel 16, simulador 9, `sex` 6, sync 12, triaje 12, bienestar 14, acceso 15). Si la base de pruebas no existe, esas suites se saltan con el comando para crearla.
 - **Escalamiento** (tarea 6):
   - `src/services/escalation.service.js`: enrutamiento por categoría y prioridad;
   - `src/services/escalationDelivery.service.js`: queued → delivered y recálculo de `deliver_at` por cortes;
@@ -262,6 +262,8 @@ Guía para la app y el panel: `docs/api-guia-frontend.md` §12.
 
 **PIN sin conexión** (`offlinePin.service.js`): bcrypt en `offline_pins.pin_hash`; `offline_unlock_until = now() + OFFLINE_UNLOCK_DAYS` y cada login en línea en ese dispositivo lo renueva. La app guarda su propio verificador (PBKDF2, parámetros en `offline_verifier`). Un PIN nuevo reemplaza al anterior; el comandante lo borra en todos los dispositivos del tripulante; revocar una tableta borra los PIN de esa etiqueta para la tripulación de su misión.
 
+**Auditoría de accesos confidenciales** (`confidentialAudit.service.js`, decisión de la tarea 11): saber de quién consultó salud conductual ya revela algo conductual, así que **no** la ve admin ni el flight surgeon. `GET /admin/audit/confidential-access` → solo `behavioral_health`, sobre los astronautas de su misión (`crew_assignments`), filtrable por `astronaut_id`. `GET /me/confidential-access` → el astronauta, solo las filas sobre él. Nunca el contenido ni la IP. Leer la auditoría no agrega filas a la bitácora.
+
 **Contra Render**: `docs/api-guia-frontend.md` §12 (Git Bash y PowerShell, incluida la emergencia con TAB-1; los dos se probaron contra la API local).
 
 ## Credenciales demo
@@ -442,6 +444,7 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
 - **"Estoy bien" desde la tableta**: solo para un afectado con plazo pendiente en esa sesión (si no, 409). Es una tableta compartida: cualquiera a bordo podría tocar el botón por el afectado, igual que con su propio iPad desbloqueado (riesgo aceptado; queda el `actor_device`).
 - **Reglas de diseño nuevas** (configurables): `RATE_LIMIT_DEVICE_CREDENTIAL_PER_MINUTE=10` (solo fallos, por IP); `OFFLINE_UNLOCK_DAYS=7` (el contrato ya decía 7 días); verificador local del PIN con PBKDF2-HMAC-SHA256 y 600 000 iteraciones (OWASP Password Storage Cheat Sheet), sal de 16 bytes del dispositivo y `max_attempts = LOCKOUT_MAX_ATTEMPTS`.
 - **PIN**: se define solo en el dispositivo de la sesión (`device_id` = `did` del token) y no en una tableta revocada. El servidor nunca lo verifica ni lo devuelve: ningún endpoint acepta el PIN (ni como contraseña, Bearer, credencial de tableta o refresh: probado).
+- **Auditoría confidencial (cambio al contrato)**: `x-roles` de `GET /admin/audit/confidential-access` pasa de `[admin, behavioral_health]` a `[behavioral_health]` y se agrega `GET /me/confidential-access` para el astronauta (decidido con el responsable del backend).
 - **Enumeración por bloqueo** (límite conocido): un usuario real se bloquea a los 5 fallos y uno inexistente nunca (sigue en 401), así que el 423 revela que la cuenta existe. El contrato pide el 423; el límite de login por IP (`RATE_LIMIT_LOGIN_PER_MINUTE`) acota el abuso.
 
 **Pruebas y herramientas**
@@ -455,10 +458,9 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
 
 ## Pendientes
 
-- **`GET /admin/audit/confidential-access`** (extra b de la tarea 11, NO implementado): el contrato lo da a `[admin, behavioral_health]`, pero saber de quién consultó salud conductual ya revela algo conductual. Propuesta: que lo vean **behavioral_health** (de su misión, para su propia auditoría) y **el propio astronauta** (solo las filas sobre él: quién vio sus datos y cuándo); admin no, o solo conteos agregados por misión sin astronauta. Decidir antes de implementarlo y cambiar `x-roles` en el contrato.
 - **Acceso, cosas a mirar**: el límite de fallos de credencial es en memoria (una sola instancia, como el de login). `offline_pins.failed_attempts` no se usa (los intentos del PIN los cuenta la app sin conexión). Un PIN débil (1111, 1234) se acepta: si se quiere, agregar una lista de PIN prohibidos (regla de diseño).
 - **Hilo de Tierra**: el panel no tiene un `GET` del hilo de un escalamiento (el contrato no lo define); lo ve a bordo con `GET /escalations/{id}/messages`. Si el panel lo necesita, agregarlo al contrato.
-- **Bienestar, sin hacer** (fuera del MVP): `GET /me/gamification` (la racha va en la respuesta del check-in; faltan logros), `PUT /admin/indicators/{code}/rules` (behavioral_health editando reglas), audio en "Quiero hablar con alguien" (no está en el contrato), mensajes del astronauta en el hilo de apoyo (`support_messages` `to_earth` existe en la base pero no hay ruta), `interventions` (tabla sin endpoint), recordatorios de check-in/PHQ-2 (`reminders` no se llena) y agenda real de la conferencia psicológica (hoy `screening_due` es "cada 14 días"). `GET /admin/audit/confidential-access` sigue pendiente aunque la bitácora ya se llena.
+- **Bienestar, sin hacer** (fuera del MVP): `GET /me/gamification` (la racha va en la respuesta del check-in; faltan logros), `PUT /admin/indicators/{code}/rules` (behavioral_health editando reglas), audio en "Quiero hablar con alguien" (no está en el contrato), mensajes del astronauta en el hilo de apoyo (`support_messages` `to_earth` existe en la base pero no hay ruta), `interventions` (tabla sin endpoint), recordatorios de check-in/PHQ-2 (`reminders` no se llena) y agenda real de la conferencia psicológica (hoy `screening_due` es "cada 14 días"). La auditoría de accesos ya es real (tarea 11).
 - **Bienestar, cosas a mirar**: el check-in tardío por sync de un día que ya tenía uno lo corrige aunque se haya medido antes (gana el último en llegar); si se quiere "gana el más reciente por `measured_at`", cambiar `currentCheckinOfDay`. La racha y "check-in hoy" usan el día UTC. La aptitud con PVT reciente hace que, tras la historia del simulador (PVT semanal), el dashboard muestre `not_confirmed` hasta que alguien haga una PVT.
 - **Simulador**: para limpiar los datos en Render no hay `db:reset`: habría que recrear la base desde el panel.
 - **`GET /admin/sync/history`**: no está en el contrato, así que no se implementó. `sync_batches` ya tiene lo necesario (usuario, dispositivo, tamaño, conteos, offset y duración, sin payload): si el panel lo pide, agregarlo al contrato para admin y flight surgeon con metadatos y conteos totales, sin desglosar los tipos de bienestar.
@@ -478,4 +480,4 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
 - Variables: ninguna obligatoria nueva (`RATE_LIMIT_DEVICE_CREDENTIAL_PER_MINUTE`, `OFFLINE_UNLOCK_DAYS`, `WELLBEING_*` tienen valor por defecto). Revisar `SIMULATOR_ENABLED=true` y `CORS_ORIGIN` con los dominios de los frontends.
 - Pruebas de humo contra Render: bienestar (§11) y acceso (§12), incluida la emergencia con TAB-1. TAB-1/TAB-2 usan credenciales **sintéticas** del seed: para una demo pública, registrar tabletas nuevas (`POST /admin/devices`) y revocar las del seed.
 - Base gratuita de Render: expira a los 30 días; dejar anotado cómo recrearla (Blueprint + `DEMO_SEED=true`) y cargar la historia del simulador.
-- Pendientes que pueden entrar si sobra tiempo: decidir quién ve `GET /admin/audit/confidential-access` (ver Pendientes) y `GET /me/gamification`.
+- Pendientes que pueden entrar si sobra tiempo: `GET /me/gamification`.

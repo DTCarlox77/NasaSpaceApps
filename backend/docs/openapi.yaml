@@ -85,6 +85,10 @@ info:
       `OFFLINE_UNLOCK_DAYS` (7) y cada login en línea en ese dispositivo lo renueva.
     - `GET /missions/current` agrega 403 (astronauta sin asignación o personal de Tierra fuera
       del equipo de la misión).
+    - ⚠ `GET /admin/audit/confidential-access`: `x-roles` pasa de `[admin, behavioral_health]` a
+      **`[behavioral_health]`** (saber de quién consultó salud conductual ya revela algo
+      conductual) y agrega `mission_id`. Nuevo `GET /me/confidential-access`: el astronauta ve
+      quién consultó SUS datos y cuándo. Admin y el flight surgeon → 403.
 
     **1.4.0** (tarea 10, bienestar). Cambios al contrato (aditivos salvo los marcados ⚠):
     - Rutas de bienestar implementadas: `/wellbeing/*`, `GET /me/wellbeing`,
@@ -7082,15 +7086,19 @@ paths:
   /api/v1/admin/audit/confidential-access:
     get:
       tags: [Auditoría]
-      summary: Accesos a datos confidenciales
-      description: Quién vio datos de bienestar, de quién y cuándo. Sin el contenido.
+      summary: Accesos a datos confidenciales (salud conductual)
+      description: |
+        Quién vio datos de bienestar, de quién y cuándo, sobre los astronautas de la misión
+        (`mission_id` o la del equipo de behavioral_health). Sin el contenido ni la IP. Solo
+        behavioral_health: saber de quién se consultó ya revela algo conductual, así que admin y
+        el flight surgeon → 403. Cada astronauta ve lo suyo en `GET /me/confidential-access`.
       operationId: listConfidentialAccess
       x-status: mvp
-      x-status-impl: pending
-      x-roles: [admin, behavioral_health]
+      x-roles: [behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
       parameters:
+        - $ref: '#/components/parameters/MissionIdQuery'
         - name: astronaut_id
           in: query
           schema: { $ref: '#/components/schemas/Uuid' }
@@ -7121,6 +7129,56 @@ paths:
                           accessed_at: '2026-11-14T22:00:00Z',
                         }
                     next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/me/confidential-access:
+    get:
+      tags: [Auditoría]
+      summary: Quién consultó mis datos confidenciales
+      description: |
+        Para el astronauta: cada lectura de SUS datos de bienestar por otra persona (p. ej. la
+        bandeja o el detalle de behavioral_health), con quién, su rol, qué recurso y cuándo. Sin
+        el contenido ni la IP. Sus propias lecturas no se registran.
+      operationId: listMyConfidentialAccess
+      x-status: mvp
+      x-roles: [astronaut]
+      x-sensitivity: confidential
+      x-hazards: [isolation_confinement]
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Página de accesos a mis datos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfidentialAccessPage'
+              examples:
+                vega:
+                  summary: VEGA ve quién consultó lo suyo
+                  value:
+                    items:
+                      - {
+                          id: 'b2000000-0000-4000-8000-000000000001',
+                          actor_user_id: '00000000-0000-4000-8000-000000000003',
+                          actor_username: bh.salas,
+                          actor_role: behavioral_health,
+                          astronaut_id: '10000000-0000-4000-8000-000000000012',
+                          call_sign: VEGA,
+                          resource: 'GET /api/v1/admin/behavioral/astronauts/{id}',
+                          accessed_at: '2026-11-14T22:00:00Z',
+                        }
+                    next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':

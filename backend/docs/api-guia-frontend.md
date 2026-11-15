@@ -135,7 +135,7 @@ Cada operación del YAML trae `x-roles` (quién puede llamarla), `x-crew-role` (
 |---|---|---|
 | `astronaut` | App móvil | Lo suyo: lecturas, figura, bienestar propio, emergencia. El comandante tiene además acciones delegadas de **acceso** (`/crew/...`: desbloquear, restablecer PIN, tableta de repuesto), que no le dan datos médicos ni de bienestar de nadie. |
 | `flight_surgeon` | Panel | Semáforo físico de la tripulación, bandeja (`/admin/inbox`), emergencias, la alerta de bienestar que el catálogo le escala (`PVT_LAPSES` crítico: solo "aptitud no confirmada", sin métricas) y aptitud `fit` / `not_confirmed`. Nunca los valores del check-in ni la nota. |
-| `behavioral_health` | Panel | Detalle confidencial de bienestar (`/admin/behavioral/...`): valores, tendencias, z, cuestionarios, PVT y solicitudes de apoyo (nunca la nota privada del check-in). Cada lectura queda auditada. |
+| `behavioral_health` | Panel | Detalle confidencial de bienestar (`/admin/behavioral/...`): valores, tendencias, z, cuestionarios, PVT y solicitudes de apoyo (nunca la nota privada del check-in). Cada lectura queda auditada y la auditoría (`GET /admin/audit/confidential-access`) solo la ve salud conductual. |
 | `admin` | Panel | Cuentas, dispositivos, misiones y entornos; de bienestar, solo cumplimiento (`/admin/compliance`) y aptitud `fit` / `not_confirmed`. Nunca valores, tendencias ni solicitudes. |
 | Tableta sin sesión | App móvil | Solo el triaje de su misión, con `X-Device-Credential` (sección 12). Nada más: ni `/me`, ni lecturas, ni bienestar, ni sync. |
 | `service` | Sensores y simulador | Solo `POST /api/v1/habitat/readings`. Cualquier otra ruta responde 403. |
@@ -198,6 +198,7 @@ La tripulación no ve nada del bienestar de los demás: ni el comandante ni el o
 - `Device` agrega `status`; nuevo `GET /admin/devices`; 409 `DEVICE_LABEL_TAKEN`.
 - `OfflinePinResponse` agrega `offline_verifier`; el PIN se define en el dispositivo de la sesión (403 `DEVICE_NOT_OWNED`).
 - Puede romper algo: `audit.reported_to_earth` ahora es `false` mientras la acción espera enlace (antes siempre `true` en los ejemplos).
+- Puede romper algo: `GET /admin/audit/confidential-access` es **solo de behavioral_health** (admin → 403). Nuevo `GET /me/confidential-access`: el astronauta ve quién consultó sus datos.
 
 ## 9. Qué ya es real (tareas 1–11) y cómo pasar del mock a la API
 
@@ -219,7 +220,7 @@ En el YAML, las operaciones que **todavía** son solo mock llevan `x-status-impl
 | Misión (admin) | `GET`/`POST /admin/missions`, `PATCH /admin/missions/{id}`, `GET`/`POST /admin/environments`, `PATCH /admin/environments/{code}`, `GET`/`POST /admin/assignments`, `PATCH /admin/assignments/{id}`, `GET`/`POST /admin/comm-outages`, `PATCH /admin/comm-outages/{id}` |
 | Simulador (admin, solo demo) | `POST /admin/simulator/history`, `POST /admin/simulator/scenarios/{name}` |
 | Bienestar (tarea 10) | `POST /wellbeing/checkins`, `GET /wellbeing/instruments`, `POST /wellbeing/screenings`, `POST /wellbeing/pvt-runs`, `POST /wellbeing/support-requests`, `GET /wellbeing/support-requests/{id}/messages`, `GET /me/wellbeing` |
-| Acceso (tarea 11) | `GET`/`POST /admin/devices`, `POST /admin/devices/{id}/revoke`, `POST /crew/users/{id}/unlock`, `POST /crew/users/{id}/reset-pin`, `POST /crew/devices`, `PUT /me/offline-pin`, `GET /admin/audit/delegated-actions`, `GET /missions/current`; `X-Device-Credential` en el triaje |
+| Acceso (tarea 11) | `GET /admin/audit/confidential-access` (behavioral_health), `GET /me/confidential-access` (astronauta), `GET`/`POST /admin/devices`, `POST /admin/devices/{id}/revoke`, `POST /crew/users/{id}/unlock`, `POST /crew/users/{id}/reset-pin`, `POST /crew/devices`, `PUT /me/offline-pin`, `GET /admin/audit/delegated-actions`, `GET /missions/current`; `X-Device-Credential` en el triaje |
 | Salud conductual y cumplimiento (tarea 10) | `GET /admin/behavioral/inbox`, `GET /admin/behavioral/astronauts/{id}`, `POST /admin/behavioral/support-requests/{id}/messages`, `/ack`, `/close`, `POST /admin/behavioral/escalations/{id}/ack`, `/close`, `GET /admin/compliance` |
 
 Para pasar del mock a la API local:
@@ -560,6 +561,11 @@ Solo el comandante vigente (`context.crew_role: "commander"`) y solo sobre los t
 - `POST /admin/devices/{id}/revoke`: deja de servir de inmediato y borra los PIN offline definidos en esa tableta. Pide confirmación.
 - `GET /admin/audit/delegated-actions?mission_id=&from=&to=`: lo que hizo el comandante, cuando ya llegó a Tierra (`deliver_at`).
 - `GET /missions/current`: misión, entorno, rol y estado del enlace (`comm.link`: `up` | `down`, cortes en curso y próximos).
+
+### Auditoría de accesos confidenciales
+
+- **Panel de salud conductual**: `GET /admin/audit/confidential-access?mission_id=&astronaut_id=&from=&to=`: quién (usuario y rol) leyó datos de bienestar de qué astronauta, qué recurso y cuándo; sin el contenido. Solo `behavioral_health`: a admin y al flight surgeon les responde 403 (saber de quién se consultó ya revela algo conductual). No muestres esta pantalla en el panel de control de misión.
+- **App**: `GET /me/confidential-access` → "Quién vio tus datos de bienestar": cada lectura de lo tuyo por otra persona (p. ej. la bandeja o el detalle de salud conductual). Tus propias lecturas no aparecen.
 
 ### Contra Render
 
