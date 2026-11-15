@@ -5,7 +5,8 @@
 import { Suspense, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { useAuth } from '../auth/context.ts';
-import { ROLE_LABELS, sectionsFor } from '../nav/access.ts';
+import { canSee, ROLE_LABELS, sectionsFor } from '../nav/access.ts';
+import { useUnacknowledgedCount } from '../features/alerts/useInbox.ts';
 import { Button } from '../components/Button.tsx';
 import { Loading } from '../components/QueryStatus.tsx';
 import { useMission } from '../mission/useMission.ts';
@@ -36,6 +37,20 @@ function MissionPicker() {
         ))}
       </select>
     </label>
+  );
+}
+
+/** Contador de la barra lateral: alertas que ya llegaron y siguen sin acuse (cada 15 s). */
+function AlertsBadge() {
+  const { role } = useAuth();
+  const pending = useUnacknowledgedCount(canSee(role, 'alerts'));
+  if (!pending || pending.count === 0) return null;
+  const text = pending.more ? `${pending.count}+` : String(pending.count);
+  return (
+    <span className="nav-badge">
+      {text}
+      <span className="visually-hidden"> sin acuse</span>
+    </span>
   );
 }
 
@@ -82,7 +97,8 @@ export function AppShell() {
           {sections.map((s) => (
             <li key={s.id}>
               <NavLink to={s.path} className={({ isActive }) => (isActive ? 'active' : undefined)}>
-                {s.title}
+                <span className="nav-title">{s.title}</span>
+                {s.id === 'alerts' ? <AlertsBadge /> : null}
               </NavLink>
             </li>
           ))}

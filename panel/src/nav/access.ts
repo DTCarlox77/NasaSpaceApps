@@ -138,3 +138,33 @@ export function canOpenPath(role: Role | null | undefined, path: string): boolea
 export function homePathFor(role: Role | null | undefined): string {
   return sectionsFor(role)[0]?.path ?? '/login';
 }
+
+// ---------------------------------------------------------------- acciones (botones)
+
+export type ActionId = 'escalation.ack' | 'escalation.reply';
+
+export interface Action {
+  endpoint: string;
+  /** x-roles del contrato. */
+  contractRoles: GroundRole[];
+  /** Roles que ven el botón en el panel (subconjunto del contrato). */
+  roles: GroundRole[];
+}
+
+export const ACTIONS: Record<ActionId, Action> = {
+  'escalation.ack': {
+    endpoint: 'POST /admin/escalations/{id}/ack',
+    contractRoles: ['flight_surgeon', 'admin'],
+    roles: ['flight_surgeon', 'admin'],
+  },
+  'escalation.reply': {
+    endpoint: 'POST /admin/escalations/{id}/messages',
+    contractRoles: ['flight_surgeon', 'admin'],
+    roles: ['flight_surgeon', 'admin'],
+  },
+};
+
+/** ¿El rol puede usar esta acción? (el backend vuelve a comprobarlo: 403 si no). */
+export function canDo(role: Role | null | undefined, action: ActionId): boolean {
+  return isGround(role) && ACTIONS[action].roles.includes(role);
+}

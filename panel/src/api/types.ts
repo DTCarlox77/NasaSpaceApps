@@ -193,3 +193,73 @@ export interface IndicatorList {
   rules_version: number;
   items: IndicatorDef[];
 }
+
+// ---------------------------------------------------------------- bandeja de Tierra (P2)
+
+export type Priority = 'routine' | 'urgent' | 'emergency';
+export type EscalationStatus = 'queued' | 'delivered' | 'acknowledged' | 'responded' | 'closed';
+export type InboxCategory = 'reading' | 'emergency' | 'wellbeing' | 'manual';
+export type TriageCategory = 'green' | 'yellow' | 'red' | 'black';
+
+export interface IndicatorEvaluation {
+  code: string;
+  level: Level;
+  rule_index: number;
+  escalation: string;
+  rules_version?: number;
+  recommendation?: string;
+  basis?: string;
+  source_ids?: string[];
+}
+
+/** Elemento de GET /admin/inbox. */
+export interface InboxItem {
+  id: string;
+  mission_id: string;
+  mission_code?: string;
+  astronaut_id?: string | null;
+  call_sign?: string | null;
+  category: InboxCategory;
+  source_type: 'reading' | 'emergency_assessment' | 'emergency_session' | 'wellbeing' | 'manual';
+  source_id?: string | null;
+  level: string;
+  priority: Priority;
+  status: EscalationStatus;
+  reason: string;
+  created_at: string;
+  deliver_at: string;
+  acknowledged_at?: string | null;
+  acknowledged_by?: string | null;
+  /** Solo si viene de una lectura. */
+  measured_at?: string;
+  late_sync?: boolean;
+  lag_s?: number;
+  evaluation?: IndicatorEvaluation;
+  /** Solo para el flight surgeon (admin no la recibe). */
+  triage?: { triage_category?: TriageCategory; radiation_flag?: 'none' | 'possible' | 'probable' };
+}
+
+export interface InboxPage {
+  items: InboxItem[];
+  next_cursor: string | null;
+}
+
+/** POST /admin/escalations/{id}/ack. */
+export interface EscalationAck {
+  id: string;
+  status: EscalationStatus;
+  acknowledged_at: string;
+  acknowledged_by: string;
+}
+
+/** POST /admin/escalations/{id}/messages (201). deliver_at null = en cola sin enlace. */
+export interface EscalationMessage {
+  id: string;
+  escalation_id: string;
+  direction: 'to_earth' | 'to_crew';
+  author_id?: string | null;
+  author_role?: 'astronaut' | 'flight_surgeon' | 'admin';
+  body: string;
+  created_at: string;
+  deliver_at?: string | null;
+}

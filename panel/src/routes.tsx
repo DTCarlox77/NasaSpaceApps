@@ -14,6 +14,9 @@ import { SectionPlaceholder } from './pages/SectionPlaceholder.tsx';
 const CrewDashboardPage = lazy(() =>
   import('./features/crew/CrewDashboardPage.tsx').then((m) => ({ default: m.CrewDashboardPage })),
 );
+const AlertsPage = lazy(() =>
+  import('./features/alerts/AlertsPage.tsx').then((m) => ({ default: m.AlertsPage })),
+);
 const AstronautDetailPage = lazy(() =>
   import('./features/crew/AstronautDetailPage.tsx').then((m) => ({ default: m.AstronautDetailPage })),
 );
@@ -21,6 +24,7 @@ const AstronautDetailPage = lazy(() =>
 /** Pantallas ya implementadas; el resto sigue como placeholder de su fase. */
 const PAGES: Partial<Record<SectionId, ReactNode>> = {
   crew: <CrewDashboardPage />,
+  alerts: <AlertsPage />,
 };
 
 /** Rutas hijas de una sección (detalle), protegidas con el mismo rol que la sección. */
