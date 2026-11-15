@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Astro Health API
-  version: 1.1.0
+  version: 1.3.0
   description: |
     API de apoyo a la decisión para el monitoreo de salud de astronautas.
 
@@ -49,7 +49,7 @@ info:
     |---|---|
     | `astronaut` | Solo lo suyo. Recibe mensajes neutros: nunca un color ni un puntaje. |
     | `behavioral_health` | Detalle: valores, tendencias, cuestionarios y solicitudes de apoyo. Cada acceso queda auditado. |
-    | `flight_surgeon` | Estado y alertas escaladas a `flight_surgeon`, sin respuestas individuales. |
+    | `flight_surgeon` | Estado y alertas escaladas a `flight_surgeon`, y aptitud `fit` / `not_confirmed`; sin respuestas individuales ni cumplimiento. |
     | `admin` | Solo cumplimiento (check-ins completados) y aptitud: `fit` / `not_confirmed`. |
     | Tripulación | Nada. |
 
@@ -57,11 +57,83 @@ info:
     `npm run api:mock` levanta Prism en `http://localhost:4010` con los ejemplos de este
     contrato. Para pedir otra respuesta documentada usa el header `Prefer`, por ejemplo
     `Prefer: code=423` o `Prefer: example=duplicate`.
+
+    ## Cambios
+    **1.3.0** (tarea 9, triaje). Cambios al contrato (aditivos salvo los marcados ⚠):
+    - Rutas de emergencia implementadas: `/emergency/*` y `GET /admin/emergencies(/{id})`.
+    - ⚠ `POST /emergency/sessions` con una sesión ya abierta en la misión ya no responde 409
+      `SESSION_ALREADY_ACTIVE`: **se une** a la abierta (201 con `joined: true` y la sesión
+      abierta). La activación queda en la línea de tiempo.
+    - `EmergencyStatus` agrega `pending` (activación automática esperando "estoy bien") y
+      `merged` (activación que se unió a otra; `merged_into`). Una sola sesión abierta
+      (`pending` o `active`) por misión.
+    - Nuevos: `POST /emergency/sessions/{id}/confirm` ("estoy bien" del tripulante afectado,
+      interruptor de hombre muerto de `TRIAGE_DEADMAN_S`, 60 s) y
+      `POST /emergency/sessions/{id}/questions` (pregunta fuera del protocolo a Tierra, con
+      `deliver_at`; la respuesta llega por `GET /sync/pull`).
+    - `EmergencySession` agrega `mission_code`, `activated_at`, `merged_into`, `deadman`,
+      `heartbeat` y `joined_activations`; `responder_safe` puede ser null (activación
+      automática: lo contesta el primer evaluador). `SessionWithRoster` agrega `joined`,
+      `assessments` y `attention_order` (orden de atención con su motivo).
+    - ⚠ Reevaluación: `POST /emergency/sessions/{id}/assessments` acepta otra evaluación del
+      mismo tripulante (append-only, `reassessment_of`); el 409 queda para la sesión cerrada
+      (`SESSION_CLOSED`). `sequence_no` es opcional.
+    - Respuestas: `responder_safe` se puede contestar en una evaluación; responder a una
+      evaluación completada → 409 `ASSESSMENT_COMPLETED`.
+    - `AssessmentResult` agrega `device_result`, `mismatch_fields` y `attention_order`; al
+      completar siempre hay un escalamiento a `flight_surgeon` (además de las acciones del
+      protocolo).
+    - `GET /emergency/protocol?version=` (la versión con que se evaluó una sesión vieja).
+    - `POST /readings` (y el `reading` de sync) agrega `emergency` si la lectura crítica abrió
+      o se unió a una emergencia.
+    - Panel: `EmergencyListItem.counts` es null para admin; `EmergencyDetail` agrega
+      `timeline`, `attention_order`, `questions` y `report` (al llegar el cierre); para admin,
+      sin datos clínicos (`answers`, categorías ni reporte). `GET /admin/inbox`: admin no
+      recibe `triage`.
+    - Sync: `emergency_session`, `emergency_assessment`, `emergency_answer`,
+      `emergency_heartbeat` ya tienen servicio, y se agregan `emergency_confirm`,
+      `emergency_complete`, `emergency_question` y `emergency_close`. Todos con prioridad
+      emergency (aunque el item diga normal). Las referencias (`session_id`,
+      `assessment_id`) aceptan el id del servidor o el `client_uuid`.
+    - Simulador: escenario `emergency_solar` y campo `emergency` en el resumen.
+
+    **1.2.0** (tarea 8):
+    - Perfil del astronauta: campo nuevo `sex` (`female` | `male` | null), sexo biológico para
+      referencias clínicas (no es identidad de género). Lo escribe admin en
+      `POST /admin/users` (`astronaut.sex`) y en el nuevo `PATCH /admin/astronauts/{id}`, pero
+      **no lo recibe**. Lo ven el propio astronauta (`GET /me` → `context.sex`) y
+      `flight_surgeon` / `behavioral_health` de su misión (`GET /missions/{id}/crew`). Nunca
+      otro astronauta ni el dashboard. El motor lo pone en el contexto de las reglas; ninguna
+      regla actual lo usa.
+    - `GET /missions/{id}/crew` ya está implementado.
+    - **Sync implementado** (`POST /sync/push`, `GET /sync/pull`). Cambios al contrato:
+      - `SyncItem.entity` deja de ser un enum cerrado: es un nombre (`^[a-z][a-z0-9_]{0,39}$`).
+        Un tipo desconocido no da 400 al lote: ese item sale `rejected` con `UNKNOWN_ENTITY`
+        (así la tarea 9 puede agregar `triage_*` sin romper apps viejas). Los del contrato que
+        todavía no tienen servicio (`emergency_*`, `support_request`) salen `rejected` con
+        `ENTITY_NOT_SUPPORTED`.
+      - Orden de proceso: `priority: emergency`, luego los **críticos** (evaluados con sus
+        propios valores) y luego el resto por `measured_at` del payload (o `created_at`). Antes
+        decía solo "por created_at".
+      - `SyncItem.supersedes_uuid` opcional (alias del `payload.supersedes_uuid`).
+      - `SyncPushResponse` agrega `batch_id`, `clock_offset_s` y `counts`; `SyncItemResult`
+        agrega `sequence` (orden de proceso) y en `result` van `late_sync` y `lag_s`.
+        `client_uuid` y `entity` pueden venir `null` si el item no los traía válidos.
+      - Códigos por item: `PAYLOAD_MISMATCH` y `SUPERSEDE_CONFLICT` (conflict),
+        `FUTURE_TIMESTAMP`, `VALIDATION_ERROR`, `UNKNOWN_ENTITY` y `ENTITY_NOT_SUPPORTED`
+        (rejected). Push agrega 403 (`DEVICE_NOT_OWNED`, `NO_ACTIVE_ASSIGNMENT`).
+      - `GET /sync/pull` acepta `limit` y agrega `catalog`, `mission` (versión y estado del
+        enlace), `evaluations`, `escalations` y `routines`. Responde 400 con un cursor inválido.
+    - `GET /admin/inbox`: cada item de una lectura trae `measured_at`, `late_sync` y `lag_s`
+      ("registrado hace X h").
+    - Simulador: escenario nuevo `offline_batch` y campo `sync` en el resumen.
 servers:
   - url: http://localhost:3000
     description: Desarrollo local
   - url: http://localhost:4010
     description: Mock con Prism (npm run api:mock)
+  - url: https://astro-health-api-81jd.onrender.com
+    description: Demo desplegada en Render (datos sintéticos; se duerme sin uso)
 security:
   - bearerAuth: []
 tags:
@@ -89,6 +161,10 @@ tags:
     description: Bandeja y detalle confidencial para behavioral_health.
   - name: Auditoría
     description: Acciones delegadas y accesos a datos confidenciales.
+  - name: Simulador
+    description: |
+      **Solo demo.** Datos sintéticos de ARES-1 (historia y escenarios). Solo existen con
+      `SIMULATOR_ENABLED=true`; si no, responden 404.
 paths:
   # ===================================================================== Sistema
   /api/v1/health:
@@ -448,6 +524,7 @@ paths:
                       astronaut_id: '10000000-0000-4000-8000-000000000011'
                       call_sign: 'ORION'
                       crew_role: 'commander'
+                      sex: female
                       mission:
                         id: '20000000-0000-4000-8000-000000000001'
                         code: 'ARES-1'
@@ -673,6 +750,54 @@ paths:
               examples:
                 unlocked:
                   $ref: '#/components/examples/UserAdminLyra'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/admin/astronauts/{id}:
+    patch:
+      tags: [Admin-Cuentas]
+      summary: Cambia el sexo biológico del perfil del astronauta
+      description: |
+        `sex`: `female`, `male` o `null` (lo borra); cualquier otro valor o campo da 400. admin
+        lo escribe pero la respuesta **no** lo incluye (ver BiologicalSex).
+      operationId: updateAstronaut
+      x-status: mvp
+      x-roles: [admin]
+      x-hazards: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AstronautPatch'
+            examples:
+              female:
+                summary: Sexo biológico de LYRA (sintético)
+                value: { sex: female }
+      responses:
+        '200':
+          description: Perfil actualizado (sin `sex`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AstronautProfile'
+              examples:
+                lyra:
+                  summary: LYRA
+                  value:
+                    id: '10000000-0000-4000-8000-000000000013'
+                    user_id: '00000000-0000-4000-8000-000000000013'
+                    call_sign: LYRA
+                    agency: Demo Agency
+                    synthetic: true
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -973,9 +1098,12 @@ paths:
     get:
       tags: [Misión]
       summary: Tripulación vigente de una misión
+      description: |
+        La ven la tripulación de la misión, su equipo en Tierra y admin (403 si no eres parte).
+        `sex` solo viene en tu propia fila (astronauta) o si eres `flight_surgeon` o
+        `behavioral_health`; admin y los demás astronautas no lo reciben.
       operationId: getMissionCrew
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut, flight_surgeon, behavioral_health, admin]
       x-hazards: [isolation_confinement]
       parameters:
@@ -991,7 +1119,7 @@ paths:
                 $ref: '#/components/schemas/CrewPage'
               examples:
                 ares1:
-                  summary: Tripulación de ARES-1
+                  summary: Tripulación de ARES-1 (vista de admin, sin sex)
                   value:
                     items:
                       - {
@@ -1040,7 +1168,6 @@ paths:
       summary: Lista misiones
       operationId: listMissions
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -1071,6 +1198,8 @@ paths:
                         created_at: '2026-09-30T08:00:00Z'
                         updated_at: '2026-11-14T00:00:00Z'
                     next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -1078,9 +1207,9 @@ paths:
     post:
       tags: [Misión]
       summary: Crea una misión
+      description: Nace `planned`. El admin que la crea entra a su equipo en Tierra (`operations`). **409** si el `code` ya existe.
       operationId: createMission
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth, gravity_fields]
       requestBody:
@@ -1122,7 +1251,6 @@ paths:
       summary: Actualiza una misión
       operationId: updateMission
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -1162,7 +1290,6 @@ paths:
       summary: Lista entornos
       operationId: listEnvironments
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [gravity_fields, distance_from_earth]
       parameters:
@@ -1226,6 +1353,8 @@ paths:
                           updated_at: '2026-11-14T00:00:00Z',
                         }
                     next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -1235,7 +1364,6 @@ paths:
       summary: Crea un entorno
       operationId: createEnvironment
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [gravity_fields, distance_from_earth]
       requestBody:
@@ -1291,7 +1419,6 @@ paths:
       summary: Actualiza un entorno (p. ej. el retraso de comunicación)
       operationId: updateEnvironment
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [gravity_fields, distance_from_earth]
       parameters:
@@ -1335,14 +1462,13 @@ paths:
       summary: Lista asignaciones de tripulación (historial incluido)
       operationId: listAssignments
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [isolation_confinement]
       parameters:
         - $ref: '#/components/parameters/MissionIdQuery'
         - name: active
           in: query
-          description: true = solo vigentes (`assigned_to` nulo).
+          description: true = solo vigentes (`assigned_from <= now() < assigned_to`, como `v_current_crew`); false = solo las no vigentes.
           schema: { type: boolean }
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -1377,6 +1503,10 @@ paths:
                           created_at: '2026-09-30T08:00:00Z',
                         }
                     next_cursor: eyJpZCI6IjIyMDAwMDAwIn0
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -1386,7 +1516,6 @@ paths:
       summary: Asigna un astronauta a una misión
       operationId: createAssignment
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [isolation_confinement]
       requestBody:
@@ -1444,7 +1573,6 @@ paths:
         CMO no puede tener un periodo que se solape con otro del mismo rol en la misión (**409**).
       operationId: updateAssignment
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [isolation_confinement]
       parameters:
@@ -1497,7 +1625,6 @@ paths:
       summary: Lista cortes de comunicación de una misión
       operationId: listCommOutages
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -1523,6 +1650,10 @@ paths:
                         reason: 'Conjunción solar (demo)'
                         created_at: '2026-11-14T10:00:00Z'
                     next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -1533,7 +1664,6 @@ paths:
       description: Sin `ends_at` el corte queda abierto y `compute_deliver_at` devuelve null (los mensajes esperan en cola).
       operationId: createCommOutage
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -1585,9 +1715,12 @@ paths:
     patch:
       tags: [Misión]
       summary: Cierra o corrige un corte de comunicación
+      description: |
+        `ends_at` cierra el corte (o lo reabre con null). Al crear o cambiar un corte se recalcula
+        `deliver_at` de todo lo que todavía no llegó (escalamientos, mensajes y solicitudes de
+        apoyo): lo que estaba en cola sale cuando vuelve el enlace + el retraso del entorno.
       operationId: updateCommOutage
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -1629,6 +1762,168 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  # ===================================================================== Simulador (solo demo)
+  /api/v1/admin/simulator/history:
+    post:
+      tags: [Simulador]
+      summary: Carga la historia sintética de ARES-1 (solo demo)
+      description: |
+        **Solo demo**: responde 404 si el servidor no tiene `SIMULATOR_ENABLED=true`.
+
+        Genera los últimos `days` días (terminan ahora, en UTC) de la tripulación vigente y del
+        hábitat, con datos **sintéticos** dentro de los rangos normales del catálogo:
+        - signos vitales diarios, sueño, ejercicio, glucosa en ayunas cada 2–3 días, masa semanal
+          y dosis de radiación diaria y acumulada;
+        - hábitat cada hora por módulo (CO₂, temperatura, humedad y ruido);
+        - bienestar: check-in diario, PVT semanal (con 3 corridas de línea base al inicio de la
+          misión) y PHQ-2/GAD-2 cada 2 semanas.
+
+        Cada lectura entra por el mismo camino que la API (validación, reglas activas, derivados y
+        escalamientos), como el astronauta o la cuenta de servicio que la registraría. La historia
+        normal no genera críticos ni escalamientos (solo alguna precaución de autocuidado).
+
+        **Idempotente**: la misma `seed` da los mismos valores y los mismos `client_uuid`; correrla
+        otra vez responde con todo en `duplicate`. Tarda unos segundos (en Render, hasta ~1 min).
+      operationId: loadSimulatorHistory
+      x-status: extra
+      x-roles: [admin]
+      x-hazards:
+        [
+          space_radiation,
+          isolation_confinement,
+          distance_from_earth,
+          gravity_fields,
+          hostile_closed_env,
+        ]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulatorHistoryRequest'
+            examples:
+              default:
+                summary: 14 días con la semilla 42
+                value: { days: 14, seed: 42 }
+      responses:
+        '200':
+          description: Historia cargada (o ya existente)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulatorSummary'
+              examples:
+                history:
+                  $ref: '#/components/examples/SimulatorHistorySummary'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: El simulador está apagado (`SIMULATOR_ENABLED` no es `true`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/admin/simulator/scenarios/{name}:
+    post:
+      tags: [Simulador]
+      summary: Dispara un escenario de la demo ahora (solo demo)
+      description: |
+        **Solo demo**: responde 404 si el servidor no tiene `SIMULATOR_ENABLED=true` o si el
+        escenario no existe. Crea las lecturas del escenario en el momento actual, encima de la
+        historia (cárgala antes), por el mismo camino que la API:
+        - `solar_event`: evento solar en el dosímetro de toda la tripulación (`event_active`).
+          `low` llega a precaución (dosis del evento ≥ 125 mSv → flight surgeon) y `high` a crítico
+          (≥ 250 mSv). Con `astronaut`, ese tripulante reporta náusea: crítico por síntomas.
+        - `crew_illness`: fiebre (38.4 °C; 39.6 °C crítico en `high`), tos y FC elevada en
+          `astronaut` (por defecto LYRA). Con `contagion: true` empezó ayer y un segundo
+          tripulante enferma hoy.
+        - `co2_spike`: el CO₂ de `module_id` (por defecto HAB-1) pasa de 3 y luego de 4.5 mmHg en
+          50 min (precaución a la tripulación); en `high` llega a ~10.8 mmHg (crítico).
+        - `wellbeing_decline`: 5 check-ins seguidos claramente peores en `astronaut` (por defecto
+          ATLAS) → escalamiento **confidencial** a `behavioral_health`. En `high`, además PHQ-2 y
+          GAD-2 ≥ 3. Corrige los check-ins de esos días (`supersedes_uuid`). Necesita la historia
+          de 14 días para la línea base.
+        - `offline_batch`: ~24 h sin conexión de `astronaut` (por defecto ORION) empujadas por
+          `POST /sync/push` desde `TAB-1` (13 items, como `docs/examples/sync-push.json`): un
+          crítico de hace 6 h (SpO₂ 89 %, se procesa primero y llega con `late_sync`), una
+          corrección y un duplicado. El resumen trae `sync` con los conteos del lote.
+        - `emergency_solar`: el triaje de punta a punta. Evento solar y dos tripulantes con
+          náusea (VEGA y `astronaut`, por defecto LYRA) → activación automática por lectura
+          crítica → hombre muerto vencido (el barrido se adelanta) → el comandante evalúa
+          (`astronaut` no responde: solo signos observables) → corte de enlace con una pregunta
+          y el cierre en cola → al cerrar el corte, el reporte sale hacia Tierra. El resumen
+          trae `emergency`. Ejemplo del reporte: `docs/examples/emergency-session.json`.
+
+        Un reintento en el mismo minuto no duplica; dispararlo más tarde crea un episodio nuevo.
+        Las alertas a `flight_surgeon` llegan a `GET /admin/inbox` tras el retraso de la misión
+        (ARES-1: 90 s). El resumen nunca incluye niveles ni escalamientos de bienestar.
+      operationId: runSimulatorScenario
+      x-status: extra
+      x-roles: [admin]
+      x-hazards: [space_radiation, isolation_confinement, hostile_closed_env]
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              [
+                solar_event,
+                crew_illness,
+                co2_spike,
+                wellbeing_decline,
+                offline_batch,
+                emergency_solar,
+              ]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulatorScenarioRequest'
+            examples:
+              solarHigh:
+                summary: Evento solar fuerte, VEGA con náusea
+                value: { intensity: high, astronaut: VEGA }
+              illness:
+                summary: Enfermedad con contagio
+                value: { astronaut: LYRA, contagion: true }
+              co2:
+                summary: CO₂ en HAB-2
+                value: { module_id: HAB-2, intensity: low }
+      responses:
+        '200':
+          description: Escenario creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulatorSummary'
+              examples:
+                co2Spike:
+                  $ref: '#/components/examples/SimulatorCo2Summary'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: El simulador está apagado o el escenario no existe.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
           $ref: '#/components/responses/Conflict'
 
@@ -3161,9 +3456,22 @@ paths:
               $ref: '#/components/schemas/ReadingCreate'
             examples:
               bloodPressure:
-                summary: Presión arterial de ORION
+                summary: Presión arterial de ORION (manual)
                 value:
                   client_uuid: 'c1000000-0000-4000-8000-000000000101'
+                  indicator_code: BLOOD_PRESSURE
+                  measured_at: '2026-11-14T07:30:00Z'
+                  values: { systolic: 145, diastolic: 88, symptoms: [] }
+                  input_method: manual
+                  device_id: ipad-crew-01
+              bloodPressureWithPhoto:
+                summary: Presión arterial con foto del tensiómetro
+                description: |
+                  Primero se sube la foto con `POST /attachments` y se usa el `attachment_id` que
+                  devuelve; un `attachment_id` que no existe o no es del autor responde 400. El id de
+                  este ejemplo es ilustrativo: no existe en el seed.
+                value:
+                  client_uuid: 'c1000000-0000-4000-8000-000000000102'
                   indicator_code: BLOOD_PRESSURE
                   measured_at: '2026-11-14T07:30:00Z'
                   values: { systolic: 145, diastolic: 88, symptoms: [] }
@@ -3703,16 +4011,41 @@ paths:
       tags: [Sync]
       summary: Envía un lote de cambios hechos sin conexión
       description: |
-        El servidor procesa primero los items con `priority: emergency` y luego el resto en
-        orden de `created_at`. Cada `payload` tiene la misma forma que el body del endpoint en
-        línea equivalente (p. ej. `reading` = `POST /readings`). Resultado por item:
+        Solo el astronauta, con sus datos y desde un dispositivo suyo: el `device_id` de su
+        sesión, uno con el que inició sesión o una tableta registrada de su misión (si no, 403
+        `DEVICE_NOT_OWNED`). Hasta 500 items (`SYNC_MAX_BATCH`; más → 413).
+
+        **Orden de proceso**: primero `priority: emergency`, luego los **críticos** (el servidor
+        evalúa cada lectura con sus propios valores, sin historial) y luego el resto por
+        `payload.measured_at` (o `created_at`). Una corrección arrastra a su original del mismo
+        lote. `sequence` en cada resultado dice el orden real.
+
+        Cada `payload` tiene la misma forma que el body del endpoint en línea, sin `client_uuid`
+        (va en el item): `reading` = `POST /readings`, `habitat_reading` = un elemento de
+        `POST /habitat/readings`, `wellbeing_checkin` = `POST /wellbeing/checkins`,
+        `pvt_run` = `POST /wellbeing/pvt-runs`, `wellbeing_screening` =
+        `POST /wellbeing/screenings`. Cada item va en su propia transacción: uno que falla no
+        tumba el lote. Resultado por item (el arreglo `results` sigue el orden de `items`):
         - `accepted`: guardado (`server_id`, y `result` con la evaluación si aplica).
-        - `duplicate`: ya existía ese `client_uuid` (`server_id` del existente).
-        - `conflict`: choca con el estado del servidor (p. ej. ya hay una sesión de emergencia activa).
-        - `rejected`: inválido (`error` con el formato de errores); no reintentar sin corregir.
+        - `duplicate`: ya existía ese `client_uuid` con el mismo contenido (`server_id` del
+          existente). **Reintentar el lote completo da todo `duplicate`.**
+        - `conflict`: `PAYLOAD_MISMATCH` (ese `client_uuid` ya existe con otro contenido; las
+          lecturas nunca se sobrescriben: corrige con `supersedes_uuid` y un `client_uuid`
+          nuevo) o `SUPERSEDE_CONFLICT` (esa lectura ya se corrigió una vez). No reintentar igual.
+        - `rejected`: inválido (`error` con el formato de errores): `VALIDATION_ERROR`,
+          `FUTURE_TIMESTAMP` (`measured_at` más de 5 min en el futuro según el servidor; nunca
+          se corrige en silencio), `UNKNOWN_ENTITY` o `ENTITY_NOT_SUPPORTED` (emergencias y
+          apoyo, todavía no). No reintentar sin corregir.
+
+        **Llegó tarde**: se evalúa con su `measured_at` y el escalamiento sale desde la recepción
+        (`compute_deliver_at`, con cortes): un crítico viejo sigue escalando. `result.late_sync`
+        es true si pasaron más de 15 min (`SYNC_LATE_AFTER_S`) entre la medición y la recepción;
+        `result.lag_s` dice cuánto. `clock_offset_s` = recepción − `sent_at` (solo se registra).
+
+        **Bienestar**: el resultado es un mensaje neutro (y la aptitud en `pvt_run`); nunca un
+        nivel, un puntaje ni un escalamiento.
       operationId: syncPush
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -3787,23 +4120,42 @@ paths:
                   summary: Los cuatro estados posibles
                   value:
                     server_time: '2026-11-14T08:06:01Z'
+                    batch_id: '90000000-0000-4000-8000-000000000001'
+                    clock_offset_s: 1
+                    counts: { accepted: 1, duplicate: 1, conflict: 0, rejected: 2 }
                     results:
-                      - {
-                          client_uuid: 'e1000000-0000-4000-8000-000000000003',
-                          entity: emergency_answer,
-                          status: accepted,
-                          server_id: null,
-                        }
-                      - {
-                          client_uuid: 'c1000000-0000-4000-8000-000000000101',
-                          entity: reading,
-                          status: duplicate,
-                          server_id: '30000000-0000-4000-8000-000000000101',
-                        }
+                      - client_uuid: 'e1000000-0000-4000-8000-000000000003'
+                        entity: emergency_answer
+                        status: rejected
+                        server_id: null
+                        error:
+                          {
+                            code: ENTITY_NOT_SUPPORTED,
+                            message: El servidor todavía no acepta emergency_answer por sincronización.,
+                            details: { entity: emergency_answer },
+                          }
+                      - client_uuid: 'c1000000-0000-4000-8000-000000000101'
+                        entity: reading
+                        status: duplicate
+                        server_id: '30000000-0000-4000-8000-000000000101'
+                        sequence: 1
+                        result:
+                          evaluation:
+                            {
+                              code: BLOOD_PRESSURE,
+                              level: caution,
+                              rule_index: 5,
+                              rules_version: 1,
+                              escalation: crew,
+                            }
+                          escalation_id: '60000000-0000-4000-8000-000000000101'
+                          late_sync: true
+                          lag_s: 2160
                       - client_uuid: 'c1000000-0000-4000-8000-000000000116'
                         entity: reading
                         status: accepted
                         server_id: '30000000-0000-4000-8000-000000000116'
+                        sequence: 2
                         result:
                           evaluation:
                             {
@@ -3817,35 +4169,66 @@ paths:
                               source_ids: [aha_hr],
                             }
                           escalation_id: null
+                          late_sync: true
+                          lag_s: 1860
                       - client_uuid: 'ca000000-0000-4000-8000-000000000001'
                         entity: wellbeing_checkin
                         status: rejected
                         server_id: null
+                        sequence: 3
                         error:
-                          {
-                            code: VALIDATION_ERROR,
-                            message: mood debe estar entre 0 y 100.,
-                            details: { field: payload.mood },
-                          }
+                          code: VALIDATION_ERROR
+                          message: La petición tiene campos inválidos.
+                          details:
+                            - { field: payload.mood, issue: debe ser un entero entre 0 y 100 }
                 conflict:
-                  summary: Sesión de emergencia ya activa
+                  summary: Mismo client_uuid con otro contenido
                   value:
                     server_time: '2026-11-14T08:06:01Z'
+                    batch_id: '90000000-0000-4000-8000-000000000002'
+                    clock_offset_s: 0
+                    counts: { accepted: 0, duplicate: 0, conflict: 2, rejected: 0 }
                     results:
-                      - client_uuid: 'c4000000-0000-4000-8000-000000000002'
-                        entity: emergency_session
+                      - client_uuid: 'c1000000-0000-4000-8000-000000000101'
+                        entity: reading
                         status: conflict
-                        server_id: '40000000-0000-4000-8000-000000000001'
+                        server_id: '30000000-0000-4000-8000-000000000101'
+                        sequence: 1
                         error:
                           {
-                            code: SESSION_ALREADY_ACTIVE,
-                            message: Ya hay una sesión de emergencia activa en la misión; únete a ella.,
-                            details: { session_id: '40000000-0000-4000-8000-000000000001' },
+                            code: PAYLOAD_MISMATCH,
+                            message: Ya existe un registro con ese client_uuid y otro contenido. Para corregirlo usa supersedes_uuid con un client_uuid nuevo.,
+                            details: { server_id: '30000000-0000-4000-8000-000000000101' },
+                          }
+                      - client_uuid: 'c1000000-0000-4000-8000-000000000120'
+                        entity: reading
+                        status: conflict
+                        server_id: null
+                        sequence: 2
+                        error:
+                          {
+                            code: SUPERSEDE_CONFLICT,
+                            message: La lectura que intentas corregir ya fue reemplazada.,
+                            details: { supersedes_uuid: 'c1000000-0000-4000-8000-000000000101' },
                           }
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: El dispositivo no es del astronauta (DEVICE_NOT_OWNED), no tiene asignación vigente (NO_ACTIVE_ASSIGNMENT) o no es astronauta (FORBIDDEN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                device:
+                  summary: Dispositivo ajeno
+                  value:
+                    error:
+                      code: DEVICE_NOT_OWNED
+                      message: 'Ese dispositivo no es tuyo: inicia sesión en él o usa una tableta registrada de tu misión.'
+                      details: { device_id: ipad-de-otro }
         '413':
           $ref: '#/components/responses/PayloadTooLarge'
 
@@ -3854,16 +4237,30 @@ paths:
       tags: [Sync]
       summary: Recibe lo nuevo desde la última sincronización
       description: |
-        Reglas o protocolo nuevos (si `changed`, descarga `GET /rules` o `GET /emergency/protocol`),
-        mensajes de Tierra ya entregados (`deliver_at <= now()`) y recordatorios. Guarda `cursor`
-        y envíalo en la próxima llamada; si `has_more`, vuelve a llamar enseguida.
+        Solo lo del astronauta. Guarda `cursor` y envíalo en la próxima llamada; si `has_more`,
+        vuelve a llamar enseguida. El cursor es opaco y monótono: con el mismo cursor sale lo
+        mismo. Sin cursor, empieza desde el principio.
+
+        **Incremental** (hasta `limit` en total, por fecha):
+        - `evaluations`: evaluación y estado de sus lecturas **estándar** (nunca bienestar), con
+          `supersedes_uuid` para marcar las corregidas y `late_sync` / `lag_s`;
+        - `escalations`: sus escalamientos no confidenciales que ya llegaron a destino
+          (`deliver_at <= now()`; el estado es el del momento en que llegaron);
+        - `messages`: respuestas de Tierra ya entregadas (`deliver_at <= now()`). Durante un corte
+          de enlace `deliver_at` es null y no sale nada hasta que se restablezca.
+
+        **Estado** (en cada respuesta): `rules`, `protocol`, `catalog` y `mission` con `changed`
+        respecto del cursor (si `rules.changed`, descarga `GET /rules`; si `protocol.changed`,
+        `GET /emergency/protocol`), recordatorios pendientes y rutinas activas.
+
+        Para no saltar filas, solo devuelve lo que tiene más de 2 s (`SYNC_PULL_SETTLE_MS`).
       operationId: syncPull
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
       responses:
         '200':
           description: Cambios desde el cursor
@@ -3880,6 +4277,45 @@ paths:
                     server_time: '2026-11-14T08:13:00Z'
                     rules: { rules_version: 1, changed: false }
                     protocol: { code: crew_emergency, version: 1, changed: false }
+                    catalog: { catalog_version: 1, changed: false }
+                    mission:
+                      id: '20000000-0000-4000-8000-000000000001'
+                      code: ARES-1
+                      status: active
+                      ends_at: null
+                      comm_delay_seconds: 90
+                      link: { status: up, outage_ends_at: null }
+                      version: '2026-09-30T08:00:00.000000Z'
+                      changed: false
+                    evaluations:
+                      - reading_id: '30000000-0000-4000-8000-000000000131'
+                        client_uuid: 'c1000000-0000-4000-8000-000000000131'
+                        supersedes_uuid: null
+                        indicator_code: SPO2
+                        measured_at: '2026-11-14T02:00:00Z'
+                        received_at: '2026-11-14T08:06:01Z'
+                        evaluation:
+                          {
+                            code: SPO2,
+                            level: critical,
+                            rule_index: 0,
+                            rules_version: 1,
+                            escalation: flight_surgeon,
+                          }
+                        escalation_id: '60000000-0000-4000-8000-000000000212'
+                        late_sync: true
+                        lag_s: 21961
+                    escalations:
+                      - id: '60000000-0000-4000-8000-000000000212'
+                        source_type: reading
+                        source_id: '30000000-0000-4000-8000-000000000131'
+                        level: flight_surgeon
+                        priority: urgent
+                        status: delivered
+                        reason: 'SPO2 en critical: 89 %.'
+                        created_at: '2026-11-14T08:06:01Z'
+                        deliver_at: '2026-11-14T08:07:31Z'
+                    routines: []
                     messages:
                       - id: '61000000-0000-4000-8000-000000000301'
                         channel: escalation
@@ -3897,23 +4333,36 @@ paths:
                           due_at: '2026-11-14T21:00:00Z',
                           indicator_code: null,
                         }
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   # ===================================================================== Emergencia
   /api/v1/emergency/protocol:
     get:
       tags: [Emergencia]
-      summary: Protocolo de triaje activo
-      description: La app lo guarda en caché para evaluar sin conexión con `evaluateAssessment`. El ejemplo es el protocolo real del seed.
+      summary: Protocolo de triaje activo (o una versión)
+      description: |
+        La app lo guarda en caché para evaluar sin conexión con `evaluateAssessment`
+        (`src/engine/triage.js`, el mismo código del servidor). El activo es la **v2** (si el
+        tripulante no responde, el módulo de radiación solo pregunta signos observables).
+        `?version=` devuelve otra versión: una sesión se evalúa siempre con la suya
+        (`session.protocol.version`). El ejemplo es la v1 del seed.
       operationId: getEmergencyProtocol
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut, flight_surgeon, admin]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
         - bearerAuth: []
         - deviceCredential: []
+      parameters:
+        - name: version
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1 }
       responses:
         '200':
           description: Protocolo activo
@@ -4149,14 +4598,17 @@ paths:
       tags: [Emergencia]
       summary: Activa el modo emergencia
       description: |
-        `trigger_type`: botón manual o activación automática (check-in perdido, lectura crítica o
-        alarma del entorno). Incluye la respuesta de sesión `responder_safe`; si es
-        `{ "value": false }`, `next_step` es `secure_self` y la app muestra "ponte a salvo"
-        antes de evaluar. Devuelve el roster ordenado por riesgo. Si ya hay una sesión activa en
-        la misión → **409** `SESSION_ALREADY_ACTIVE` con su id para unirse.
+        Cualquier tripulante de la misión vigente. `trigger_type`: botón manual (`manual_button`),
+        aviso de un tripulante (`crew_event`) o lo que detectó la app sin conexión. Se abre
+        **activa** de una vez (sin hombre muerto: ya hay alguien atendiendo) y escala a bordo
+        (`crew`) y a Tierra (`flight_surgeon`, con `compute_deliver_at` y cortes).
+        `responder_safe`: si es `{ "value": false }`, `next_step` es `secure_self` y la app
+        muestra "ponte a salvo" antes de evaluar. Devuelve el roster ordenado por riesgo y el
+        orden de atención. Si ya hay una sesión abierta en la misión, **se une** a ella:
+        201 con `joined: true` y la sesión abierta (queda en la línea de tiempo). Las
+        activaciones automáticas (lectura crítica, check-in perdido) las hace el servidor.
       operationId: createEmergencySession
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4200,29 +4652,23 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
-        '409':
-          description: Ya hay una sesión activa en la misión
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              examples:
-                alreadyActive:
-                  summary: Únete a la sesión activa
-                  value:
-                    error:
-                      code: SESSION_ALREADY_ACTIVE
-                      message: Ya hay una sesión de emergencia activa en la misión; únete a ella.
-                      details: { session_id: '40000000-0000-4000-8000-000000000001' }
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /api/v1/emergency/sessions/{id}:
     get:
       tags: [Emergencia]
-      summary: Sesión con su roster ordenado por riesgo
-      description: Primero quien tenga lecturas críticas recientes o check-ins perdidos; luego el resto.
+      summary: Sesión con su roster ordenado por riesgo y el orden de atención
+      description: |
+        Roster: primero quien no respondió "estoy bien", luego quien lo está esperando y quien
+        tiene una lectura crítica reciente; luego el resto (con `prefill` desde lecturas
+        recientes). `attention_order`: a quién atender primero según el protocolo (rojo,
+        amarillo, verde, negro; dentro, radiación probable antes que posible; quien no tiene
+        evaluación va después de los rojos), con el motivo de cada lugar.
+        Al leerla corre el barrido del hombre muerto (`sweepDeadman`). flight_surgeon y admin
+        ven solo lo que ya llegó a Tierra (404 antes); admin, sin datos clínicos.
       operationId: getEmergencySession
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut, flight_surgeon, admin]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4242,17 +4688,135 @@ paths:
                   $ref: '#/components/examples/SessionWithRosterAres1'
         '401':
           $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /api/v1/emergency/sessions/{id}/confirm:
+    post:
+      tags: [Emergencia]
+      summary: '"Estoy bien" del tripulante afectado (interruptor de hombre muerto)'
+      description: |
+        En una activación automática (lectura crítica o check-in perdido) la sesión nace
+        `pending` y el tripulante afectado tiene `TRIAGE_DEADMAN_S` (60 s) para confirmar. Si
+        todos los afectados confirman, la sesión se **cancela** (queda registrada). Si el plazo
+        vence, el servidor la activa, avisa a bordo y escala a Tierra (una sola vez). Solo el
+        propio afectado confirma; después del plazo → 409 `DEADMAN_EXPIRED`. Idempotente.
+      operationId: confirmEmergencyOk
+      x-status: mvp
+      x-roles: [astronaut]
+      x-hazards: [distance_from_earth, isolation_confinement]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                confirmed_at: { $ref: '#/components/schemas/Timestamp' }
+            examples:
+              ok:
+                summary: LYRA está bien
+                value: { confirmed_at: '2026-11-14T08:00:20Z' }
+      responses:
+        '200':
+          description: Sesión (cancelled si todos confirmaron)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionWithRoster'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: No tienes alerta pendiente (CONFLICT) o el plazo ya venció (DEADMAN_EXPIRED)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                expired:
+                  summary: Llegó tarde
+                  value:
+                    error:
+                      code: DEADMAN_EXPIRED
+                      message: 'El plazo ya venció: la emergencia está activa.'
+                      details: { session_id: '40000000-0000-4000-8000-000000000001' }
+
+  /api/v1/emergency/sessions/{id}/questions:
+    post:
+      tags: [Emergencia]
+      summary: Pregunta a Tierra lo que no cubre el protocolo
+      description: |
+        El sistema no diagnostica ni receta: lo que está fuera del protocolo se consulta con el
+        flight surgeon. La pregunta viaja por el hilo de la sesión con `deliver_at`
+        (`compute_deliver_at`; durante un corte, null = en cola). Tierra responde con
+        `POST /admin/escalations/{escalation_id}/messages` y la respuesta llega a toda la
+        tripulación de la misión por `GET /sync/pull` cuando su `deliver_at` ya pasó.
+        Idempotente por `client_uuid` (201 / 200). Solo con la sesión activa o cerrada.
+      operationId: askEmergencyQuestion
+      x-status: mvp
+      x-roles: [astronaut]
+      x-hazards: [distance_from_earth]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmergencyQuestionCreate'
+            examples:
+              nausea:
+                summary: Fuera del protocolo
+                value:
+                  client_uuid: 'c6000000-0000-4000-8000-000000000001'
+                  body: 'VEGA pide algo para la náusea y LYRA sigue sin responder. ¿Qué indican?'
+                  asked_at: '2026-11-14T08:06:00Z'
+      responses:
+        '201':
+          description: Pregunta enviada (o en cola)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmergencyQuestion'
+        '200':
+          description: Duplicado (mismo client_uuid)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmergencyQuestion'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /api/v1/emergency/sessions/{id}/assessments:
     post:
       tags: [Emergencia]
       summary: Inicia la evaluación de un tripulante
-      description: Una evaluación por tripulante y sesión. Idempotente por `client_uuid`.
+      description: |
+        Idempotente por `client_uuid`. Una evaluación nueva del mismo tripulante es una
+        **reevaluación**: la anterior se conserva (append-only, `reassessment_of`) y manda la
+        última completada. Se evalúa con la versión del protocolo de la sesión. Si la sesión
+        esperaba "estoy bien", empezar a evaluar la activa. `{id}` acepta el id o el
+        `client_uuid` de la sesión.
       operationId: createAssessment
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4300,20 +4864,23 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '404':
           $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '409':
-          description: Ese tripulante ya tiene evaluación en la sesión, o la sesión está cerrada
+          description: La sesión está cerrada (SESSION_CLOSED)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               examples:
-                alreadyAssessed:
-                  summary: Ya evaluado
+                closed:
+                  summary: Sesión cerrada
                   value:
                     error:
-                      code: CONFLICT
-                      message: LYRA ya tiene una evaluación en esta sesión.
-                      details: { assessment_id: '50000000-0000-4000-8000-000000000001' }
+                      code: SESSION_CLOSED
+                      message: La sesión de emergencia está cerrada.
+                      details:
+                        { session_id: '40000000-0000-4000-8000-000000000001', status: closed }
 
   /api/v1/emergency/assessments/{id}/answers:
     put:
@@ -4324,10 +4891,14 @@ paths:
         para opciones (lista de códigos en `multi_choice`). Idempotente: cada respuesta lleva
         `client_uuid` y, por pregunta, manda la más reciente (`answered_at`). Devuelve una
         vista previa de `evaluateAssessment` para saber qué pregunta sigue (`pending`).
-        La respuesta de sesión `responder_safe` se copia automáticamente en cada evaluación.
+        **Vocabulario cerrado**: la app lee la pregunta en voz alta y responde con botones; el
+        servidor solo acepta las opciones del protocolo (si no, 400).
+        La respuesta de sesión `responder_safe` se copia automáticamente en cada evaluación; en
+        una activación automática (sin `responder_safe`) la contesta el primer evaluador.
+        Responder a una evaluación ya completada → 409 `ASSESSMENT_COMPLETED` (reevalúa); un
+        reintento de respuestas ya guardadas da `duplicates`.
       operationId: putAssessmentAnswers
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4439,17 +5010,22 @@ paths:
       tags: [Emergencia]
       summary: Completa la evaluación; el servidor recalcula y su resultado manda
       description: |
-        Ejecuta `evaluateAssessment(protocolo, respuestas, contexto)` y devuelve su resultado
-        con los mismos nombres (`status`, `triage_category`, `radiation_flag`, `escalations`,
-        `path`, `pending`, `reason`), más `priority` (la mayor de `escalations`), los IDs y
-        `deliver_at` de los escalamientos creados y `matches_device` contra `device_result`.
-        - `completed`: se crean los escalamientos (`crew` se entrega a bordo de inmediato;
-          `flight_surgeon` con `compute_deliver_at`).
+        Ejecuta `evaluateAssessment(protocolo, respuestas, contexto)` con la **versión del
+        protocolo de la evaluación** y devuelve su resultado con los mismos nombres (`status`,
+        `triage_category`, `radiation_flag`, `escalations`, `path`, `pending`, `reason`), más
+        `priority` (la mayor de `escalations`), los IDs y `deliver_at` de los escalamientos
+        creados, `next` (a quién evaluar después) y `attention_order`.
+        **Dispositivo vs servidor**: si `device_result` difiere, se guardan los dos,
+        `matches_device: false` y `mismatch_fields` dicen qué cambió, queda un evento
+        `device_mismatch` y se usa el del servidor para priorizar (nunca se sobrescribe en
+        silencio). Completar otra vez devuelve lo mismo sin volver a escalar.
+        - `completed`: se crean los escalamientos de la regla del protocolo (`crew` se entrega
+          a bordo de inmediato; `flight_surgeon` con `compute_deliver_at`) y siempre uno a
+          `flight_surgeon` (Tierra recibe cada evaluación).
         - `incomplete`: no se completa; `pending` es la pregunta que falta.
         - `stopped`: `reason` (p. ej. `STOP_SECURE_SELF`).
       operationId: completeAssessment
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       security:
@@ -4522,12 +5098,12 @@ paths:
       tags: [Emergencia]
       summary: Latido del interruptor de hombre muerto
       description: |
-        La tableta lo envía mientras alguien atiende la emergencia. Si pasan
-        `dead_man_switch_seconds` (120 s en el protocolo v1) sin latido, el servidor escala
-        automáticamente a la tripulación y al flight surgeon.
+        La tableta lo envía mientras alguien atiende una sesión **activa**. Si pasan
+        `dead_man_switch_seconds` (120 s en el protocolo) sin latido, el barrido del servidor
+        escala a la tripulación y al flight surgeon (una vez por corte de latidos). Es distinto
+        del "estoy bien" de una activación automática (`/confirm`).
       operationId: emergencyHeartbeat
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, isolation_confinement]
       security:
@@ -4574,9 +5150,14 @@ paths:
     post:
       tags: [Emergencia]
       summary: Cierra o cancela la sesión de emergencia
+      description: |
+        Comandante o CMO. `closed` = atendida; `cancelled` = falsa alarma. Avisa a Tierra y deja
+        el **reporte completo** (línea de tiempo, evaluaciones con respuestas, clasificaciones,
+        versión del protocolo y diferencias dispositivo/servidor), que el flight surgeon ve en
+        `GET /admin/emergencies/{id}` cuando llega el cierre (retraso + cortes). Cerrar una
+        sesión que se fusionó cierra la principal. Idempotente.
       operationId: closeEmergencySession
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-crew-role: [commander, crew_medical_officer]
       x-hazards: [distance_from_earth]
@@ -5181,10 +5762,15 @@ paths:
     get:
       tags: [Tierra]
       summary: Semáforo físico de la tripulación
-      description: Por astronauta e indicador físico, nivel, último valor y tendencia, más cumplimiento y aptitud. **Sin estado conductual.**
+      description: |
+        Por astronauta de la tripulación vigente e indicador físico con lecturas: nivel, último
+        valor, serie (hasta 10 puntos; valor principal = `value` o la sistólica) y tendencia
+        (último valor frente a la media de los anteriores, ±5 %; menos de 2 puntos =
+        `insufficient_data`). Más aptitud (`flight_surgeon` y `admin`) y cumplimiento (solo `admin`).
+        **Sin estado conductual**: las lecturas salen de `v_readings_standard`.
+        `behavioral_health` → 403.
       operationId: getCrewDashboard
       x-status: mvp
-      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [gravity_fields, space_radiation, hostile_closed_env, distance_from_earth]
       parameters:
@@ -5235,6 +5821,10 @@ paths:
                             series:
                               - { measured_at: '2026-11-14T06:50:00Z', value: 18 }
                               - { measured_at: '2026-11-14T07:50:00Z', value: 31 }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -5246,13 +5836,14 @@ paths:
       summary: Bandeja de escalamientos ya entregados en Tierra
       description: |
         Basada en `v_ground_inbox`: escalamientos `flight_surgeon` con `deliver_at <= now()` y no
-        cerrados, ordenados por prioridad y luego por `deliver_at`. Lo que está en cola
+        cerrados, ordenados por prioridad (`emergency` > `urgent` > `routine`) y luego por
+        `deliver_at` ascendente (lo que espera desde hace más tiempo, primero). Lo que está en cola
         (`deliver_at` futuro o null) no aparece todavía. `category`: `reading` (lectura),
         `emergency` (triaje), `wellbeing` (alerta de bienestar escalada al flight surgeon: solo
-        estado), `manual`.
+        estado; `admin` no la ve), `manual`. Lo confidencial (`behavioral_health`) nunca aparece.
+        Al leer la bandeja, lo que ya llegó pasa de `queued` a `delivered`.
       operationId: getGroundInbox
       x-status: mvp
-      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5320,6 +5911,10 @@ paths:
                           basis: 'source'
                           source_ids: ['aha_bp', 'ama_bp2025']
                     next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -5329,9 +5924,12 @@ paths:
     post:
       tags: [Tierra]
       summary: Marca un escalamiento como recibido
+      description: |
+        Solo sobre lo que ya está en la bandeja (`deliver_at <= now()`); antes responde **404**.
+        Idempotente: un segundo acuse devuelve el primero (y no retrocede un `responded`).
+        **409** si el escalamiento está cerrado.
       operationId: ackEscalation
       x-status: mvp
-      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5364,10 +5962,13 @@ paths:
     post:
       tags: [Tierra]
       summary: Responde a la tripulación (viaja con retraso)
-      description: Devuelve `deliver_at` calculado con `compute_deliver_at`. Si el enlace está caído y el corte sigue abierto, `deliver_at` es null (en cola).
+      description: |
+        Devuelve `deliver_at` calculado con `compute_deliver_at`. Si el enlace está caído y el
+        corte sigue abierto, `deliver_at` es null (en cola) y se recalcula al cerrar el corte.
+        El escalamiento pasa a `responded` (y cuenta como acuse si no lo había). Igual que el
+        acuse: **404** si todavía no llegó a Tierra y **409** si está cerrado.
       operationId: replyEscalation
       x-status: mvp
-      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5414,15 +6015,19 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /api/v1/escalations/{id}/messages:
     get:
       tags: [Tierra]
       summary: Mensajes de un escalamiento (lado astronauta)
-      description: Solo los ya entregados a bordo (`deliver_at <= now()`).
+      description: |
+        Hilo visto a bordo: los mensajes de Tierra (`to_crew`) solo cuando ya se entregaron
+        (`deliver_at <= now()`); los enviados desde a bordo (`to_earth`), siempre. Lo ve el
+        astronauta del escalamiento (y el CMO si es físico); otro tripulante → 403.
       operationId: listEscalationMessages
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5450,6 +6055,8 @@ paths:
                         created_at: '2026-11-14T08:11:00Z'
                         deliver_at: '2026-11-14T08:12:30Z'
                     next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -5461,17 +6068,19 @@ paths:
     get:
       tags: [Tierra]
       summary: Sesiones de emergencia que ya llegaron a Tierra
-      description: Una sesión aparece cuando al menos uno de sus escalamientos tiene `deliver_at <= now()` (la tabla de sesiones no tiene `deliver_at`).
+      description: |
+        Una sesión aparece cuando al menos uno de sus escalamientos a flight_surgeon tiene
+        `deliver_at <= now()`. `counts` (clasificación de lo que ya llegó) lo ve el flight
+        surgeon; para admin es null (solo estado operativo).
       operationId: listGroundEmergencies
       x-status: mvp
-      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       parameters:
         - $ref: '#/components/parameters/MissionIdQuery'
         - name: status
           in: query
-          schema: { type: string, enum: [active, closed, cancelled] }
+          schema: { type: string, enum: [pending, active, closed, cancelled] }
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
@@ -5507,9 +6116,16 @@ paths:
     get:
       tags: [Tierra]
       summary: Detalle de una emergencia con evaluaciones y respuestas
+      description: |
+        Solo lo que ya llegó a Tierra (cada evento de la línea de tiempo viaja con su
+        `deliver_at`; durante un corte, nada nuevo). flight_surgeon: evaluaciones con respuestas
+        y clasificación, orden de atención, línea de tiempo, preguntas de la tripulación y el
+        `report` completo cuando llega el cierre. admin: solo el estado operativo (sin
+        `answers`, categorías, preguntas ni reporte). El acuse y la respuesta usan
+        `POST /admin/escalations/{id}/ack` y `/messages`. El triaje no incluye datos de
+        bienestar.
       operationId: getGroundEmergency
       x-status: mvp
-      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth, space_radiation, hostile_closed_env]
       parameters:
@@ -5626,6 +6242,30 @@ paths:
                           status: delivered,
                           deliver_at: '2026-11-14T08:05:40Z',
                         }
+                    timeline:
+                      - {
+                          id: 1,
+                          event_type: opened,
+                          at: '2026-11-14T08:02:01Z',
+                          delivered_at: '2026-11-14T08:03:31Z',
+                          actor_role: astronaut,
+                          details: { trigger_type: manual_button, automatic: false },
+                        }
+                      - {
+                          id: 2,
+                          event_type: assessment_completed,
+                          at: '2026-11-14T08:04:10Z',
+                          delivered_at: '2026-11-14T08:05:40Z',
+                          call_sign: LYRA,
+                          details:
+                            {
+                              triage_category: red,
+                              radiation_flag: probable,
+                              rules_version: 1,
+                              matches_device: true,
+                            },
+                        }
+                    report: null
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -6201,14 +6841,21 @@ components:
                   message: La operación no es compatible con el estado actual.
                   details: null
     PayloadTooLarge:
-      description: El cuerpo excede el tamaño permitido (PAYLOAD_TOO_LARGE)
+      description: El cuerpo excede el tamaño permitido (5 MB) o el lote trae más items que SYNC_MAX_BATCH (PAYLOAD_TOO_LARGE)
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
           examples:
+            tooMany:
+              summary: Lote de sync con demasiados items
+              value:
+                error:
+                  code: PAYLOAD_TOO_LARGE
+                  message: El lote tiene 620 items; el máximo es 500. Divídelo en lotes más chicos.
+                  details: { max_items: 500, items: 620 }
             tooLarge:
-              summary: Demasiado grande
+              summary: Cuerpo demasiado grande
               value:
                 error:
                   code: PAYLOAD_TOO_LARGE
@@ -6363,9 +7010,9 @@ components:
           astronaut_id: '10000000-0000-4000-8000-000000000011'
           indicator_code: BLOOD_PRESSURE
           values: { systolic: 145, diastolic: 88, symptoms: [] }
-          input_method: camera
+          input_method: manual
           device_id: ipad-crew-01
-          attachment_id: '90000000-0000-4000-8000-000000000001'
+          attachment_id: null
           measured_at: '2026-11-14T07:30:00Z'
           received_at: '2026-11-14T07:30:04Z'
           superseded_by: null
@@ -6502,6 +7149,47 @@ components:
         received_at: '2026-11-14T06:45:03Z'
         message: Gracias por tu check-in.
         offer_support: false
+    SimulatorHistorySummary:
+      summary: Historia de 14 días (primera vez)
+      value:
+        kind: history
+        mission_code: ARES-1
+        params: { days: 14, seed: 42 }
+        from: '2026-11-02T00:00:00.000Z'
+        to: '2026-11-15T03:27:36.640Z'
+        readings: { created: 3293, duplicate: 0, rejected: 0 }
+        wellbeing:
+          checkins: { created: 52, duplicate: 0 }
+          checkin_corrections: 0
+          pvt_runs: { created: 19, duplicate: 0 }
+          instruments: { created: 8, duplicate: 0 }
+        levels:
+          BLOOD_PRESSURE: { normal: 47, caution: 5 }
+          HAB_CO2: { normal: 631 }
+          SLEEP_HOURS: { normal: 39, caution: 13 }
+        escalations: { created: 0, by_level: {} }
+        confidential_note: 'Los niveles y escalamientos de bienestar son confidenciales: solo los ve behavioral_health.'
+        errors: []
+    SimulatorCo2Summary:
+      summary: Subida de CO₂ en HAB-1 (low)
+      value:
+        kind: scenario
+        scenario: co2_spike
+        mission_code: ARES-1
+        params: { intensity: low, module_id: HAB-1 }
+        at: '2026-11-15T03:28:00.000Z'
+        notes: []
+        readings: { created: 6, duplicate: 0, rejected: 0 }
+        wellbeing:
+          checkins: { created: 0, duplicate: 0 }
+          checkin_corrections: 0
+          pvt_runs: { created: 0, duplicate: 0 }
+          instruments: { created: 0, duplicate: 0 }
+        levels:
+          HAB_CO2: { normal: 2, caution: 4 }
+        escalations: { created: 4, by_level: { crew: 4 } }
+        confidential_note: 'Los niveles y escalamientos de bienestar son confidenciales: solo los ve behavioral_health.'
+        errors: []
     SupportRequestOrion:
       summary: Solicitud de apoyo de ORION
       value:
@@ -6597,7 +7285,8 @@ components:
       enum: [manual_button, crew_event, missed_checkin, critical_reading, environment_alarm]
     EmergencyStatus:
       type: string
-      enum: [active, closed, cancelled]
+      description: pending = activación automática esperando "estoy bien"; merged = activación que se unió a otra sesión (merged_into).
+      enum: [pending, active, closed, cancelled, merged]
     AssessmentStatus:
       type: string
       enum: [in_progress, completed, unreachable]
@@ -6645,6 +7334,10 @@ components:
             Código estable para la lógica del cliente. Mínimos: VALIDATION_ERROR (400),
             UNAUTHENTICATED (401), FORBIDDEN (403), NOT_FOUND (404), CONFLICT (409),
             ACCOUNT_LOCKED (423), PASSWORD_CHANGE_REQUIRED (428), RATE_LIMITED (429).
+            Emergencia: SESSION_CLOSED, ASSESSMENT_COMPLETED, DEADMAN_EXPIRED (409).
+            Sync (por item): PAYLOAD_MISMATCH, SUPERSEDE_CONFLICT, FUTURE_TIMESTAMP,
+            UNKNOWN_ENTITY, ENTITY_NOT_SUPPORTED; del lote: DEVICE_NOT_OWNED (403),
+            PAYLOAD_TOO_LARGE (413).
             Específicos: INVALID_CREDENTIALS, TOKEN_REUSE_DETECTED, NO_ACTIVE_ASSIGNMENT,
             WEAK_PASSWORD, USERNAME_TAKEN, EMAIL_TAKEN, CALL_SIGN_TAKEN, CREW_ROLE_TAKEN,
             ASSIGNMENT_OVERLAP, OUTAGE_OVERLAP,
@@ -6711,6 +7404,8 @@ components:
           type: string
           nullable: true
           enum: [commander, pilot, crew_medical_officer, flight_engineer, mission_specialist, null]
+        sex:
+          $ref: '#/components/schemas/BiologicalSex'
         mission: { $ref: '#/components/schemas/MissionRef' }
         environment: { $ref: '#/components/schemas/EnvironmentRef' }
         ground_missions:
@@ -6802,6 +7497,8 @@ components:
             agency: { type: string, nullable: true }
             mission_id: { $ref: '#/components/schemas/Uuid' }
             crew_role: { $ref: '#/components/schemas/CrewRole' }
+            sex:
+              $ref: '#/components/schemas/BiologicalSex'
         ground_mission_ids:
           type: array
           description: Misiones a cuyo equipo en Tierra se agrega (no aplica a astronautas ni a service). Si se omite, las misiones activas del equipo en Tierra del admin que crea la cuenta.
@@ -6813,15 +7510,35 @@ components:
           properties:
             mission_id: { $ref: '#/components/schemas/Uuid' }
             description: { type: string, minLength: 1, maxLength: 200 }
+    BiologicalSex:
+      type: string
+      nullable: true
+      enum: [female, male, null]
+      description: |
+        Sexo biológico para referencias clínicas futuras. **No es identidad de género.** Datos
+        sintéticos en la demo. Quién lo recibe (accessPolicy, vista `clinical_profile`): el propio
+        astronauta, y `flight_surgeon` y `behavioral_health` de su misión. `admin` lo escribe
+        pero **no** lo recibe; otro astronauta (también el CMO y el comandante) nunca lo ve, y no
+        aparece en el dashboard. Si el rol no puede verlo, el campo no viene. Ninguna regla
+        actual lo usa y la radiación no depende de él (límite de carrera universal,
+        NASA-STD-3001 Vol. 1 [V1 4030]).
     AstronautProfile:
       type: object
       required: [id, user_id, call_sign, synthetic]
+      description: Lo recibe admin, así que nunca trae `sex` (ver BiologicalSex).
       properties:
         id: { $ref: '#/components/schemas/Uuid' }
         user_id: { $ref: '#/components/schemas/Uuid' }
         call_sign: { type: string }
         agency: { type: string, nullable: true }
         synthetic: { type: boolean }
+    AstronautPatch:
+      type: object
+      required: [sex]
+      additionalProperties: false
+      properties:
+        sex:
+          $ref: '#/components/schemas/BiologicalSex'
     CreatedUser:
       type: object
       required: [user, temporary_password]
@@ -6989,7 +7706,10 @@ components:
         crew_role: { $ref: '#/components/schemas/CrewRole' }
         assigned_from: { $ref: '#/components/schemas/Timestamp' }
         assigned_to:
-          { type: string, format: date-time, nullable: true, description: null = vigente. }
+          type: string
+          format: date-time
+          nullable: true
+          description: null = sin fecha de fin. Vigente mientras assigned_from <= now() < assigned_to.
         created_at: { $ref: '#/components/schemas/Timestamp' }
     AssignmentCreate:
       type: object
@@ -7041,6 +7761,112 @@ components:
       properties:
         ends_at: { type: string, format: date-time, nullable: true }
         reason: { type: string, minLength: 1, maxLength: 200 }
+    SimulatorHistoryRequest:
+      type: object
+      properties:
+        days: { type: integer, minimum: 1, maximum: 60, default: 14 }
+        seed:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          default: 42
+          description: Misma semilla → mismos valores y mismos client_uuid.
+    SimulatorScenarioRequest:
+      type: object
+      properties:
+        intensity: { type: string, enum: [low, high], default: low }
+        astronaut:
+          type: string
+          description: Call sign de la tripulación vigente (ORION, VEGA, LYRA, ATLAS).
+          example: VEGA
+        module_id:
+          type: string
+          enum: [HAB-1, HAB-2]
+          description: Solo `co2_spike`.
+        contagion:
+          type: boolean
+          default: false
+          description: Solo `crew_illness`.
+    SimulatorCount:
+      type: object
+      required: [created, duplicate]
+      properties:
+        created: { type: integer }
+        duplicate: { type: integer }
+    SimulatorSummary:
+      type: object
+      required: [kind, mission_code, params, readings, wellbeing, levels, escalations, errors]
+      properties:
+        kind: { type: string, enum: [history, scenario] }
+        scenario:
+          type: string
+          enum:
+            [
+              solar_event,
+              crew_illness,
+              co2_spike,
+              wellbeing_decline,
+              offline_batch,
+              emergency_solar,
+            ]
+        mission_code: { type: string, example: ARES-1 }
+        params: { type: object, additionalProperties: true }
+        from: { type: string, format: date-time, description: Solo la historia. }
+        to: { type: string, format: date-time, description: Solo la historia. }
+        at: { type: string, format: date-time, description: Minuto del escenario. }
+        readings:
+          type: object
+          required: [created, duplicate, rejected]
+          properties:
+            created: { type: integer }
+            duplicate: { type: integer }
+            rejected: { type: integer }
+        wellbeing:
+          type: object
+          description: Solo cuántos registros (como el cumplimiento); nunca valores ni niveles.
+          properties:
+            checkins: { $ref: '#/components/schemas/SimulatorCount' }
+            checkin_corrections: { type: integer }
+            pvt_runs: { $ref: '#/components/schemas/SimulatorCount' }
+            instruments: { $ref: '#/components/schemas/SimulatorCount' }
+        levels:
+          type: object
+          description: Lecturas creadas por indicador ESTÁNDAR y nivel. Sin bienestar.
+          additionalProperties:
+            type: object
+            additionalProperties: { type: integer }
+        escalations:
+          type: object
+          description: Escalamientos no confidenciales creados, por destino.
+          required: [created, by_level]
+          properties:
+            created: { type: integer }
+            by_level:
+              type: object
+              additionalProperties: { type: integer }
+        confidential_note: { type: string }
+        emergency:
+          type: object
+          description: Solo `emergency_solar`. Sesión, evaluaciones, orden de atención y cuándo sale el reporte.
+          additionalProperties: true
+        sync:
+          type: object
+          description: Solo `offline_batch`. Conteos del lote empujado por POST /sync/push.
+          properties:
+            batch_id: { $ref: '#/components/schemas/Uuid' }
+            device_id: { type: string }
+            items: { type: integer }
+            counts:
+              type: object
+              additionalProperties: { type: integer }
+            late_sync: { type: integer, description: Items que llegaron con late_sync. }
+        notes:
+          type: array
+          items: { type: string }
+        errors:
+          type: array
+          description: Primeras lecturas rechazadas (debería estar vacío).
+          items: { type: object, additionalProperties: true }
     CommOutagePage:
       type: object
       required: [items, next_cursor]
@@ -7081,6 +7907,8 @@ components:
         full_name: { type: string }
         crew_role: { $ref: '#/components/schemas/CrewRole' }
         assigned_from: { $ref: '#/components/schemas/Timestamp' }
+        sex:
+          $ref: '#/components/schemas/BiologicalSex'
     CrewPage:
       type: object
       required: [items, next_cursor]
@@ -7351,6 +8179,17 @@ components:
             nullable: true,
             description: Escalamiento creado (crew o flight_surgeon); null si no escaló.,
           }
+        emergency:
+          type: object
+          description: |
+            Solo si la lectura quedó crítica y abrió (o se unió a) una emergencia (indicadores del
+            protocolo, medida hace menos de TRIAGE_AUTO_READING_MAX_AGE_MIN). Muestra "¿Estás
+            bien?" hasta deadline_at (POST /emergency/sessions/{id}/confirm).
+          properties:
+            session_id: { $ref: '#/components/schemas/Uuid' }
+            status: { $ref: '#/components/schemas/EmergencyStatus' }
+            trigger_type: { $ref: '#/components/schemas/TriggerType' }
+            deadline_at: { type: string, format: date-time, nullable: true }
     ReadingPoint:
       type: object
       required: [id, indicator_code, values, level, measured_at, received_at]
@@ -7541,24 +8380,38 @@ components:
       type: object
       required: [client_uuid, entity, priority, created_at, payload]
       properties:
-        client_uuid: { $ref: '#/components/schemas/Uuid' }
+        client_uuid:
+          allOf:
+            - $ref: '#/components/schemas/Uuid'
+          description: El mismo en cada reintento (es la clave de idempotencia).
         entity:
           type: string
-          enum:
-            [
-              reading,
-              habitat_reading,
-              emergency_session,
-              emergency_assessment,
-              emergency_answer,
-              emergency_heartbeat,
-              wellbeing_checkin,
-              wellbeing_screening,
-              pvt_run,
-              support_request,
-            ]
-        priority: { type: string, enum: [emergency, normal] }
+          pattern: '^[a-z][a-z0-9_]{0,39}$'
+          description: |
+            Tipo de registro. Con servicio: `reading`, `habitat_reading`, `wellbeing_checkin`,
+            `pvt_run`, `wellbeing_screening` y los de emergencia (prioridad emergency aunque el
+            item diga normal; se procesan en este orden): `emergency_session` (=
+            EmergencySessionCreate), `emergency_confirm` ({ session_id, confirmed_at }),
+            `emergency_assessment` (AssessmentCreate + `session_id`), `emergency_answer`
+            (AnswerInput + `assessment_id`), `emergency_complete` (CompleteRequest +
+            `assessment_id`), `emergency_heartbeat` ({ session_id, sent_at }),
+            `emergency_question` ({ session_id, body, asked_at }) y `emergency_close`
+            (CloseRequest + `session_id`). `session_id` / `assessment_id` aceptan el id del
+            servidor o el `client_uuid` (sin conexión la app solo conoce los suyos). Una sesión
+            creada sin conexión cuando ya había otra abierta se une a ella (`result.joined`,
+            `merged_into`) y sus evaluaciones quedan en la principal. Todavía sin servicio
+            (`rejected` `ENTITY_NOT_SUPPORTED`): `support_request`. Cualquier otro: `rejected`
+            `UNKNOWN_ENTITY` (no tumba el lote).
+          example: reading
+        priority:
+          type: string
+          enum: [emergency, normal]
+          description: emergency se procesa antes que todo (triaje, tarea 9).
         created_at: { $ref: '#/components/schemas/Timestamp' }
+        supersedes_uuid:
+          type: string
+          format: uuid
+          description: Opcional; igual que `payload.supersedes_uuid` (gana el del payload).
         payload:
           type: object
           description: Mismo body que el endpoint en línea equivalente, sin client_uuid (va en el item).
@@ -7573,27 +8426,53 @@ components:
           type: array
           minItems: 1
           maxItems: 500
+          description: Máximo SYNC_MAX_BATCH (500 por defecto); más → 413.
           items: { $ref: '#/components/schemas/SyncItem' }
     SyncItemResult:
       type: object
       required: [client_uuid, entity, status]
       properties:
-        client_uuid: { $ref: '#/components/schemas/Uuid' }
-        entity: { type: string }
+        client_uuid:
+          type: string
+          format: uuid
+          nullable: true
+          description: null si el item no traía un UUID válido.
+        entity: { type: string, nullable: true }
         status: { type: string, enum: [accepted, duplicate, conflict, rejected] }
         server_id: { type: string, format: uuid, nullable: true }
+        sequence:
+          type: integer
+          minimum: 1
+          description: Orden en que se procesó; no viene si se rechazó antes de procesarlo.
         result:
           type: object
-          description: Lo mismo que devolvería el endpoint en línea (p. ej. evaluation y escalation_id).
+          description: |
+            Lo mismo que devolvería el endpoint en línea (p. ej. `evaluation` y `escalation_id`
+            de una lectura; de bienestar, solo `message` neutro, `offer_support` y, en `pvt_run`,
+            `fitness`), más `late_sync` (boolean) y `lag_s` (segundos entre la medición y la
+            recepción).
           additionalProperties: true
         error: { $ref: '#/components/schemas/ErrorBody' }
     SyncPushResponse:
       type: object
-      required: [server_time, results]
+      required: [server_time, batch_id, clock_offset_s, counts, results]
       properties:
         server_time: { $ref: '#/components/schemas/Timestamp' }
+        batch_id: { $ref: '#/components/schemas/Uuid' }
+        clock_offset_s:
+          type: integer
+          description: Recepción − `sent_at`, en segundos. Solo se registra; measured_at no se corrige.
+        counts:
+          type: object
+          required: [accepted, duplicate, conflict, rejected]
+          properties:
+            accepted: { type: integer }
+            duplicate: { type: integer }
+            conflict: { type: integer }
+            rejected: { type: integer }
         results:
           type: array
+          description: En el orden de `items`.
           items: { $ref: '#/components/schemas/SyncItemResult' }
     DeliveredMessage:
       type: object
@@ -7616,9 +8495,64 @@ components:
         title: { type: string }
         due_at: { $ref: '#/components/schemas/Timestamp' }
         indicator_code: { type: string, nullable: true }
+    SyncEvaluation:
+      type: object
+      required: [reading_id, client_uuid, indicator_code, measured_at, received_at, evaluation]
+      properties:
+        reading_id: { $ref: '#/components/schemas/Uuid' }
+        client_uuid: { $ref: '#/components/schemas/Uuid' }
+        supersedes_uuid:
+          type: string
+          format: uuid
+          nullable: true
+          description: Si no es null, esta lectura corrige a la que tiene ese client_uuid.
+        indicator_code: { type: string }
+        measured_at: { $ref: '#/components/schemas/Timestamp' }
+        received_at: { $ref: '#/components/schemas/Timestamp' }
+        evaluation: { $ref: '#/components/schemas/IndicatorEvaluation' }
+        escalation_id: { type: string, format: uuid, nullable: true }
+        late_sync: { type: boolean }
+        lag_s: { type: integer }
+    SyncEscalation:
+      type: object
+      required: [id, level, priority, status, reason, created_at, deliver_at]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        source_type: { type: string }
+        source_id: { type: string, format: uuid, nullable: true }
+        level: { $ref: '#/components/schemas/EscalationLevel' }
+        priority: { $ref: '#/components/schemas/Priority' }
+        status: { $ref: '#/components/schemas/EscalationStatus' }
+        reason: { type: string }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        deliver_at: { $ref: '#/components/schemas/Timestamp' }
+    SyncRoutine:
+      type: object
+      required: [code, title, indicator_codes, schedule]
+      properties:
+        code: { type: string }
+        title: { type: string }
+        indicator_codes:
+          type: array
+          items: { type: string }
+        schedule: { type: string }
     SyncPullResponse:
       type: object
-      required: [cursor, has_more, server_time, rules, protocol, messages, reminders]
+      required:
+        [
+          cursor,
+          has_more,
+          server_time,
+          rules,
+          protocol,
+          catalog,
+          mission,
+          evaluations,
+          escalations,
+          messages,
+          reminders,
+          routines,
+        ]
       properties:
         cursor: { type: string, description: Guárdalo para la próxima llamada. }
         has_more: { type: boolean }
@@ -7636,12 +8570,51 @@ components:
             code: { type: string }
             version: { type: integer }
             changed: { type: boolean }
+        catalog:
+          type: object
+          required: [catalog_version, changed]
+          properties:
+            catalog_version: { type: integer }
+            changed: { type: boolean }
+        mission:
+          type: object
+          nullable: true
+          required: [id, code, status, comm_delay_seconds, link, version, changed]
+          properties:
+            id: { $ref: '#/components/schemas/Uuid' }
+            code: { type: string }
+            status: { type: string }
+            ends_at: { type: string, format: date-time, nullable: true }
+            comm_delay_seconds: { type: integer }
+            link:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [up, outage] }
+                outage_ends_at:
+                  type: string
+                  format: date-time
+                  nullable: true
+                  description: Fin previsto del corte; null = sin fin conocido.
+            version:
+              type: string
+              description: Cambia si cambia la misión o su entorno (p. ej. el retraso).
+            changed: { type: boolean }
+        evaluations:
+          type: array
+          items: { $ref: '#/components/schemas/SyncEvaluation' }
+        escalations:
+          type: array
+          items: { $ref: '#/components/schemas/SyncEscalation' }
         messages:
           type: array
           items: { $ref: '#/components/schemas/DeliveredMessage' }
         reminders:
           type: array
           items: { $ref: '#/components/schemas/Reminder' }
+        routines:
+          type: array
+          items: { $ref: '#/components/schemas/SyncRoutine' }
 
     # ---------------------------------------------------------------- emergencia
     ProtocolSource:
@@ -7700,7 +8673,7 @@ components:
       additionalProperties: true
     EmergencySessionCreate:
       type: object
-      required: [client_uuid, trigger_type, started_at, context, responder_safe]
+      required: [client_uuid, trigger_type, started_at]
       properties:
         client_uuid: { $ref: '#/components/schemas/Uuid' }
         trigger_type: { $ref: '#/components/schemas/TriggerType' }
@@ -7739,12 +8712,87 @@ components:
           { type: string, format: uuid, nullable: true, description: null si la activó el sistema. }
         status: { $ref: '#/components/schemas/EmergencyStatus' }
         context: { $ref: '#/components/schemas/EmergencyContext' }
-        responder_safe: { type: boolean }
+        responder_safe:
+          type: boolean
+          nullable: true
+          description: null en una activación automática hasta que lo conteste un evaluador.
         next_step: { type: string, enum: [start_assessments, secure_self] }
         started_at: { $ref: '#/components/schemas/Timestamp' }
+        activated_at: { type: string, format: date-time, nullable: true }
         closed_at: { type: string, format: date-time, nullable: true }
         received_at: { $ref: '#/components/schemas/Timestamp' }
+        mission_code: { type: string }
+        merged_into:
+          type: string
+          format: uuid
+          nullable: true
+          description: Si esta activación se unió a otra sesión.
+        deadman:
+          type: array
+          description: Plazos de "estoy bien" de los afectados (activación automática).
+          items: { $ref: '#/components/schemas/DeadmanEntry' }
+        heartbeat:
+          type: object
+          properties:
+            dead_man_switch_seconds: { type: integer }
+            last_heartbeat_at: { type: string, format: date-time, nullable: true }
+            expires_at: { type: string, format: date-time, nullable: true }
+            lapsed_at: { type: string, format: date-time, nullable: true }
+        joined_activations:
+          type: integer
+          description: Cuántas activaciones se unieron a esta sesión.
         synthetic: { type: boolean }
+    DeadmanEntry:
+      type: object
+      required: [astronaut_id, call_sign, status]
+      properties:
+        astronaut_id: { $ref: '#/components/schemas/Uuid' }
+        call_sign: { type: string }
+        trigger_type: { $ref: '#/components/schemas/TriggerType' }
+        deadline_at: { $ref: '#/components/schemas/Timestamp' }
+        confirmed_at: { type: string, format: date-time, nullable: true }
+        expired_at: { type: string, format: date-time, nullable: true }
+        status: { type: string, enum: [waiting, confirmed, expired] }
+    AttentionEntry:
+      type: object
+      required: [position, astronaut_id, call_sign, status, reason]
+      properties:
+        position: { type: integer, minimum: 1 }
+        astronaut_id: { $ref: '#/components/schemas/Uuid' }
+        call_sign: { type: string }
+        status: { type: string, enum: [assessed, in_progress, unassessed] }
+        assessment_id: { type: string, format: uuid, nullable: true }
+        triage_category: { type: string, nullable: true, enum: [green, yellow, red, black, null] }
+        radiation_flag: { type: string, nullable: true, enum: [none, possible, probable, null] }
+        matches_device: { type: boolean, nullable: true }
+        reason:
+          type: string
+          description: Motivo del lugar, p. ej. "Rojo (inmediato), radiación probable (vómito)".
+    EmergencyQuestionCreate:
+      type: object
+      required: [client_uuid, body]
+      properties:
+        client_uuid: { $ref: '#/components/schemas/Uuid' }
+        body: { type: string, minLength: 1, maxLength: 4000 }
+        asked_at: { $ref: '#/components/schemas/Timestamp' }
+    EmergencyQuestion:
+      type: object
+      required: [id, session_id, escalation_id, direction, body, created_at, deliver_at]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        session_id: { $ref: '#/components/schemas/Uuid' }
+        escalation_id:
+          allOf:
+            - $ref: '#/components/schemas/Uuid'
+          description: Hilo con Tierra (para responder, POST /admin/escalations/{id}/messages).
+        direction: { $ref: '#/components/schemas/MessageDirection' }
+        body: { type: string }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+        deliver_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: null = en cola esperando enlace.
     PrefillValue:
       type: object
       required: [value]
@@ -7773,13 +8821,26 @@ components:
         roster:
           type: array
           items: { $ref: '#/components/schemas/RosterEntry' }
+        assessments:
+          type: array
+          items: { $ref: '#/components/schemas/Assessment' }
+        attention_order:
+          type: array
+          description: A quién atender primero (no viene para admin).
+          items: { $ref: '#/components/schemas/AttentionEntry' }
+        joined:
+          type: boolean
+          description: Solo al crear. true = había una sesión abierta y esta activación se unió.
     AssessmentCreate:
       type: object
-      required: [client_uuid, astronaut_id, sequence_no, is_self_assessment, started_at]
+      required: [client_uuid, astronaut_id, started_at]
       properties:
         client_uuid: { $ref: '#/components/schemas/Uuid' }
         astronaut_id: { $ref: '#/components/schemas/Uuid' }
-        sequence_no: { type: integer, minimum: 1 }
+        sequence_no:
+          type: integer
+          minimum: 1
+          description: Orden en que la tableta las inicia (el de atención lo calcula el servidor).
         is_self_assessment: { type: boolean }
         started_at: { $ref: '#/components/schemas/Timestamp' }
     Assessment:
@@ -7811,6 +8872,17 @@ components:
         rules_version: { type: integer, nullable: true }
         started_at: { $ref: '#/components/schemas/Timestamp' }
         completed_at: { type: string, format: date-time, nullable: true }
+        reassessment_of:
+          type: string
+          format: uuid
+          nullable: true
+          description: Evaluación anterior del mismo tripulante en la sesión (reevaluación).
+        matches_device: { type: boolean, nullable: true }
+        device_result:
+          type: object
+          nullable: true
+          description: Lo que calculó la tableta (se guarda aunque difiera).
+          additionalProperties: true
     AnswerInput:
       type: object
       required: [client_uuid, question_code, answer, source, answered_at]
@@ -7902,7 +8974,20 @@ components:
         rules_version: { type: integer, description: Versión del protocolo usada. }
         matches_device:
           { type: boolean, nullable: true, description: null si no se envió device_result. }
-        next: { $ref: '#/components/schemas/RosterEntry' }
+        mismatch_fields:
+          type: array
+          description: Qué difiere del dispositivo (status, triage_category, radiation_flag, rules_version).
+          items: { type: string }
+        device_result: { type: object, additionalProperties: true }
+        next:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/RosterEntry'
+          nullable: true
+          description: A quién evaluar después (null si ya están todos).
+        attention_order:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionEntry' }
     HeartbeatRequest:
       type: object
       required: [sent_at]
@@ -8202,11 +9287,26 @@ components:
                 items: { $ref: '#/components/schemas/DashboardIndicator' }
               compliance:
                 type: object
+                nullable: true
+                description: |
+                  Check-ins de bienestar hechos en 7 días (solo el conteo). Solo para `admin`;
+                  para el flight surgeon es `null`.
                 required: [checkins_completed_7d, checkins_expected_7d]
                 properties:
-                  checkins_completed_7d: { type: integer, minimum: 0 }
-                  checkins_expected_7d: { type: integer, minimum: 0 }
-              fitness: { $ref: '#/components/schemas/Fitness' }
+                  checkins_completed_7d: { type: integer, minimum: 0, maximum: 7 }
+                  checkins_expected_7d:
+                    type: integer
+                    minimum: 1
+                    maximum: 7
+                    description: Días de la asignación dentro de la ventana (hasta 7).
+              fitness:
+                type: string
+                enum: [fit, not_confirmed]
+                nullable: true
+                description: |
+                  Aptitud de la PVT más reciente (sin PVT = `not_confirmed`); solo el estado,
+                  nunca las métricas de la PVT. La ven `flight_surgeon` y `admin`; `null` para un
+                  rol que no pueda verla.
     InboxItem:
       type: object
       required:
@@ -8230,7 +9330,10 @@ components:
         call_sign: { type: string, nullable: true }
         category: { type: string, enum: [reading, emergency, wellbeing, manual] }
         source_type:
-          { type: string, enum: [reading, emergency_assessment, emergency_session, manual] }
+          {
+            type: string,
+            enum: [reading, emergency_assessment, emergency_session, wellbeing, manual],
+          }
         source_id: { type: string, format: uuid, nullable: true }
         level: { $ref: '#/components/schemas/EscalationLevel' }
         priority: { $ref: '#/components/schemas/Priority' }
@@ -8240,6 +9343,14 @@ components:
         deliver_at: { $ref: '#/components/schemas/Timestamp' }
         acknowledged_at: { type: string, format: date-time, nullable: true }
         acknowledged_by: { type: string, format: uuid, nullable: true }
+        measured_at:
+          type: string
+          format: date-time
+          description: Solo si viene de una lectura. Cuándo se midió (puede ser horas antes de created_at si llegó por sync).
+        late_sync:
+          type: boolean
+          description: Solo si viene de una lectura. true si se registró más de 15 min después de medirse.
+        lag_s: { type: integer, description: Segundos entre la medición y la recepción. }
         evaluation: { $ref: '#/components/schemas/IndicatorEvaluation' }
         triage:
           type: object
@@ -8307,7 +9418,12 @@ components:
         closed_at: { type: string, format: date-time, nullable: true }
         received_at: { $ref: '#/components/schemas/Timestamp' }
         first_delivered_at: { $ref: '#/components/schemas/Timestamp' }
-        counts: { $ref: '#/components/schemas/TriageCounts' }
+        counts:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/TriageCounts'
+          nullable: true
+          description: null para admin (solo estado operativo).
     EmergencyListPage:
       type: object
       required: [items, next_cursor]
@@ -8327,16 +9443,16 @@ components:
         received_at: { $ref: '#/components/schemas/Timestamp' }
     EmergencyDetail:
       type: object
-      required: [session, assessments, escalations]
+      required: [session, assessments, escalations, timeline, report]
       properties:
         session: { $ref: '#/components/schemas/EmergencySession' }
         assessments:
           type: array
+          description: Lo que ya llegó. Para admin, sin categorías ni respuestas.
           items:
             allOf:
               - $ref: '#/components/schemas/Assessment'
               - type: object
-                required: [answers]
                 properties:
                   answers:
                     type: array
@@ -8344,6 +9460,61 @@ components:
         escalations:
           type: array
           items: { $ref: '#/components/schemas/EscalationRef' }
+        timeline:
+          type: array
+          items: { $ref: '#/components/schemas/EmergencyEvent' }
+        attention_order:
+          type: array
+          description: Solo flight_surgeon.
+          items: { $ref: '#/components/schemas/AttentionEntry' }
+        questions:
+          type: array
+          description: Solo flight_surgeon. Preguntas de la tripulación y respuestas, ya entregadas.
+          items: { $ref: '#/components/schemas/EmergencyQuestion' }
+        report:
+          type: object
+          nullable: true
+          description: |
+            Solo flight_surgeon, cuando llega el cierre: protocol, session, counts,
+            attention_order, assessments (con answers y server_result), differences
+            (dispositivo vs servidor), timeline, messages y joined_activations. Sin bienestar.
+            Ejemplo: docs/examples/emergency-session.json.
+          additionalProperties: true
+    EmergencyEvent:
+      type: object
+      required: [id, event_type, at]
+      properties:
+        id: { type: integer }
+        event_type:
+          type: string
+          enum:
+            [
+              opened,
+              joined,
+              merged,
+              deadman_started,
+              deadman_confirmed,
+              deadman_expired,
+              activated,
+              cancelled,
+              assessment_started,
+              assessment_completed,
+              device_mismatch,
+              heartbeat_lost,
+              question_to_earth,
+              closed,
+            ]
+        at: { $ref: '#/components/schemas/Timestamp' }
+        device_at: { type: string, format: date-time, nullable: true }
+        delivered_at: { type: string, format: date-time, nullable: true }
+        astronaut_id: { type: string, format: uuid, nullable: true }
+        call_sign: { type: string, nullable: true }
+        actor_role: { type: string, nullable: true }
+        assessment_id: { type: string, format: uuid, nullable: true }
+        details:
+          type: object
+          description: No viene para admin en los eventos clínicos.
+          additionalProperties: true
     Compliance:
       type: object
       required: [mission_id, from, to, astronauts]

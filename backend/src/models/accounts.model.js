@@ -17,14 +17,26 @@ async function activeGroundMissionIds(userId, db = pool) {
   return rows.map((r) => r.id);
 }
 
-async function insertAstronaut({ userId, callSign, agency }, db) {
+// Sin `sex`: estas respuestas van a admin, que lo escribe pero no lo recibe.
+const ASTRONAUT_COLUMNS = 'id, user_id, call_sign, agency, synthetic';
+
+async function insertAstronaut({ userId, callSign, agency, sex }, db) {
   const { rows } = await db.query(
-    `INSERT INTO astronauts (user_id, call_sign, agency)
-     VALUES ($1, $2, $3)
-     RETURNING id, user_id, call_sign, agency, synthetic`,
-    [userId, callSign, agency || null],
+    `INSERT INTO astronauts (user_id, call_sign, agency, sex)
+     VALUES ($1, $2, $3, $4)
+     RETURNING ${ASTRONAUT_COLUMNS}`,
+    [userId, callSign, agency || null, sex || null],
   );
   return rows[0];
+}
+
+/** Cambia el sexo biológico del perfil (null lo borra). Devuelve el perfil sin `sex`. */
+async function updateAstronautSex(astronautId, sex, db = pool) {
+  const { rows } = await db.query(
+    `UPDATE astronauts SET sex = $2 WHERE id = $1 RETURNING ${ASTRONAUT_COLUMNS}`,
+    [astronautId, sex],
+  );
+  return rows[0] || null;
 }
 
 async function insertAssignment({ missionId, astronautId, crewRole, createdBy }, db) {
@@ -58,6 +70,7 @@ module.exports = {
   findMission,
   activeGroundMissionIds,
   insertAstronaut,
+  updateAstronautSex,
   insertAssignment,
   addToGroundTeam,
   insertServiceAccount,

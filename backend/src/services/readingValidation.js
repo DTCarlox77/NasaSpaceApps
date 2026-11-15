@@ -8,6 +8,7 @@
  *   regla de diseño (no una fuente clínica): sirven para detectar errores de unidad, por
  *   ejemplo °F en vez de °C o lb en vez de kg. No deciden el semáforo.
  */
+const env = require('../config/env');
 
 const PLAUSIBLE = Object.freeze({
   'BLOOD_PRESSURE.systolic': [40, 300],
@@ -127,11 +128,14 @@ function validateComponents(indicator, values, { symptomCodes, fieldPrefix = 'va
   return problems;
 }
 
-/** measured_at válido (ISO 8601) y no en el futuro (5 min de tolerancia de reloj). */
-function measuredAtIssue(value) {
+/**
+ * measured_at válido (ISO 8601) y no en el futuro, con la tolerancia de reloj de
+ * SYNC_MAX_FUTURE_SKEW_S (300 s por defecto), la misma en línea y por /sync/push.
+ */
+function measuredAtIssue(value, { now = Date.now(), skewS = env.sync.maxFutureSkewS } = {}) {
   if (typeof value !== 'string' || Number.isNaN(Date.parse(value)))
     return 'debe ser una fecha ISO 8601 en UTC';
-  if (Date.parse(value) > Date.now() + 5 * 60 * 1000) return 'no puede estar en el futuro';
+  if (Date.parse(value) > now + skewS * 1000) return 'no puede estar en el futuro';
   return null;
 }
 

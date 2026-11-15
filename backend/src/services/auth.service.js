@@ -62,6 +62,8 @@ async function buildContext(user, db = pool) {
     if (crew) {
       context.astronaut_id = crew.astronaut_id;
       context.call_sign = crew.call_sign;
+      // Perfil clínico propio (accessPolicy, clinical_profile): solo el contexto del astronauta.
+      context.sex = crew.sex ?? null;
       if (crew.mission_id) {
         context.crew_role = crew.crew_role;
         context.mission = {

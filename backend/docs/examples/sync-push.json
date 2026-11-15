@@ -1,0 +1,209 @@
+{
+  "device_id": "TAB-1",
+  "sent_at": "2026-11-14T08:00:00.000Z",
+  "items": [
+    {
+      "client_uuid": "fcc1a21a-0192-82ec-847e-c7e336ef2a83",
+      "entity": "reading",
+      "priority": "normal",
+      "created_at": "2026-11-13T08:30:05.000Z",
+      "payload": {
+        "indicator_code": "HEART_RATE",
+        "values": {
+          "value": 66,
+          "at_rest": true
+        },
+        "input_method": "wearable",
+        "device_id": "TAB-1",
+        "measured_at": "2026-11-13T08:30:00.000Z"
+      }
+    },
+    {
+      "client_uuid": "658379de-a790-807c-9ff8-108c8a743a70",
+      "entity": "reading",
+      "priority": "normal",
+      "created_at": "2026-11-13T09:00:05.000Z",
+      "payload": {
+        "indicator_code": "BLOOD_PRESSURE",
+        "values": {
+          "systolic": 116,
+          "diastolic": 75
+        },
+        "input_method": "manual",
+        "device_id": "TAB-1",
+        "measured_at": "2026-11-13T09:00:00.000Z"
+      }
+    },
+    {
+      "client_uuid": "21a35d69-d9a5-853d-9f2c-8ebd686b9e7d",
+      "entity": "reading",
+      "priority": "normal",
+      "created_at": "2026-11-13T14:00:05.000Z",
+      "payload": {
+        "indicator_code": "EXERCISE_MIN",
+        "values": {
+          "value": 75,
+          "type": "aerobic"
+        },
+        "input_method": "manual",
+        "device_id": "TAB-1",
+        "measured_at": "2026-11-13T14:00:00.000Z"
+      }
+    },
+    {
+      "client_uuid": "9a2a5293-fb14-82ad-99d2-5e058b4f7a6f",
+      "entity": "reading",
+      "priority": "normal",
+      "created_at": "2026-11-13T18:00:05.000Z",
+      "payload": {
+        "indicator_code": "RESP_RATE",
+        "values": {
+          "value": 14
+        },
+        "input_method": "wearable",
+        "device_id": "TAB-1",
+        "measured_at": "2026-11-13T18:00:00.000Z"
+      }
+    },
+    {
+      "client_uuid": "9515b2d8-d40e-8f5c-b9bf-10a2d352a734",
+      "entity": "reading",
+      "priority": "normal",
+      "created_at": "2026-11-14T02:00:05.000Z",
+      "payload": {
+        "indicator_code": "SPO2",
+        "values": {
+          "value": 89
+        },
+        "input_method": "wearable",
+        "device_id": "TAB-1",
+        "measured_at": "2026-11-14T02:00:00.000Z"
+      }
+    },
+    {
+      "client_uuid": "20805887-45de-8184-b164-79e020757c16",
+      "entity": "reading",
+      "priority": "normal",
+      "created_at": "2026-11-14T02:06:05.000Z",
+      "payload": {
+        "indicator_code": "HEART_RATE",
+        "values": {
+          "value": 78,
+          "at_rest": true
+        },
+        "input_method": "wearable",
+        "device_id": "TAB-1",
+        "measured_at": "2026-11-14T02:06:00.000Z"
+      }
+    },
+    {
+      "client_uuid": "c3150824-e407-8d8a-8a64-b62149b29d76",
+      "entity": "reading",
+      "priority": "normal",
+      "created_at": "2026-11-14T06:30:05.000Z",
+      "payload": {
+        "indicator_code": "BLOOD_PRESSURE",
+        "values": {
+          "systolic": 151,
+          "diastolic": 95
+        },
+        "input_method": "manual",
+        "device_id": "TAB-1",
+        "measured_at": "2026-11-14T06:30:00.000Z"
+      }
+    },
+    {
+      "client_uuid": "ff19abff-f01e-81c3-abb7-d885d18de5ac",
+      "entity": "reading",
+      "priority": "normal",
+      "created_at": "2026-11-14T06:33:05.000Z",
+      "payload": {
+        "indicator_code": "BLOOD_PRESSURE",
+        "values": {
+          "systolic": 115,
+          "diastolic": 74
+        },
+        "input_method": "manual",
+        "device_id": "TAB-1",
+        "supersedes_uuid": "c3150824-e407-8d8a-8a64-b62149b29d76",
+        "measured_at": "2026-11-14T06:33:00.000Z"
+      }
+    },
+    {
+      "client_uuid": "c5782cb1-d665-8f72-85dd-9c386e253a35",
+      "entity": "reading",
+      "priority": "normal",
+      "created_at": "2026-11-14T06:36:05.000Z",
+      "payload": {
+        "indicator_code": "BODY_TEMP",
+        "values": {
+          "value": 36.6
+        },
+        "input_method": "manual",
+        "device_id": "TAB-1",
+        "measured_at": "2026-11-14T06:36:00.000Z"
+      }
+    },
+    {
+      "client_uuid": "d971be4b-b029-81a7-a2a1-215c2ed172f8",
+      "entity": "reading",
+      "priority": "normal",
+      "created_at": "2026-11-14T06:42:05.000Z",
+      "payload": {
+        "indicator_code": "SPO2",
+        "values": {
+          "value": 97
+        },
+        "input_method": "wearable",
+        "device_id": "TAB-1",
+        "measured_at": "2026-11-14T06:42:00.000Z"
+      }
+    },
+    {
+      "client_uuid": "eeb3e02e-aef8-85bd-bc4b-b5cb35ae0de5",
+      "entity": "wellbeing_checkin",
+      "priority": "normal",
+      "created_at": "2026-11-14T07:00:05.000Z",
+      "payload": {
+        "mood": 70,
+        "fatigue": 30,
+        "stress": 28,
+        "crew_conflict": 12,
+        "sleep_hours": 6.8,
+        "measured_at": "2026-11-14T07:00:00.000Z"
+      }
+    },
+    {
+      "client_uuid": "e6050272-b9ef-8aea-bcda-461fff70e905",
+      "entity": "pvt_run",
+      "priority": "normal",
+      "created_at": "2026-11-14T07:15:05.000Z",
+      "payload": {
+        "device_id": "TAB-1",
+        "before_critical_task": false,
+        "duration_s": 180,
+        "trials": 52,
+        "lapses": 2,
+        "mean_rt_ms": 271,
+        "false_starts": 1,
+        "measured_at": "2026-11-14T07:15:00.000Z"
+      }
+    },
+    {
+      "client_uuid": "fcc1a21a-0192-82ec-847e-c7e336ef2a83",
+      "entity": "reading",
+      "priority": "normal",
+      "created_at": "2026-11-13T08:30:05.000Z",
+      "payload": {
+        "indicator_code": "HEART_RATE",
+        "values": {
+          "value": 66,
+          "at_rest": true
+        },
+        "input_method": "wearable",
+        "device_id": "TAB-1",
+        "measured_at": "2026-11-13T08:30:00.000Z"
+      }
+    }
+  ]
+}

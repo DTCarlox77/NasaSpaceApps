@@ -35,6 +35,16 @@ INSERT INTO astronauts (id, user_id, call_sign, agency, synthetic) VALUES
   ('10000000-0000-4000-8000-000000000013', '00000000-0000-4000-8000-000000000013', 'LYRA',  'Demo Agency', true),
   ('10000000-0000-4000-8000-000000000014', '00000000-0000-4000-8000-000000000014', 'ATLAS', 'Demo Agency', true) ON CONFLICT DO NOTHING;
 
+-- Sexo biológico SINTÉTICO (migración 009). Solo si está vacío: no pisa un cambio del panel.
+UPDATE astronauts a SET sex = v.sex
+FROM (VALUES
+  ('10000000-0000-4000-8000-000000000011'::uuid, 'female'),
+  ('10000000-0000-4000-8000-000000000012'::uuid, 'male'),
+  ('10000000-0000-4000-8000-000000000013'::uuid, 'female'),
+  ('10000000-0000-4000-8000-000000000014'::uuid, 'male')
+) AS v(id, sex)
+WHERE a.id = v.id AND a.sex IS NULL;
+
 -- ---------- Misión y tripulación ----------
 INSERT INTO missions (id, code, name, environment_code, status, starts_at, created_by) VALUES
   ('20000000-0000-4000-8000-000000000001', 'ARES-1', 'Ares 1 · Tránsito a Marte (demo)', 'mars_transit', 'active',

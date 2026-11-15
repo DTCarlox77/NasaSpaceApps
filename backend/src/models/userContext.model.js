@@ -5,7 +5,7 @@ const { pool } = require('../config/db');
 /** Perfil de astronauta y su asignación vigente (v_current_crew), si la hay. */
 async function crewContext(userId, db = pool) {
   const { rows } = await db.query(
-    `SELECT a.id AS astronaut_id, a.call_sign, c.crew_role,
+    `SELECT a.id AS astronaut_id, a.call_sign, a.sex, c.crew_role,
             m.id AS mission_id, m.code AS mission_code, m.name AS mission_name, m.status AS mission_status,
             e.code AS environment_code, e.name AS environment_name, e.type AS environment_type,
             e.gravity_g, e.comm_delay_seconds

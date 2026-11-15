@@ -1,0 +1,675 @@
+{
+  "counts": {
+    "red": 1,
+    "black": 0,
+    "green": 2,
+    "yellow": 0,
+    "in_progress": 0,
+    "unreachable": 0
+  },
+  "session": {
+    "id": "df7d1a06-663d-457e-9d8d-3eb065f9f63b",
+    "status": "closed",
+    "context": {
+      "environment_alarm": null,
+      "solar_event_active": true
+    },
+    "deadman": [
+      {
+        "status": "expired",
+        "call_sign": "VEGA",
+        "expired_at": "2026-11-15T06:55:16.224Z",
+        "deadline_at": "2026-11-15T06:55:16.224Z",
+        "astronaut_id": "10000000-0000-4000-8000-000000000012",
+        "confirmed_at": null,
+        "trigger_type": "critical_reading"
+      },
+      {
+        "status": "expired",
+        "call_sign": "LYRA",
+        "expired_at": "2026-11-15T06:55:16.330Z",
+        "deadline_at": "2026-11-15T06:55:16.330Z",
+        "astronaut_id": "10000000-0000-4000-8000-000000000013",
+        "confirmed_at": null,
+        "trigger_type": "critical_reading"
+      }
+    ],
+    "protocol": {
+      "id": 2,
+      "code": "crew_emergency",
+      "version": 2
+    },
+    "closed_at": "2026-11-15T06:54:16.708Z",
+    "heartbeat": {
+      "lapsed_at": null,
+      "expires_at": null,
+      "last_heartbeat_at": null,
+      "dead_man_switch_seconds": 120
+    },
+    "next_step": "start_assessments",
+    "synthetic": true,
+    "mission_id": "20000000-0000-4000-8000-000000000001",
+    "started_at": "2026-11-15T06:54:16.224Z",
+    "started_by": null,
+    "client_uuid": "eb4a6171-db0c-8215-a01d-0f6b890b7b44",
+    "merged_into": null,
+    "received_at": "2026-11-15T06:54:16.226Z",
+    "activated_at": "2026-11-15T06:54:16.415Z",
+    "mission_code": "ARES-1",
+    "trigger_type": "critical_reading",
+    "responder_safe": true,
+    "joined_activations": 0
+  },
+  "messages": [
+    {
+      "id": "d11da4fc-828d-457e-b6ea-421ba9bf1d52",
+      "body": "Fuera del protocolo: VEGA pide algo para la náusea y LYRA sigue sin responder. ¿Qué indican?",
+      "direction": "to_earth",
+      "created_at": "2026-11-15T06:54:16.703Z",
+      "deliver_at": null,
+      "author_role": "astronaut"
+    }
+  ],
+  "protocol": {
+    "id": 2,
+    "code": "crew_emergency",
+    "version": 2
+  },
+  "timeline": [
+    {
+      "at": "2026-11-15T06:54:16.226Z",
+      "id": "1",
+      "details": {
+        "automatic": true,
+        "reading_id": "0fee3116-47ab-4fc9-b94c-99d06d6ebe71",
+        "trigger_type": "critical_reading",
+        "indicator_code": "RAD_DOSE_DAILY"
+      },
+      "call_sign": "VEGA",
+      "device_at": null,
+      "actor_role": null,
+      "event_type": "opened"
+    },
+    {
+      "at": "2026-11-15T06:54:16.226Z",
+      "id": "2",
+      "details": {
+        "deadline_at": "2026-11-15T06:55:16.224Z",
+        "trigger_type": "critical_reading"
+      },
+      "call_sign": "VEGA",
+      "device_at": null,
+      "actor_role": null,
+      "event_type": "deadman_started"
+    },
+    {
+      "at": "2026-11-15T06:54:16.333Z",
+      "id": "3",
+      "details": {
+        "automatic": true,
+        "reading_id": "7130e2c4-d547-44c6-8ec4-f21055694bfa",
+        "trigger_type": "critical_reading",
+        "indicator_code": "RAD_DOSE_DAILY"
+      },
+      "call_sign": "LYRA",
+      "device_at": null,
+      "actor_role": null,
+      "event_type": "joined"
+    },
+    {
+      "at": "2026-11-15T06:54:16.333Z",
+      "id": "4",
+      "details": {
+        "deadline_at": "2026-11-15T06:55:16.330Z",
+        "trigger_type": "critical_reading"
+      },
+      "call_sign": "LYRA",
+      "device_at": null,
+      "actor_role": null,
+      "event_type": "deadman_started"
+    },
+    {
+      "at": "2026-11-15T06:54:16.415Z",
+      "id": "5",
+      "details": {
+        "deadline_at": "2026-11-15T06:55:16.224Z"
+      },
+      "call_sign": "VEGA",
+      "device_at": null,
+      "actor_role": null,
+      "event_type": "deadman_expired"
+    },
+    {
+      "at": "2026-11-15T06:54:16.415Z",
+      "id": "6",
+      "details": {
+        "reason": "deadman_expired"
+      },
+      "call_sign": null,
+      "device_at": null,
+      "actor_role": null,
+      "event_type": "activated"
+    },
+    {
+      "at": "2026-11-15T06:54:16.415Z",
+      "id": "7",
+      "details": {
+        "deadline_at": "2026-11-15T06:55:16.330Z"
+      },
+      "call_sign": "LYRA",
+      "device_at": null,
+      "actor_role": null,
+      "event_type": "deadman_expired"
+    },
+    {
+      "at": "2026-11-15T06:54:16.456Z",
+      "id": "8",
+      "details": {
+        "reassessment_of": null
+      },
+      "call_sign": "VEGA",
+      "device_at": "2026-11-15T06:54:16.446Z",
+      "actor_role": "astronaut",
+      "event_type": "assessment_started"
+    },
+    {
+      "at": "2026-11-15T06:54:16.492Z",
+      "id": "9",
+      "details": {
+        "rules_version": 2,
+        "matches_device": true,
+        "radiation_flag": "probable",
+        "triage_category": "green"
+      },
+      "call_sign": "VEGA",
+      "device_at": "2026-11-15T06:54:16.487Z",
+      "actor_role": "astronaut",
+      "event_type": "assessment_completed"
+    },
+    {
+      "at": "2026-11-15T06:54:16.551Z",
+      "id": "10",
+      "details": {
+        "reassessment_of": null
+      },
+      "call_sign": "LYRA",
+      "device_at": "2026-11-15T06:54:16.532Z",
+      "actor_role": "astronaut",
+      "event_type": "assessment_started"
+    },
+    {
+      "at": "2026-11-15T06:54:16.594Z",
+      "id": "11",
+      "details": {
+        "rules_version": 2,
+        "matches_device": true,
+        "radiation_flag": "probable",
+        "triage_category": "red"
+      },
+      "call_sign": "LYRA",
+      "device_at": "2026-11-15T06:54:16.590Z",
+      "actor_role": "astronaut",
+      "event_type": "assessment_completed"
+    },
+    {
+      "at": "2026-11-15T06:54:16.614Z",
+      "id": "12",
+      "details": {
+        "reassessment_of": null
+      },
+      "call_sign": "ATLAS",
+      "device_at": "2026-11-15T06:54:16.607Z",
+      "actor_role": "astronaut",
+      "event_type": "assessment_started"
+    },
+    {
+      "at": "2026-11-15T06:54:16.641Z",
+      "id": "13",
+      "details": {
+        "rules_version": 2,
+        "matches_device": true,
+        "radiation_flag": "none",
+        "triage_category": "green"
+      },
+      "call_sign": "ATLAS",
+      "device_at": "2026-11-15T06:54:16.639Z",
+      "actor_role": "astronaut",
+      "event_type": "assessment_completed"
+    },
+    {
+      "at": "2026-11-15T06:54:16.703Z",
+      "id": "14",
+      "details": {
+        "message_id": "d11da4fc-828d-457e-b6ea-421ba9bf1d52"
+      },
+      "call_sign": null,
+      "device_at": "2026-11-15T06:54:16.700Z",
+      "actor_role": "astronaut",
+      "event_type": "question_to_earth"
+    },
+    {
+      "at": "2026-11-15T06:54:16.711Z",
+      "id": "15",
+      "details": {
+        "status": "closed"
+      },
+      "call_sign": null,
+      "device_at": "2026-11-15T06:54:16.708Z",
+      "actor_role": "astronaut",
+      "event_type": "closed"
+    }
+  ],
+  "synthetic": true,
+  "wellbeing": "No incluido: el triaje no usa datos de bienestar (decisión del MVP).",
+  "disclaimer": "Apoyo a la decisión. No diagnostica ni receta: lo que no cubre el protocolo se consulta con el flight surgeon.",
+  "assessments": [
+    {
+      "id": "bd63fcfd-18d0-406e-b4eb-4b2e28f04758",
+      "status": "completed",
+      "answers": [
+        {
+          "answer": {
+            "value": true
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.465Z",
+          "received_at": "2026-11-15T06:54:16.469Z",
+          "question_code": "responder_safe",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "value": true
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.465Z",
+          "received_at": "2026-11-15T06:54:16.469Z",
+          "question_code": "responsive_and_mobile",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "value": true
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.465Z",
+          "received_at": "2026-11-15T06:54:16.469Z",
+          "question_code": "vomiting",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "choice": "1_2h"
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.465Z",
+          "received_at": "2026-11-15T06:54:16.469Z",
+          "question_code": "time_to_vomiting",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "choice": ["nausea", "fatigue"]
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.465Z",
+          "received_at": "2026-11-15T06:54:16.469Z",
+          "question_code": "prodromal_symptoms",
+          "source_reading_id": null
+        }
+      ],
+      "call_sign": "VEGA",
+      "session_id": "df7d1a06-663d-457e-9d8d-3eb065f9f63b",
+      "started_at": "2026-11-15T06:54:16.446Z",
+      "assessed_by": "00000000-0000-4000-8000-000000000011",
+      "client_uuid": "3bdec0a9-10db-8f1c-803c-ee52ed857a6c",
+      "computed_by": "server",
+      "protocol_id": 2,
+      "sequence_no": 1,
+      "astronaut_id": "10000000-0000-4000-8000-000000000012",
+      "completed_at": "2026-11-15T06:54:16.487Z",
+      "device_result": {
+        "status": "completed",
+        "rules_version": 2,
+        "radiation_flag": "probable",
+        "triage_category": "green"
+      },
+      "rules_version": 2,
+      "server_result": {
+        "path": [
+          "responder_safe=true",
+          "responsive_and_mobile=true",
+          "RESULT_GREEN_THEN_RADIATION",
+          "vomiting=true",
+          "time_to_vomiting=\"1_2h\"",
+          "prodromal_symptoms=[\"nausea\",\"fatigue\"]"
+        ],
+        "status": "completed",
+        "escalations": [
+          {
+            "level": "crew",
+            "priority": "emergency"
+          },
+          {
+            "level": "flight_surgeon",
+            "priority": "emergency"
+          }
+        ],
+        "radiation_flag": "probable",
+        "mismatch_fields": [],
+        "triage_category": "green"
+      },
+      "matches_device": true,
+      "radiation_flag": "probable",
+      "reassessment_of": null,
+      "triage_category": "green",
+      "is_self_assessment": false
+    },
+    {
+      "id": "3e198d1d-c4e3-49ab-8220-7d8cc9ae67c0",
+      "status": "completed",
+      "answers": [
+        {
+          "answer": {
+            "value": true
+          },
+          "source": "auto",
+          "answered_at": "2026-11-15T06:54:16.224Z",
+          "received_at": "2026-11-15T06:54:16.551Z",
+          "question_code": "responder_safe",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "value": true
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.564Z",
+          "received_at": "2026-11-15T06:54:16.570Z",
+          "question_code": "responder_safe",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "value": false
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.564Z",
+          "received_at": "2026-11-15T06:54:16.570Z",
+          "question_code": "responsive_and_mobile",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "value": true
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.564Z",
+          "received_at": "2026-11-15T06:54:16.570Z",
+          "question_code": "breathing",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "value": false
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.564Z",
+          "received_at": "2026-11-15T06:54:16.570Z",
+          "question_code": "resp_rate_over_30",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "value": true
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.564Z",
+          "received_at": "2026-11-15T06:54:16.570Z",
+          "question_code": "perfusion_ok",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "value": false
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.564Z",
+          "received_at": "2026-11-15T06:54:16.570Z",
+          "question_code": "follows_commands",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "value": true
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.564Z",
+          "received_at": "2026-11-15T06:54:16.570Z",
+          "question_code": "vomiting_observed",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "choice": "lt_1h"
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.564Z",
+          "received_at": "2026-11-15T06:54:16.570Z",
+          "question_code": "time_to_vomiting_observed",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "choice": "pain"
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.564Z",
+          "received_at": "2026-11-15T06:54:16.570Z",
+          "question_code": "consciousness_level",
+          "source_reading_id": null
+        }
+      ],
+      "call_sign": "LYRA",
+      "session_id": "df7d1a06-663d-457e-9d8d-3eb065f9f63b",
+      "started_at": "2026-11-15T06:54:16.532Z",
+      "assessed_by": "00000000-0000-4000-8000-000000000011",
+      "client_uuid": "a81f0393-03a6-8518-958c-7775d3217964",
+      "computed_by": "server",
+      "protocol_id": 2,
+      "sequence_no": 2,
+      "astronaut_id": "10000000-0000-4000-8000-000000000013",
+      "completed_at": "2026-11-15T06:54:16.590Z",
+      "device_result": {
+        "status": "completed",
+        "rules_version": 2,
+        "radiation_flag": "probable",
+        "triage_category": "red"
+      },
+      "rules_version": 2,
+      "server_result": {
+        "path": [
+          "responder_safe=true",
+          "responsive_and_mobile=false",
+          "breathing=true",
+          "resp_rate_over_30=false",
+          "perfusion_ok=true",
+          "follows_commands=false",
+          "RESULT_RED_UNRESPONSIVE",
+          "vomiting_observed=true",
+          "time_to_vomiting_observed=\"lt_1h\"",
+          "consciousness_level=\"pain\""
+        ],
+        "status": "completed",
+        "escalations": [
+          {
+            "level": "crew",
+            "priority": "emergency"
+          },
+          {
+            "level": "flight_surgeon",
+            "priority": "emergency"
+          }
+        ],
+        "radiation_flag": "probable",
+        "mismatch_fields": [],
+        "triage_category": "red"
+      },
+      "matches_device": true,
+      "radiation_flag": "probable",
+      "reassessment_of": null,
+      "triage_category": "red",
+      "is_self_assessment": false
+    },
+    {
+      "id": "0a8b5a6f-0207-475a-bead-827cb760504b",
+      "status": "completed",
+      "answers": [
+        {
+          "answer": {
+            "value": true
+          },
+          "source": "auto",
+          "answered_at": "2026-11-15T06:54:16.224Z",
+          "received_at": "2026-11-15T06:54:16.614Z",
+          "question_code": "responder_safe",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "value": true
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.624Z",
+          "received_at": "2026-11-15T06:54:16.629Z",
+          "question_code": "responder_safe",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "value": true
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.624Z",
+          "received_at": "2026-11-15T06:54:16.629Z",
+          "question_code": "responsive_and_mobile",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "value": false
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.624Z",
+          "received_at": "2026-11-15T06:54:16.629Z",
+          "question_code": "vomiting",
+          "source_reading_id": null
+        },
+        {
+          "answer": {
+            "choice": ["none"]
+          },
+          "source": "voice",
+          "answered_at": "2026-11-15T06:54:16.624Z",
+          "received_at": "2026-11-15T06:54:16.629Z",
+          "question_code": "prodromal_symptoms",
+          "source_reading_id": null
+        }
+      ],
+      "call_sign": "ATLAS",
+      "session_id": "df7d1a06-663d-457e-9d8d-3eb065f9f63b",
+      "started_at": "2026-11-15T06:54:16.607Z",
+      "assessed_by": "00000000-0000-4000-8000-000000000011",
+      "client_uuid": "0260cad1-240c-87ac-b88c-81f2480d6f84",
+      "computed_by": "server",
+      "protocol_id": 2,
+      "sequence_no": 3,
+      "astronaut_id": "10000000-0000-4000-8000-000000000014",
+      "completed_at": "2026-11-15T06:54:16.639Z",
+      "device_result": {
+        "status": "completed",
+        "rules_version": 2,
+        "radiation_flag": "none",
+        "triage_category": "green"
+      },
+      "rules_version": 2,
+      "server_result": {
+        "path": [
+          "responder_safe=true",
+          "responsive_and_mobile=true",
+          "RESULT_GREEN_THEN_RADIATION",
+          "vomiting=false",
+          "prodromal_symptoms=[\"none\"]"
+        ],
+        "status": "completed",
+        "escalations": [
+          {
+            "level": "self_care",
+            "priority": "routine"
+          },
+          {
+            "level": "crew",
+            "priority": "routine"
+          }
+        ],
+        "radiation_flag": "none",
+        "mismatch_fields": [],
+        "triage_category": "green"
+      },
+      "matches_device": true,
+      "radiation_flag": "none",
+      "reassessment_of": null,
+      "triage_category": "green",
+      "is_self_assessment": false
+    }
+  ],
+  "differences": [],
+  "generated_at": "2026-11-15T06:54:16.732Z",
+  "attention_order": [
+    {
+      "reason": "Rojo (inmediato), radiación probable (vómito)",
+      "status": "assessed",
+      "position": 1,
+      "call_sign": "LYRA",
+      "astronaut_id": "10000000-0000-4000-8000-000000000013",
+      "assessment_id": "3e198d1d-c4e3-49ab-8220-7d8cc9ae67c0",
+      "matches_device": true,
+      "radiation_flag": "probable",
+      "triage_category": "red"
+    },
+    {
+      "reason": "Sin evaluar: evalúalo (puede ser rojo)",
+      "status": "unassessed",
+      "position": 2,
+      "call_sign": "ORION",
+      "astronaut_id": "10000000-0000-4000-8000-000000000011",
+      "assessment_id": null,
+      "matches_device": null,
+      "radiation_flag": null,
+      "triage_category": null
+    },
+    {
+      "reason": "Verde (leve), radiación probable (vómito)",
+      "status": "assessed",
+      "position": 3,
+      "call_sign": "VEGA",
+      "astronaut_id": "10000000-0000-4000-8000-000000000012",
+      "assessment_id": "bd63fcfd-18d0-406e-b4eb-4b2e28f04758",
+      "matches_device": true,
+      "radiation_flag": "probable",
+      "triage_category": "green"
+    },
+    {
+      "reason": "Verde (leve)",
+      "status": "assessed",
+      "position": 4,
+      "call_sign": "ATLAS",
+      "astronaut_id": "10000000-0000-4000-8000-000000000014",
+      "assessment_id": "0a8b5a6f-0207-475a-bead-827cb760504b",
+      "matches_device": true,
+      "radiation_flag": "none",
+      "triage_category": "green"
+    }
+  ],
+  "joined_activations": []
+}

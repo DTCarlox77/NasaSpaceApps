@@ -16,6 +16,9 @@ const path = require('node:path');
 require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env'), quiet: true });
 const { Pool } = require('pg');
 
+// Las pruebas usan siempre las DB_* (nunca una DATABASE_URL de despliegue).
+delete process.env.DATABASE_URL;
+delete process.env.DB_SSL;
 const DEV_DB = process.env.DB_NAME;
 const TEST_DB = (process.env.DB_NAME_TEST || 'astro_health_test').trim();
 if (process.env.NODE_ENV !== 'production') process.env.NODE_ENV = 'test';
