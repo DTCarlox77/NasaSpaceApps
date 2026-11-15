@@ -1,6 +1,6 @@
 # Guía de la API para los frontends (app móvil y panel web)
 
-Contrato completo: [`docs/openapi.yaml`](openapi.yaml) (OpenAPI 3.0.3, v1.5). Si esta guía y el YAML difieren, manda el YAML. Los cambios desde v1 están en la [sección 8](#8-cambios-del-contrato-v11-a-v15).
+Contrato completo: [`docs/openapi.yaml`](openapi.yaml) (OpenAPI 3.0.3, v1.6). Si esta guía y el YAML difieren, manda el YAML. Los cambios desde v1 están en la [sección 8](#8-cambios-del-contrato-v11-a-v16).
 
 > Datos sintéticos. La app es apoyo a la decisión, no un diagnóstico médico.
 
@@ -152,7 +152,7 @@ La tripulación no ve nada del bienestar de los demás: ni el comandante ni el o
 - `PUT /admin/indicators/{code}/rules`
 - `POST /admin/simulator/history`, `POST /admin/simulator/scenarios/{name}` (solo demo)
 
-## 8. Cambios del contrato (v1.1 a v1.5)
+## 8. Cambios del contrato (v1.1 a v1.6)
 
 - **Rol `service`**: cuenta de servicio de los sensores y del simulador del hábitat. Solo puede llamar `POST /api/v1/habitat/readings` (`x-roles: [astronaut, service]`); cualquier otra ruta le responde 403. El simulador ya no usa una cuenta `admin`.
 - **`trigger_type: crew_event`**: nueva forma de activar el modo emergencia (un tripulante avisa, p. ej. por voz), además de `manual_button`, `missed_checkin`, `critical_reading` y `environment_alarm`. Si la app muestra el motivo de la emergencia, agrega este valor.
@@ -200,7 +200,13 @@ La tripulación no ve nada del bienestar de los demás: ni el comandante ni el o
 - Puede romper algo: `audit.reported_to_earth` ahora es `false` mientras la acción espera enlace (antes siempre `true` en los ejemplos).
 - Puede romper algo: `GET /admin/audit/confidential-access` es **solo de behavioral_health** (admin → 403). Nuevo `GET /me/confidential-access`: el astronauta ve quién consultó sus datos.
 
-## 9. Qué ya es real (tareas 1–11) y cómo pasar del mock a la API
+### v1.6 (tarea 12, despliegue y demo)
+
+- Nuevo `POST /admin/demo/reset` (solo demo, solo `admin`): reinicio de la demo para el panel. Ver "Reinicio de demo" en la sección 9.
+- `offline_verifier.iterations` sale de la variable del servidor `OFFLINE_PIN_PBKDF2_ITERATIONS` (600 000 por defecto, mínimo 10 000). La app debe usar **el valor que recibe**, no uno fijo (sección 12).
+- CORS: en la API desplegada solo los orígenes de `CORS_ORIGIN` pueden llamar desde el navegador (panel y Expo web). La app nativa no se ve afectada.
+
+## 9. Qué ya es real (tareas 1–12) y cómo pasar del mock a la API
 
 En el YAML, las operaciones que **todavía** son solo mock llevan `x-status-impl: pending`. Las que no la llevan ya responden en la API local:
 
@@ -218,7 +224,7 @@ En el YAML, las operaciones que **todavía** son solo mock llevan `x-status-impl
 | Hábitat | `POST /habitat/readings`, `GET /habitat/status` |
 | Tierra | `GET /admin/dashboard/crew`, `GET /admin/inbox`, `POST /admin/escalations/{id}/ack`, `POST /admin/escalations/{id}/messages`, `GET /escalations/{id}/messages` |
 | Misión (admin) | `GET`/`POST /admin/missions`, `PATCH /admin/missions/{id}`, `GET`/`POST /admin/environments`, `PATCH /admin/environments/{code}`, `GET`/`POST /admin/assignments`, `PATCH /admin/assignments/{id}`, `GET`/`POST /admin/comm-outages`, `PATCH /admin/comm-outages/{id}` |
-| Simulador (admin, solo demo) | `POST /admin/simulator/history`, `POST /admin/simulator/scenarios/{name}` |
+| Simulador y demo (admin, solo demo) | `POST /admin/simulator/history`, `POST /admin/simulator/scenarios/{name}`, `POST /admin/demo/reset` (tarea 12) |
 | Bienestar (tarea 10) | `POST /wellbeing/checkins`, `GET /wellbeing/instruments`, `POST /wellbeing/screenings`, `POST /wellbeing/pvt-runs`, `POST /wellbeing/support-requests`, `GET /wellbeing/support-requests/{id}/messages`, `GET /me/wellbeing` |
 | Acceso (tarea 11) | `GET /admin/audit/confidential-access` (behavioral_health), `GET /me/confidential-access` (astronauta), `GET`/`POST /admin/devices`, `POST /admin/devices/{id}/revoke`, `POST /crew/users/{id}/unlock`, `POST /crew/users/{id}/reset-pin`, `POST /crew/devices`, `PUT /me/offline-pin`, `GET /admin/audit/delegated-actions`, `GET /missions/current`; `X-Device-Credential` en el triaje |
 | Salud conductual y cumplimiento (tarea 10) | `GET /admin/behavioral/inbox`, `GET /admin/behavioral/astronauts/{id}`, `POST /admin/behavioral/support-requests/{id}/messages`, `/ack`, `/close`, `POST /admin/behavioral/escalations/{id}/ack`, `/close`, `GET /admin/compliance` |
@@ -246,9 +252,9 @@ Comportamientos reales que el mock no muestra:
 - Swagger: `https://astro-health-api-81jd.onrender.com/api/docs`.
 - Mismos usuarios y contraseña del seed (`Demo2026!`): son **datos sintéticos**. No metas datos reales.
 - El access token dura 15 min: ante un 401 `UNAUTHENTICATED`, usa `POST /auth/refresh` (sección 2).
-- El plan gratuito se duerme tras ~15 min sin uso: la primera petición puede tardar ~50 s. Llama a `GET /api/v1/health` al abrir la app para despertarla.
-- CORS: si tu frontend corre en un dominio propio, pide que se agregue a `CORS_ORIGIN`.
-- Los datos se comparten entre todos los que usen la API desplegada: usa `client_uuid` nuevos y no esperes un estado limpio.
+- El plan gratuito se duerme tras ~15 min sin uso: la primera petición puede tardar ~50 s. Llama a `GET /api/v1/health` al abrir la app para despertarla y no uses un timeout corto en esa primera llamada (8 s no alcanza; 60 s sí).
+- CORS: el navegador solo puede llamar desde los orígenes de `CORS_ORIGIN` (nunca `*` en producción). Si el panel o Expo web corren en otro origen (dominio o puerto), pide que se agregue; si no, el navegador bloquea la respuesta (en la consola sale un error de CORS, no un 4xx). La app nativa no manda `Origin` y no lo necesita.
+- Los datos se comparten entre todos los que usen la API desplegada: usa `client_uuid` nuevos y no esperes un estado limpio (antes de la demo se corre el reinicio de demo).
 
 ### Datos de demo: simulador
 
@@ -279,6 +285,20 @@ curl -s -X POST $API/admin/simulator/scenarios/co2_spike -H "$AUTH" -H "$JSON" -
 curl -s -X POST $API/admin/simulator/scenarios/wellbeing_decline -H "$AUTH" -H "$JSON" -d '{"astronaut":"ATLAS"}'
 curl -s -X POST $API/admin/simulator/scenarios/offline_batch -H "$AUTH" -H "$JSON" -d '{"astronaut":"ORION"}'
 curl -s -X POST $API/admin/simulator/scenarios/emergency_solar -H "$AUTH" -H "$JSON" -d '{"astronaut":"LYRA"}'
+```
+
+### Reinicio de demo (panel de control de misión)
+
+`POST /admin/demo/reset` con `{ "confirm": "ARES-1" }`, como `admin` (`mission.control`). Solo demo (`x-status: extra`): fuera del modo demo responde 404, igual que el simulador. Sirve para dejar la demo como nueva antes de presentarla o entre ensayos; **no borra nada**.
+
+- Qué hace: recarga la historia de 14 días hasta ahora; cierra emergencias abiertas, cortes de enlace en curso, escalamientos y solicitudes de apoyo abiertos (lo conductual se cierra pero no se cuenta); deja los usuarios del seed desbloqueados y con `Demo2026!` (ATLAS, `m.silva`, sigue con cambio de contraseña obligatorio); evita que el check-in perdido abra una emergencia justo después; y registra una PVT reciente para que el dashboard muestre **3 aptos y ATLAS `not_confirmed`**.
+- Botón en el panel: pide confirmación ("Esto reinicia la demo de ARES-1") y manda `confirm: "ARES-1"`; sin ella → 400 `VALIDATION_ERROR` (`details[0].field = "confirm"`). Otro rol → 403. Mientras corre otro reinicio → 409 `DEMO_RESET_RUNNING`.
+- Tarda unos segundos (en Render hasta ~1 min): muestra "Reiniciando…" y usa un timeout largo (≥ 5 min).
+- Respuesta: `emergencies.closed`, `comm_outages`, `escalations.closed` (solo físicos y de emergencia), `users` (quién se desbloqueó o recuperó la contraseña), `fitness` por call sign, `not_confirmed`, `panel_flags` (lo que el dashboard seguirá marcando en caution o critical; una lectura crítica de un ensayo anterior no se puede quitar sin borrar) y `notes`. Después, recarga el dashboard y la bandeja.
+- Si el admin que lo pulsa había cambiado su contraseña, vuelve a `Demo2026!` y su sesión se cierra: vuelve a hacer login.
+
+```bash
+curl -s --max-time 300 -X POST $API/admin/demo/reset -H "$AUTH" -H "$JSON" -d '{"confirm":"ARES-1"}'
 ```
 
 ### Sync contra Render (como astronauta)
@@ -549,7 +569,8 @@ Solo el comandante vigente (`context.crew_role: "commander"`) y solo sobre los t
 
 1. Tras un login en línea, si `offline_unlock_until` viene `null`, pide definir un PIN (4–8 dígitos).
 2. `PUT /me/offline-pin` `{ pin, device_id }` con el **mismo `device_id` del login** (otro → 403 `DEVICE_NOT_OWNED`). Responde `offline_unlock_until` (ahora + `OFFLINE_UNLOCK_DAYS`, 7 días) y `offline_verifier`.
-3. Guarda en el dispositivo **tu propio verificador**, nunca el PIN: deriva una clave con `offline_verifier` (PBKDF2-HMAC-SHA256, `iterations`, una sal aleatoria de `salt_bytes` bytes generada en el dispositivo) y guarda sal + resultado en el almacén seguro. El servidor nunca te devuelve el PIN ni su hash.
+3. Guarda en el dispositivo **tu propio verificador**, nunca el PIN: deriva una clave con `offline_verifier` (PBKDF2-HMAC-SHA256, `iterations`, una sal aleatoria de `salt_bytes` bytes generada en el dispositivo) y guarda sal + resultado (y las `iterations` usadas) en el almacén seguro. El servidor nunca te devuelve el PIN ni su hash.
+   - `iterations` viene de la variable del servidor `OFFLINE_PIN_PBKDF2_ITERATIONS`: 600 000 por defecto (OWASP), mínimo 10 000. **No la fijes en la app**: usa la que recibes. Si en React Native el cálculo tarda demasiado (mide en el teléfono más lento; más de ~1–2 s ya molesta), pide que se baje en el servidor y vuelve a definir el PIN. Usa una implementación nativa de PBKDF2 (no JS puro).
 4. Sin conexión, desbloquea la app comparando el PIN con tu verificador mientras no pase `offline_unlock_until`. Tras `max_attempts` fallos (5), borra el verificador y exige un login en línea.
 5. **El PIN no da acceso al servidor**: al volver la conexión, haz login o refresh antes de `/sync/push` y `/sync/pull`. Cada login en línea en ese dispositivo renueva `offline_unlock_until`.
 6. Si un login trae `offline_unlock_until: null` habiendo PIN, el comandante lo restableció o la tableta se revocó: borra el verificador y pide uno nuevo.
