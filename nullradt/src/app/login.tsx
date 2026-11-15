@@ -7,7 +7,7 @@ import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { apiEnabled } from '@/core/config/env';
 import { useAppTheme } from '@/core/theme';
-import { Button } from '@/presentation/components/ui';
+import { AppText, Button } from '@/presentation/components/ui';
 import { ChangePasswordStep } from '@/presentation/features/auth/ChangePasswordStep';
 import { IdentifyStep } from '@/presentation/features/auth/IdentifyStep';
 import { LOGIN_SHEET_OVERLAP, LoginHero } from '@/presentation/features/auth/LoginHero';
@@ -73,6 +73,8 @@ export default function LoginScreen() {
                 <MissionStep onBack={() => setStep(0)} onContinue={enterApp} />
               </Animated.View>
             )}
+            <Button label={t('legal.link')} variant="ghost" size="sm" leftIcon="document-lock-outline" onPress={() => router.push('/legal')} />
+            <AppText variant="caption" color="textMuted" align="center">{t('legal.copyright')}</AppText>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

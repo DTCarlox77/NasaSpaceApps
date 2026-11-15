@@ -14,6 +14,7 @@ import { container } from '@/di/container';
 import { AppThemeProvider, useAppTheme } from '@/core/theme';
 import { BrandIntro } from '@/presentation/components/brand/BrandIntro';
 import { ToastHost } from '@/presentation/components/feedback/ToastHost';
+import { DialogHost } from '@/presentation/components/feedback/DialogHost';
 import { useAutoLock } from '@/presentation/hooks/useAutoLock';
 import { useTokenRefresh } from '@/presentation/hooks/useTokenRefresh';
 import { useVoiceAssistant } from '@/presentation/features/voice/useVoiceAssistant';
@@ -89,12 +90,15 @@ function RootNavigator() {
         <Stack.Protected guard={status === 'signedOut' || status === 'locked'} redirectTo="/">
           <Stack.Screen name="login" options={{ animation: 'fade' }} />
         </Stack.Protected>
+        {/* Términos y privacidad: accesibles con y sin sesión. */}
+        <Stack.Screen name="legal" />
         <Stack.Screen
           name="alert"
           options={{ presentation: 'fullScreenModal', animation: 'fade', gestureEnabled: false }}
         />
       </Stack>
       <VoiceOverlay />
+      <DialogHost />
       <ToastHost />
     </>
   );

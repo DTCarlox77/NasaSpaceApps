@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
@@ -10,6 +10,7 @@ import { AppText, Avatar, Button, Card, FadeInView, IconButton, PressableScale, 
 import { MissionCard } from '@/presentation/features/auth/MissionStep';
 import { useCrew } from '@/presentation/hooks/useCrew';
 import { useCurrentMission, useMissions } from '@/presentation/hooks/useMissions';
+import { showDialog } from '@/presentation/store/dialogStore';
 import { useAuthStore } from '@/presentation/store/authStore';
 import { useProfileStore } from '@/presentation/store/profileStore';
 import { useSettingsStore } from '@/presentation/store/settingsStore';
@@ -62,12 +63,16 @@ export default function ProfileScreen() {
             <PressableScale
               accessibilityLabel={t('profile.changePhoto')}
               onPress={() =>
-                Alert.alert(t('profile.changePhoto'), undefined, [
-                  { text: t('profile.fromGallery'), onPress: () => pick('library') },
-                  { text: t('profile.takePhoto'), onPress: () => pick('camera') },
-                  ...(photoUri ? [{ text: t('profile.removePhoto'), style: 'destructive' as const, onPress: removePhoto }] : []),
-                  { text: t('alert.cancel'), style: 'cancel' as const },
-                ])
+                showDialog({
+                  title: t('profile.changePhoto'),
+                  icon: 'camera-outline',
+                  actions: [
+                    { label: t('profile.takePhoto'), variant: 'primary', icon: 'camera-outline', onPress: () => pick('camera') },
+                    { label: t('profile.fromGallery'), variant: 'secondary', icon: 'images-outline', onPress: () => pick('library') },
+                    ...(photoUri ? [{ label: t('profile.removePhoto'), variant: 'outline' as const, icon: 'trash-outline' as const, onPress: removePhoto }] : []),
+                    { label: t('alert.cancel'), variant: 'ghost' },
+                  ],
+                })
               }
               style={[styles.editBadge, { backgroundColor: colors.primary, borderColor: colors.surface }]}
             >
@@ -98,6 +103,9 @@ export default function ProfileScreen() {
                 </View>
               ))}
             </View>
+          )}
+          {me?.synthetic && (
+            <AppText variant="caption" color="textMuted" align="center">{t('common.syntheticData')}</AppText>
           )}
         </Card>
       </FadeInView>

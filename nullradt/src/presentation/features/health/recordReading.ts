@@ -43,7 +43,7 @@ export function recordReading(input: RecordInput, opts: { notify?: boolean } = {
   const result = evaluateIndicator(input.indicatorId, input.value, input.secondaryValue, {
     history: input.history ?? mine.slice(-7).map((r) => r.reading.value),
     recentStatuses: mine.slice(-3).map((r) => r.status),
-    sex: biometricsOf(userId)?.sex,
+    sex: session?.sex ?? biometricsOf(userId)?.sex,
   });
   const takenAt = new Date().toISOString();
   useHealthLogStore.getState().addReading(userId, {

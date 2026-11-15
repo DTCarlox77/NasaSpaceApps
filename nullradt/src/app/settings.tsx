@@ -137,6 +137,19 @@ export default function SettingsScreen() {
       </FadeInView>
 
       <FadeInView index={6}>
+        <Card onPress={() => router.push('/legal')} accessibilityLabel={t('legal.settingsTitle')} style={[styles.row, { gap: spacing.md }]}>
+          <View style={[styles.iconBubble, { backgroundColor: colors.surfaceTinted, borderRadius: radius.md }]}>
+            <Ionicons name="document-lock-outline" size={22} color={colors.primaryText} />
+          </View>
+          <View style={styles.flex}>
+            <AppText variant="title">{t('legal.settingsTitle')}</AppText>
+            <AppText variant="bodySmall" color="textSecondary">{t('legal.settingsBody')}</AppText>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </Card>
+      </FadeInView>
+
+      <FadeInView index={7}>
         <Card tone="tinted" style={{ gap: spacing.xs }}>
           <AppText variant="title">{t('settings.about')}</AppText>
           <AppText variant="bodySmall" color="textSecondary">{t('settings.aboutBody')}</AppText>

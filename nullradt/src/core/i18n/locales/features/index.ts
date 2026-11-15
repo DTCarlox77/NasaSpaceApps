@@ -10,6 +10,8 @@ import wellbeingEn from './wellbeing.en.json';
 import wellbeingEs from './wellbeing.es.json';
 import voiceEn from './voice.en.json';
 import voiceEs from './voice.es.json';
+import legalEn from './legal.en.json';
+import legalEs from './legal.es.json';
 
-export const featuresEs = { ...coreEs, ...accessEs, ...wellbeingEs, ...voiceEs };
-export const featuresEn = { ...coreEn, ...accessEn, ...wellbeingEn, ...voiceEn };
+export const featuresEs = { ...coreEs, ...accessEs, ...wellbeingEs, ...voiceEs, ...legalEs };
+export const featuresEn = { ...coreEn, ...accessEn, ...wellbeingEn, ...voiceEn, ...legalEn };

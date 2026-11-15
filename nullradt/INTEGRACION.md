@@ -19,6 +19,8 @@ con contraseñas de prueba y todo en el dispositivo. Sirve de respaldo para la p
 | `EXPO_PUBLIC_API_WAKE_TIMEOUT_MS` | `60000` | `GET /health` al abrir la app y el login (Render gratuito tarda ~50 s en despertar). |
 | `EXPO_PUBLIC_REQUIRE_AUTH` | `true` | Con API el login es obligatorio siempre (se fuerza aunque diga `false`). Sin API, `false` = entrar directo con la sesión demo. |
 
+| `EXPO_PUBLIC_HEALTH_MODE` | `local` | **Temporal.** `local` (por defecto) = Monitor, Medir y Registro usan la simulación de los equipos externos, las reglas del dispositivo y guardan en el teléfono (con foto si el dato es manual). `server` = `GET /me/body-status` + `POST /readings` (§5). Login, emergencia, triaje, bienestar y sync usan la API en ambos casos. |
+
 Copia `.env.example` como `.env` (ignorado por git). Nunca subas secretos.
 
 ## 2. Arquitectura (capas de `AGENTS.md`)

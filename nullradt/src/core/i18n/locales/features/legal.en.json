@@ -1,0 +1,118 @@
+{
+  "legal": {
+    "title": "Terms & privacy",
+    "subtitle": "NullRadt · AndroMajes",
+    "updated": "Last updated: November 15, 2026",
+    "link": "Terms & conditions · Privacy",
+    "settingsTitle": "Terms, privacy & credits",
+    "settingsBody": "How we use and protect your data, and who built NullRadt.",
+    "tabs": { "terms": "Terms", "privacy": "Privacy", "credits": "Credits" },
+    "terms": [
+      {
+        "title": "1. Ownership",
+        "body": "NullRadt is a prototype built by team AndroMajes for the NASA Space Apps Challenge 2026. © 2026 AndroMajes. All rights reserved. Taking part in the challenge does not mean NASA sponsors, endorses or is affiliated with this app."
+      },
+      {
+        "title": "2. Purpose: decision support, not diagnosis",
+        "body": "NullRadt helps the crew of a long-duration mission log and monitor their physical health and wellbeing. It is not a medical device and does not diagnose or prescribe. Clinical decisions belong to the crew medical officer on board and the flight surgeon on Earth."
+      },
+      {
+        "title": "3. Synthetic data and simulation",
+        "body": "Because this is a prototype, the demo crew, the readings from external devices and some profile data (height, weight, age, blood type) are synthetic and labeled as such. Do not use the app with real patient data."
+      },
+      {
+        "title": "4. Thresholds and evaluations",
+        "body": "Status colors use rules with a cited source (e.g. NEWS2, AHA, EWGSOP2). When a server is connected, its evaluation prevails. If an indicator has no validated rule, it is shown as “not evaluated”, never as “fine”."
+      },
+      {
+        "title": "5. Emergencies and triage",
+        "body": "The SOS button is always available, even without signing in. A critical alert opens an emergency session seen by the crew and Earth; without a link it is queued and sent first once the link returns. Triage follows only the server-approved protocol: anything it does not cover is asked to Earth. Only the commander or the crew medical officer can close an emergency. NullRadt does not replace the mission’s emergency procedures."
+      },
+      {
+        "title": "6. Your account",
+        "body": "Your credentials are personal and non-transferable. After several failed attempts the account is temporarily locked. Passwords must be at least 10 characters and the offline PIN unlock expires. Tell your commander if you think someone used your account."
+      },
+      {
+        "title": "7. Acceptable use",
+        "body": "Do not try to alter records, access other crew members’ data outside your role, or open false emergencies on purpose. Sensitive actions and emergency access are logged for audit."
+      },
+      {
+        "title": "8. Connectivity",
+        "body": "The app works offline and syncs when the link returns. The communication delay with Earth is part of the mission model: messages to Earth show when they will arrive."
+      },
+      {
+        "title": "9. Intellectual property and third parties",
+        "body": "NullRadt’s code, design and copy are © 2026 AndroMajes. The Atkinson Hyperlegible and Lexend typefaces are used under the SIL Open Font License. The PHQ-2 and GAD-2 questionnaires are free to use. Third-party names belong to their respective owners."
+      },
+      {
+        "title": "10. No warranty",
+        "body": "NullRadt is provided “as is”, as a hackathon prototype, without warranties of any kind. To the extent permitted by law, AndroMajes is not liable for damages arising from its use."
+      },
+      {
+        "title": "11. Changes",
+        "body": "These terms may be updated; the date of the latest version is shown above. Using the app after a change means you accept the current version."
+      }
+    ],
+    "privacy": [
+      {
+        "title": "1. Controller",
+        "body": "Team AndroMajes (NASA Space Apps Challenge 2026) is responsible for processing NullRadt data."
+      },
+      {
+        "title": "2. What data we process",
+        "body": "Account data (username, role, mission and call sign); biological sex, only for reference ranges; vital signs and other health readings; the wellbeing check-in (mood, fatigue, stress, friction with the crew, sleep and a private note); the PHQ-2 and GAD-2 questionnaires; the reaction test; support requests; emergencies and triage; photos you attach to a manual reading or your profile; and your settings."
+      },
+      {
+        "title": "3. Where it is stored",
+        "body": "On the mission server: the check-in, questionnaires, reaction test, support requests, emergencies and triage, and readings that are sent. Only on your device: readings and photos in local health mode, your routine, profile photo, settings and the Stroop, memory and vision tests. Your credentials are stored encrypted in the system’s secure storage."
+      },
+      {
+        "title": "4. Wellbeing confidentiality",
+        "body": "Only you and the behavioral health team see your wellbeing. The crew never sees your wellbeing. Questionnaire scores are never shown in the app. From the reaction test, mission control only receives “fit” or “not confirmed”, never your times. Only you see the check-in’s private note."
+      },
+      {
+        "title": "5. Who sees what",
+        "body": "The crew sees physical alerts escalated to them, without values. The crew medical officer sees the physical status colors. The flight surgeon receives medical escalations and triage reports. Mission control sees compliance and audit. During an active emergency, access widens only as much as needed to respond, and it is logged: safety comes first."
+      },
+      {
+        "title": "6. Voice",
+        "body": "Reading aloud and, when the phone has the language model, speech recognition run on the device. NullRadt does not record or send your audio. If you use the system recognizer (for example in Expo Go), its provider’s privacy policy applies."
+      },
+      {
+        "title": "7. Biometrics",
+        "body": "Your fingerprint or face is verified by the operating system. NullRadt only receives “verified” or “not verified”; it never receives or stores your biometric data."
+      },
+      {
+        "title": "8. Permissions",
+        "body": "Microphone (voice), camera and photos (manual readings and profile photo), notifications (alerts) and motion sensors (shake the phone for SOS). NullRadt does not use your location. You can revoke any permission; only what depends on it will stop working."
+      },
+      {
+        "title": "9. Security",
+        "body": "Communication with the server uses HTTPS. Access uses short-lived tokens renewed with a single-use token: if one is reused, the affected sessions are closed. Passwords are stored on the server with a bcrypt hash and the app locks when it goes to the background."
+      },
+      {
+        "title": "10. Retention and sign-out",
+        "body": "Signing out deletes tokens, the health cache and triage data from the device. Items still in the queue are kept so no information is lost, especially emergencies. The demo server uses synthetic data and may be reset."
+      },
+      {
+        "title": "11. No ads, no selling data",
+        "body": "NullRadt includes no ads, trackers or analytics tools, and does not sell or share your data for commercial purposes. Triage does not use cloud artificial intelligence."
+      },
+      {
+        "title": "12. Your rights",
+        "body": "You can review your data in the app and correct today’s check-in by sending it again. To request a copy or deletion of your data on the server, contact team AndroMajes."
+      },
+      {
+        "title": "13. Minors",
+        "body": "NullRadt is intended for adult crew members and is not directed at minors."
+      }
+    ],
+    "credits": {
+      "ownerTitle": "An AndroMajes app",
+      "ownerBody": "Built for the NASA Space Apps Challenge 2026.",
+      "teamTitle": "Team",
+      "nasaNote": "NASA does not sponsor or endorse this app."
+    },
+    "copyright": "© 2026 AndroMajes. All rights reserved."
+  }
+}

@@ -19,7 +19,7 @@ import Animated, {
 import Svg, { Circle } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '@/core/theme';
-import { apiEnabled } from '@/core/config/env';
+import { healthLocal } from '@/core/config/env';
 import type { SourceRef } from '@/domain/entities/Hazard';
 import type { EscalationLevel, HealthStatus, IndicatorId } from '@/domain/entities/HealthIndicator';
 import type { AutoEmergency } from '@/domain/entities/ReadingSubmission';
@@ -95,7 +95,8 @@ export default function MeasureScreen() {
   const [phase, setPhase] = useState<Phase>('searching');
   const [live, setLive] = useState('—');
   const [result, setResult] = useState<MeasureResult | null>(null);
-  const withApi = apiEnabled();
+  // Con HEALTH_MODE=server se envía a POST /readings; en modo local, simulación + reglas del dispositivo.
+  const withApi = !healthLocal();
   const userId = useAuthStore((s) => s.session?.userId ?? '');
   const addReading = useHealthLogStore((s) => s.addReading);
   const [alerted, setAlerted] = useState(false);

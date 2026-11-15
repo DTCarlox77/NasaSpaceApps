@@ -1,4 +1,4 @@
-import { apiEnabled } from '@/core/config/env';
+import { healthLocal } from '@/core/config/env';
 import type { HealthIndicator, IndicatorId, Reading } from '@/domain/entities/HealthIndicator';
 import type { ReadingInput, ReadingOutcome } from '@/domain/entities/ReadingSubmission';
 import type { HealthRepository, HealthSnapshot } from '@/domain/repositories/HealthRepository';
@@ -123,7 +123,8 @@ export class HealthRepositoryImpl implements HealthRepository {
   }
 
   async getSnapshot(): Promise<HealthSnapshot> {
-    if (!apiEnabled()) {
+    // Modo salud local: maqueta + lecturas del dispositivo (useHealthOverview las aplica encima).
+    if (healthLocal()) {
       return { indicators: await this.mock.getIndicators(), origin: 'mock', fetchedAt: new Date().toISOString() };
     }
     try {

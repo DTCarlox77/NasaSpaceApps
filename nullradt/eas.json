@@ -18,7 +18,8 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://astro-health-api-81jd.onrender.com",
-        "EXPO_PUBLIC_REQUIRE_AUTH": "true"
+        "EXPO_PUBLIC_REQUIRE_AUTH": "true",
+        "EXPO_PUBLIC_HEALTH_MODE": "local"
       }
     },
     "production": {

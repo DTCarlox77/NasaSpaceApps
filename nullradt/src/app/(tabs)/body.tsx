@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { apiEnabled } from '@/core/config/env';
+import { healthLocal } from '@/core/config/env';
 import { useAppTheme } from '@/core/theme';
 import { BODY_SYSTEM_IDS } from '@/domain/entities/BodySystem';
 import { indicatorKey, type BodySystemId, type HealthIndicator, type HealthStatus } from '@/domain/entities/HealthIndicator';
@@ -97,10 +97,10 @@ export default function MonitorScreen() {
                 onMeasure={() =>
                   isMeasurable(ind.id)
                     ? router.push({ pathname: '/measure', params: { indicator: ind.id } })
-                    : // Registro manual solo en demo: con API esos indicadores no tienen entrada desde la app (INTEGRACION.md §4).
-                      apiEnabled()
-                      ? comingSoon(t('body.measure'))
-                      : router.push({ pathname: '/register', params: { indicator: ind.id } })
+                    : // Registro manual (con foto) en modo salud local; con HEALTH_MODE=server no tienen entrada (INTEGRACION.md §4).
+                      healthLocal()
+                      ? router.push({ pathname: '/register', params: { indicator: ind.id } })
+                      : comingSoon(t('body.measure'))
                 }
               />
             </FadeInView>

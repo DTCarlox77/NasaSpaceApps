@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, BackHandler, StyleSheet, View } from 'react-native';
+import { BackHandler, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +14,7 @@ import { useNow } from '@/presentation/hooks/useNow';
 import { useAuthStore } from '@/presentation/store/authStore';
 import { activeSession, MEASURE_ORDER, openMeasurement, pendingOf, useMeasureSessionStore, type SessionMode } from '@/presentation/store/measureSessionStore';
 import { todayKey } from '@/presentation/store/routineStore';
+import { showDialog } from '@/presentation/store/dialogStore';
 
 /**
  * Registrar medición: primero el menú de mediciones PENDIENTES (presión arterial, oxígeno, …).
@@ -52,10 +53,16 @@ export default function MeasureSessionScreen() {
   const incomplete = !!session && left > 0;
   const leave = useCallback(() => {
     if (incomplete) {
-      Alert.alert(t('measureSession.leaveTitle'), t('measureSession.leaveBody', { count: left }), [
-        { text: t('measureSession.keepGoing'), style: 'cancel' },
-        { text: t('measureSession.leaveAnyway'), style: 'destructive', onPress: () => (router.canGoBack() ? router.back() : router.replace('/')) },
-      ]);
+      showDialog({
+        title: t('measureSession.leaveTitle'),
+        body: t('measureSession.leaveBody', { count: left }),
+        icon: 'pulse-outline',
+        tone: 'caution',
+        actions: [
+          { label: t('measureSession.keepGoing'), variant: 'primary', icon: 'play-outline' },
+          { label: t('measureSession.leaveAnyway'), variant: 'ghost', onPress: () => (router.canGoBack() ? router.back() : router.replace('/')) },
+        ],
+      });
       return true;
     }
     if (router.canGoBack()) router.back();
