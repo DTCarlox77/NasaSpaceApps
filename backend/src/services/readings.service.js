@@ -84,6 +84,22 @@ async function astronautActor(userId) {
   return actor;
 }
 
+/**
+ * Activación automática del triaje (tarea 9): una lectura que quedó crítica abre la emergencia
+ * (o se une a la abierta) si el protocolo lo indica. Nunca tumba el registro de la lectura.
+ */
+async function openEmergencyIfCritical(row, indicator) {
+  if (row.level !== 'critical') return null;
+  try {
+    // Carga diferida: emergency.service usa este módulo indirectamente.
+    const { onCriticalReading } = require('./emergency.service');
+    return await onCriticalReading({ reading: row, indicator, evaluation: row });
+  } catch (err) {
+    console.error('[emergency] no se pudo activar por lectura crítica', err);
+    return null;
+  }
+}
+
 async function createReading({ userId, input }) {
   const actor = await astronautActor(userId);
   const missionId = actor.mission_ids[0];
@@ -171,7 +187,10 @@ async function createReading({ userId, input }) {
         db,
       ),
     );
-    return { status: 201, body: toCreated(row) };
+    const body = toCreated(row);
+    const emergency = await openEmergencyIfCritical(row, indicator);
+    if (emergency) body.emergency = emergency;
+    return { status: 201, body };
   } catch (err) {
     if (err.constraint === 'readings_author_uq') {
       return {

@@ -204,7 +204,10 @@ test('mismo client_uuid dos veces → 200 con lo existente, sin duplicar', async
     { client_uuid: clientUuid },
   );
   assert.equal(again.status, 200);
-  assert.deepEqual(again.body, first.body, 'devuelve el registro y la evaluación originales');
+  // La activación del triaje (tarea 9) solo la informa la primera respuesta.
+  const { emergency, ...original } = first.body;
+  assert.equal(emergency.trigger_type, 'critical_reading');
+  assert.deepEqual(again.body, original, 'devuelve el registro y la evaluación originales');
   const [counts] = await q(
     `SELECT (SELECT count(*)::int FROM readings WHERE client_uuid = $1) AS readings,
             (SELECT count(*)::int FROM escalations WHERE source_id = $2) AS escalations`,

@@ -53,6 +53,15 @@ function toDurationSeconds(name, fallback) {
   return Number(match[1]) * UNIT_SECONDS[match[2]];
 }
 
+function toOptionalDate(name) {
+  const raw = (process.env[name] || '').trim();
+  if (raw === '') return null;
+  const value = new Date(raw);
+  if (Number.isNaN(value.getTime()))
+    fail(`${name} debe ser una fecha ISO 8601, recibido: "${raw}"`);
+  return value;
+}
+
 const nodeEnv = process.env.NODE_ENV || 'development';
 
 function toBoolean(name, fallback) {
@@ -160,6 +169,23 @@ const env = Object.freeze({
     // GET /sync/pull: solo devuelve cambios con más de esta antigüedad (ms), para que una
     // transacción que confirma tarde no quede detrás del cursor.
     pullSettleMs: toPositiveInt('SYNC_PULL_SETTLE_MS', 2000, { min: 0 }),
+  }),
+  triage: Object.freeze({
+    // Activaciones automáticas de la emergencia (el botón manual siempre funciona).
+    autoEnabled: toBoolean('TRIAGE_AUTO_ENABLED', true),
+    autoCriticalReading: toBoolean('TRIAGE_AUTO_CRITICAL_READING', true),
+    autoMissedCheckin: toBoolean('TRIAGE_AUTO_MISSED_CHECKIN', true),
+    // Una lectura crítica más vieja que esto (min) escala, pero no abre la emergencia.
+    autoReadingMaxAgeMin: toPositiveInt('TRIAGE_AUTO_READING_MAX_AGE_MIN', 120),
+    // Horas sin check-in para activar por check-in perdido.
+    autoMissedCheckinH: toPositiveInt('TRIAGE_AUTO_MISSED_CHECKIN_H', 30),
+    // Desde cuándo cuenta el check-in perdido (ISO 8601). Además cuenta desde la última
+    // carga de la historia del simulador. Sin ninguna de las dos, no se detecta.
+    autoSince: toOptionalDate('TRIAGE_AUTO_SINCE'),
+    // Segundos que tiene el tripulante afectado para responder "estoy bien".
+    deadmanSeconds: toPositiveInt('TRIAGE_DEADMAN_S', 60),
+    // Cada cuánto corre el barrido del hombre muerto en el servidor (0 = no corre).
+    sweepIntervalS: toPositiveInt('TRIAGE_SWEEP_INTERVAL_S', 15, { min: 0 }),
   }),
   health: Object.freeze({
     // Prescripción semanal de ejercicio para EXERCISE_MIN (rolling_7d_pct_of_prescription).

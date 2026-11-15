@@ -9,6 +9,22 @@ const server = app.listen(env.port, () => {
   console.log(`[server] Documentación en http://localhost:${env.port}/api/docs`);
 });
 
+// Interruptor de hombre muerto y check-in perdido (tarea 9): barrido periódico e idempotente.
+// También corre al leer una sesión o la bandeja (en Render la instancia puede dormirse).
+let sweeping = false;
+if (env.triage.sweepIntervalS > 0) {
+  const { runTriageSweep } = require('./services/emergency.service');
+  setInterval(() => {
+    if (sweeping) return;
+    sweeping = true;
+    runTriageSweep()
+      .catch((err) => console.error('[triage] barrido fallido:', err.message))
+      .finally(() => {
+        sweeping = false;
+      });
+  }, env.triage.sweepIntervalS * 1000).unref();
+}
+
 let shuttingDown = false;
 
 function shutdown(signal) {
