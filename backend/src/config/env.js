@@ -150,6 +150,17 @@ const env = Object.freeze({
     tempPasswordLength: toPositiveInt('TEMP_PASSWORD_LENGTH', 12, { min: 10 }),
     loginRateLimitPerMinute: toPositiveInt('RATE_LIMIT_LOGIN_PER_MINUTE', 30),
   }),
+  sync: Object.freeze({
+    // POST /sync/push: máximo de items por lote (más → 413).
+    maxBatch: toPositiveInt('SYNC_MAX_BATCH', 500),
+    // measured_at (o created_at) en el futuro más allá de esto → rejected (también en línea).
+    maxFutureSkewS: toPositiveInt('SYNC_MAX_FUTURE_SKEW_S', 300, { min: 0 }),
+    // Una lectura registrada más de esto después de medirse se marca late_sync.
+    lateAfterS: toPositiveInt('SYNC_LATE_AFTER_S', 900),
+    // GET /sync/pull: solo devuelve cambios con más de esta antigüedad (ms), para que una
+    // transacción que confirma tarde no quede detrás del cursor.
+    pullSettleMs: toPositiveInt('SYNC_PULL_SETTLE_MS', 2000, { min: 0 }),
+  }),
   health: Object.freeze({
     // Prescripción semanal de ejercicio para EXERCISE_MIN (rolling_7d_pct_of_prescription).
     exerciseWeeklyPrescriptionMin: toPositiveInt('EXERCISE_WEEKLY_PRESCRIPTION_MIN', 600),
