@@ -19,6 +19,7 @@ const wellbeingRoutes = require('./wellbeing.routes');
 const behavioralRoutes = require('./behavioral.routes');
 const adminMissionRoutes = require('./admin.mission.routes');
 const adminSimulatorRoutes = require('./admin.simulator.routes');
+const adminDemoRoutes = require('./admin.demo.routes');
 const { restrictServiceAccounts } = require('../middlewares/auth');
 
 const router = Router();
@@ -49,6 +50,8 @@ router.use(behavioralRoutes);
 router.use(crewRoutes);
 // Antes de /admin: su router exige admin a todo /admin/* y el simulador apagado debe dar 404.
 router.use('/admin/simulator', adminSimulatorRoutes);
+// Reinicio de demo (tarea 12): mismo gate que el simulador, antes de /admin.
+router.use('/admin/demo', adminDemoRoutes);
 router.use('/admin', adminMissionRoutes);
 
 module.exports = router;

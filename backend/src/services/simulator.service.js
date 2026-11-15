@@ -686,4 +686,4 @@ async function runScenario({ name, body, now = new Date() } = {}) {
   });
 }
 
-module.exports = { loadHistory, runScenario, SCENARIOS, MISSION_CODE };
+module.exports = { loadHistory, runScenario, historyParams, SCENARIOS, MISSION_CODE, MAX_DAYS };
