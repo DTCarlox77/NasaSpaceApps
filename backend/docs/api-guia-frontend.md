@@ -149,8 +149,10 @@ Comportamientos reales que el mock no muestra:
 
 ### API desplegada (Render)
 
-- URL: **pendiente del primer deploy** (se anunciará aquí; será del estilo `https://astro-health-api.onrender.com`). Rutas iguales: `<URL>/api/v1/...`, Swagger en `<URL>/api/docs`.
+- URL base: **`https://astro-health-api-81jd.onrender.com/api/v1`** (mismas rutas que en local).
+- Swagger: `https://astro-health-api-81jd.onrender.com/api/docs`.
 - Mismos usuarios y contraseña del seed (`Demo2026!`): son **datos sintéticos**. No metas datos reales.
-- El plan gratuito se duerme tras ~15 min sin uso: la primera petición puede tardar ~1 min. Llama a `GET /api/v1/health` al abrir la app para despertarla.
+- El access token dura 15 min: ante un 401 `UNAUTHENTICATED`, usa `POST /auth/refresh` (sección 2).
+- El plan gratuito se duerme tras ~15 min sin uso: la primera petición puede tardar ~50 s. Llama a `GET /api/v1/health` al abrir la app para despertarla.
 - CORS: si tu frontend corre en un dominio propio, pide que se agregue a `CORS_ORIGIN`.
 - Los datos se comparten entre todos los que usen la API desplegada: usa `client_uuid` nuevos y no esperes un estado limpio.

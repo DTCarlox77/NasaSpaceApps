@@ -62,6 +62,8 @@ servers:
     description: Desarrollo local
   - url: http://localhost:4010
     description: Mock con Prism (npm run api:mock)
+  - url: https://astro-health-api-81jd.onrender.com
+    description: Demo desplegada en Render (datos sintéticos; se duerme sin uso)
 security:
   - bearerAuth: []
 tags:

@@ -73,7 +73,12 @@ Requisitos: Node 20+ (`.nvmrc`) y PostgreSQL 16+ (local, p. ej. el 18 en Windows
 
 > La API desplegada usa los **datos sintéticos** del seed (los mismos usuarios con `Demo2026!`). Nunca cargues datos reales ahí.
 
-**URL pública**: _pendiente del primer deploy_ (con el Blueprint será `https://astro-health-api.onrender.com` si el nombre está libre). Swagger en `<URL>/api/docs`, salud en `<URL>/api/v1/health`.
+**URL pública**: `https://astro-health-api-81jd.onrender.com`
+- API: `https://astro-health-api-81jd.onrender.com/api/v1` (salud en `/api/v1/health`: `"status":"ok"` y `"db":"up"`).
+- Swagger: `https://astro-health-api-81jd.onrender.com/api/docs`.
+- Auto-deploy desde la rama `backend`: cada push despliega. Para confirmar qué commit corre, mira *Events* en el panel del servicio.
+- **Logs**: panel de Render → servicio `astro-health-api` → *Logs* (salida del arranque: migraciones, seed y errores). Los fallos de build o de health check salen en *Events* → el deploy → *View logs*.
+- **Se duerme**: en el plan gratuito, tras ~15 min sin tráfico. La primera petición tarda ~50 s; llama a `/api/v1/health` antes de una demo.
 
 **Cómo funciona**:
 - `render.yaml` (raíz del repo) crea la base `astro-health-db` (PostgreSQL 16, plan free) y el servicio web `astro-health-api` (Node 20, `rootDir: backend`, rama `backend`).
@@ -95,7 +100,7 @@ Requisitos: Node 20+ (`.nvmrc`) y PostgreSQL 16+ (local, p. ej. el 18 en Windows
 
 `PORT` lo pone Render. El resto (`JWT_ACCESS_TTL`, `LOCKOUT_*`, etc.) tiene valores por defecto.
 
-**Límites del plan gratuito**: el servicio se duerme tras ~15 min sin tráfico (la primera petición tarda ~1 min) y la base gratuita expira a los 30 días. El rate limit es en memoria: una sola instancia.
+**Límites del plan gratuito**: el servicio se duerme tras ~15 min sin tráfico (la primera petición tarda ~50 s) y la base gratuita expira a los 30 días. El rate limit es en memoria: una sola instancia.
 
 **Railway** (si Render falla): mismo código. Crea un PostgreSQL y un servicio desde el repo con *Root Directory* `backend`, *Start Command* `npm run start:deploy`, y las variables de arriba (`DATABASE_URL=${{Postgres.DATABASE_URL}}`; si no conecta, prueba `DB_SSL=false`).
 
@@ -217,7 +222,6 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
 
 ## Pendientes
 
-- **Despliegue**: hacer el primer deploy en Render, anotar la URL aquí y en la guía de frontends, y probar `/health`, el login de `a.ortega`, `POST /readings` 185/100 y `GET /me/body-status` contra la URL pública.
 - **`delegated_actions.reported_to_ground_at`**: la tabla es append-only (trigger), así que el recálculo por cortes no puede actualizarla. Cuando se implementen las acciones delegadas, calcular la entrega al leer (o guardar el envío y derivar `deliver_at` con `compute_deliver_at`).
 - **`GET /admin/emergencies` y `/{id}`** siguen pendientes (dependen de las sesiones de emergencia, tarea 9).
 - **Hilo de Tierra**: el panel no tiene un `GET` del hilo de un escalamiento (el contrato no lo define); lo ve a bordo con `GET /escalations/{id}/messages`. Si el panel lo necesita, agregarlo al contrato.
