@@ -545,14 +545,18 @@ async function runEmergencyFlow(item, ctx) {
     });
   }
 
-  // Corte de enlace (si no hay uno en curso): la pregunta y el cierre quedan en cola.
+  // Corte de enlace (si no hay uno en curso): la pregunta y el cierre quedan en cola. Empieza
+  // 1 s antes de ahora, pero nunca antes del fin del último corte (si uno acaba de cerrarse,
+  // un inicio anterior se solaparía con él y el corte no se crearía).
   let outage = null;
   if (!(await simulator.activeOutage(ctx.mission.id))) {
+    const lastEnd = await simulator.lastOutageEnd(ctx.mission.id);
+    const startsAt = Math.max(Date.now() - 1000, lastEnd ? new Date(lastEnd).getTime() : 0);
     try {
       outage = await missionAdmin.createOutage({
         body: {
           mission_id: ctx.mission.id,
-          starts_at: new Date(Date.now() - 1000).toISOString(),
+          starts_at: new Date(startsAt).toISOString(),
           reason: 'Corte de enlace (simulador, emergency_solar)',
         },
       });

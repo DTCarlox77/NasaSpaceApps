@@ -94,6 +94,16 @@ async function activeOutage(missionId, db = pool) {
   return rows[0] || null;
 }
 
+/** Fin del último corte ya cerrado (o null): un corte nuevo no puede empezar antes. */
+async function lastOutageEnd(missionId, db = pool) {
+  const { rows } = await db.query(
+    `SELECT max(ends_at) AS ends_at FROM mission_comm_outages
+     WHERE mission_id = $1 AND ends_at IS NOT NULL AND ends_at <= now()`,
+    [missionId],
+  );
+  return rows[0].ends_at;
+}
+
 module.exports = {
   missionByCode,
   currentCrew,
@@ -101,4 +111,5 @@ module.exports = {
   escalationCounts,
   radiationState,
   activeOutage,
+  lastOutageEnd,
 };
