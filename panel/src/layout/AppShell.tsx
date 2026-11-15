@@ -2,11 +2,12 @@
  * Marco del panel: cabecera (misión, estado del enlace, usuario y rol, cerrar sesión), barra
  * lateral solo con las secciones del rol y el contenido.
  */
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { useAuth } from '../auth/context.ts';
 import { ROLE_LABELS, sectionsFor } from '../nav/access.ts';
 import { Button } from '../components/Button.tsx';
+import { Loading } from '../components/QueryStatus.tsx';
 import { useMission } from '../mission/useMission.ts';
 import { LinkStatus } from './LinkStatus.tsx';
 import './AppShell.css';
@@ -88,7 +89,10 @@ export function AppShell() {
         </ul>
       </nav>
       <main id="contenido" className="shell-main" tabIndex={-1}>
-        <Outlet />
+        {/* Las pantallas con datos se cargan por ruta (React.lazy). */}
+        <Suspense fallback={<Loading label="Cargando la sección…" />}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );

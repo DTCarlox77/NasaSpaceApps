@@ -110,3 +110,86 @@ export interface CurrentMission {
   crew_role?: string | null;
   comm: CommStatus;
 }
+
+// ---------------------------------------------------------------- dashboard de tripulación (P2)
+
+/** Nivel del semáforo. unrated = sin evaluar. */
+export type Level = 'normal' | 'caution' | 'critical' | 'unrated';
+
+export type CrewRole =
+  | 'commander'
+  | 'pilot'
+  | 'crew_medical_officer'
+  | 'flight_engineer'
+  | 'mission_specialist';
+
+export type Trend = 'rising' | 'falling' | 'stable' | 'insufficient_data';
+
+/** Componentes del indicador por nombre; un indicador simple es { value: n }. */
+export type ReadingValues = Record<string, unknown>;
+
+export interface SeriesPoint {
+  measured_at: string;
+  value: number;
+}
+
+export interface DashboardIndicator {
+  code: string;
+  level: Level;
+  last_value: ReadingValues;
+  measured_at: string;
+  trend: Trend;
+  /** Hasta 10 puntos con el valor principal (p. ej. la sistólica). */
+  series: SeriesPoint[];
+}
+
+export interface Compliance {
+  checkins_completed_7d: number;
+  checkins_expected_7d: number;
+}
+
+export interface DashboardAstronaut {
+  astronaut_id: string;
+  call_sign: string;
+  crew_role: CrewRole;
+  worst_level: Level;
+  indicators: DashboardIndicator[];
+  /** Solo admin; null para el flight surgeon. */
+  compliance: Compliance | null;
+  /** null para un rol que no puede verla. */
+  fitness: 'fit' | 'not_confirmed' | null;
+}
+
+/** GET /admin/dashboard/crew. */
+export interface CrewDashboard {
+  mission_id: string;
+  mission_code: string;
+  generated_at: string;
+  astronauts: DashboardAstronaut[];
+}
+
+// ---------------------------------------------------------------- catálogo de indicadores
+
+export interface IndicatorComponent {
+  name: string;
+  type?: string;
+  role?: string;
+  unit?: string;
+  required?: boolean;
+}
+
+export interface IndicatorDef {
+  code: string;
+  name: string;
+  unit: string;
+  value_type: 'simple' | 'composite' | 'boolean' | 'scale' | 'catalog';
+  components: IndicatorComponent[];
+  sensitivity: 'standard' | 'confidential';
+}
+
+/** GET /indicators. */
+export interface IndicatorList {
+  catalog_version: number;
+  rules_version: number;
+  items: IndicatorDef[];
+}

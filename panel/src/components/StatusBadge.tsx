@@ -1,8 +1,8 @@
 /**
  * Semáforo del contrato (`level`: normal | caution | critical | unrated). Siempre lleva texto
- * y un símbolo además del color, para no depender solo de él. Listo para P2.
+ * y un símbolo además del color, para no depender solo de él.
  */
-export type Level = 'normal' | 'caution' | 'critical' | 'unrated';
+import type { Level } from '../api/types.ts';
 
 const LEVELS: Record<Level, { label: string; icon: string }> = {
   normal: { label: 'Normal', icon: '●' },
