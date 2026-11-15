@@ -14,6 +14,7 @@ const missionsRoutes = require('./missions.routes');
 const syncRoutes = require('./sync.routes');
 const emergencyRoutes = require('./emergency.routes');
 const wellbeingRoutes = require('./wellbeing.routes');
+const behavioralRoutes = require('./behavioral.routes');
 const adminMissionRoutes = require('./admin.mission.routes');
 const adminSimulatorRoutes = require('./admin.simulator.routes');
 const { restrictServiceAccounts } = require('../middlewares/auth');
@@ -39,6 +40,8 @@ router.use(missionsRoutes);
 router.use('/sync', syncRoutes);
 // Antes de /admin (su router exige admin a todo /admin/*): /admin/emergencies es de Tierra.
 router.use(emergencyRoutes);
+// Antes de /admin: /admin/behavioral/* es de behavioral_health (tarea 10).
+router.use(behavioralRoutes);
 // Antes de /admin: su router exige admin a todo /admin/* y el simulador apagado debe dar 404.
 router.use('/admin/simulator', adminSimulatorRoutes);
 router.use('/admin', adminMissionRoutes);
