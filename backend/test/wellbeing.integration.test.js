@@ -952,3 +952,22 @@ test('bitácora: cada lectura de behavioral_health queda registrada (sin el cont
   assert.equal(escAck.status, 200, JSON.stringify(escAck.body));
   assert.equal(escAck.body.status, 'acknowledged');
 });
+
+test('ejemplos de docs/examples: el check-in y la solicitud de apoyo entran tal cual', async (t) => {
+  if (skip(t)) return;
+  const example = (name) => require(`../docs/examples/${name}`);
+  const ack = await api('vega', 'post', '/wellbeing/checkins', example('wellbeing-checkin.json'));
+  assert.equal(ack.status, 201, JSON.stringify(ack.body));
+  assert.equal(ack.body.offer_support, true);
+  const again = await api('vega', 'post', '/wellbeing/checkins', example('wellbeing-checkin.json'));
+  assert.equal(again.status, 200);
+  const req = await api(
+    'vega',
+    'post',
+    '/wellbeing/support-requests',
+    example('support-request.json'),
+  );
+  assert.equal(req.status, 201, JSON.stringify(req.body));
+  assert.equal(req.body.urgency, 'now');
+  assert.equal(req.body.suggestions.length, 2);
+});
