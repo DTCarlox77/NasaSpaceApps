@@ -164,7 +164,13 @@ test('historia: radiación diaria en 0.2–0.5 mSv y acumulada creciente', () =>
 });
 
 test('escenarios: valores por defecto y validación de nombre', () => {
-  assert.deepEqual(SCENARIOS, ['solar_event', 'crew_illness', 'co2_spike', 'wellbeing_decline']);
+  assert.deepEqual(SCENARIOS, [
+    'solar_event',
+    'crew_illness',
+    'co2_spike',
+    'wellbeing_decline',
+    'offline_batch',
+  ]);
   assert.deepEqual(buildScenario('crew_illness', { now: NOW, crew: CREW }).params, {
     intensity: 'low',
     astronaut: 'LYRA',

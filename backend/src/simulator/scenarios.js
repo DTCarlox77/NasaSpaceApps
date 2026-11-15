@@ -18,7 +18,13 @@ const { WB_CODES, isoDate, epochDay } = require('./history');
 const MIN_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * MIN_MS;
 
-const SCENARIOS = ['solar_event', 'crew_illness', 'co2_spike', 'wellbeing_decline'];
+const SCENARIOS = [
+  'solar_event',
+  'crew_illness',
+  'co2_spike',
+  'wellbeing_decline',
+  'offline_batch',
+];
 const INTENSITIES = ['low', 'high'];
 
 // Valores por defecto de cada escenario (suposición de diseño).
@@ -26,6 +32,7 @@ const DEFAULTS = Object.freeze({
   crew_illness: { astronaut: 'LYRA' },
   co2_spike: { module_id: 'HAB-1' },
   wellbeing_decline: { astronaut: 'ATLAS' },
+  offline_batch: { astronaut: 'ORION' },
 });
 
 // Días seguidos de check-ins peores: la regla escala a behavioral_health desde 5
@@ -260,11 +267,101 @@ function wellbeingDecline(ctx, { astronaut, intensity }) {
   };
 }
 
+/**
+ * offline_batch: ~24 h sin conexión de un tripulante (ORION) en la tableta TAB-1, empujadas
+ * de una vez por POST /sync/push (lo mismo que haría la app al reconectar). El lote trae:
+ * - signos vitales del día anterior y de esta mañana, ejercicio, check-in y una PVT;
+ * - un CRÍTICO medido hace 6 h (SpO₂ 89 % durante el sueño): se procesa primero, llega con
+ *   late_sync y escala desde la recepción (flight_surgeon tras el retraso de la misión);
+ * - una CORRECCIÓN (presión mal tecleada, corregida con supersedes_uuid);
+ * - un DUPLICADO (el mismo item reenviado al final, como un reintento de la app).
+ * Valores alrededor de la línea base del perfil (suposición de diseño).
+ */
+const OFFLINE_DEVICE = 'TAB-1';
+
+function offlineBatch(ctx, { astronaut }) {
+  const callSign = astronaut;
+  const p = P.profileFor(callSign);
+  const hour = 60 * MIN_MS;
+  const items = [];
+  const add = (entity, ms, payload, tag = '') => {
+    const item = {
+      client_uuid: ctx.id(callSign, 'offline', entity, payload.indicator_code || '-', ms, tag),
+      entity,
+      priority: 'normal',
+      created_at: ctx.iso(ms + 5000),
+      payload: { ...payload, measured_at: ctx.iso(ms) },
+    };
+    items.push(item);
+    return item;
+  };
+  const reading = (code, values, inputMethod, hoursAgo, extra = {}) =>
+    add(
+      'reading',
+      ctx.nowMs - hoursAgo * hour,
+      {
+        indicator_code: code,
+        values,
+        input_method: inputMethod,
+        device_id: OFFLINE_DEVICE,
+        ...extra,
+      },
+      extra.supersedes_uuid ? 'fix' : '',
+    );
+
+  const firstHr = reading('HEART_RATE', { value: p.hr + 2, at_rest: true }, 'wearable', 23.5);
+  reading('BLOOD_PRESSURE', { systolic: p.bp[0] + 2, diastolic: p.bp[1] + 1 }, 'manual', 23);
+  reading('EXERCISE_MIN', { value: 75, type: 'aerobic' }, 'manual', 18);
+  reading('RESP_RATE', { value: p.rr }, 'wearable', 14);
+  reading('SPO2', { value: 89 }, 'wearable', 6); // crítico (≤ 91 %)
+  reading('HEART_RATE', { value: p.hr + 14, at_rest: true }, 'wearable', 5.9);
+  const typo = reading('BLOOD_PRESSURE', { systolic: 151, diastolic: 95 }, 'manual', 1.5);
+  reading('BLOOD_PRESSURE', { systolic: p.bp[0] + 1, diastolic: p.bp[1] }, 'manual', 1.45, {
+    supersedes_uuid: typo.client_uuid,
+  });
+  reading('BODY_TEMP', { value: p.temp }, 'manual', 1.4);
+  reading('SPO2', { value: p.spo2 - 1 }, 'wearable', 1.3);
+  add('wellbeing_checkin', ctx.nowMs - hour, {
+    mood: p.wb.WB_MOOD,
+    fatigue: p.wb.WB_FATIGUE,
+    stress: p.wb.WB_STRESS,
+    crew_conflict: p.wb.WB_CREW_CONFLICT,
+    sleep_hours: round(p.sleep - 0.4, 1),
+  });
+  add('pvt_run', ctx.nowMs - 0.75 * hour, {
+    device_id: OFFLINE_DEVICE,
+    before_critical_task: false,
+    duration_s: 180,
+    trials: 52,
+    lapses: p.pvt.lapses[1],
+    mean_rt_ms: p.pvt.mean_rt[1],
+    false_starts: p.pvt.false_starts[1],
+  });
+  items.push({ ...firstHr }); // el reintento de la app: mismo client_uuid y mismo payload
+
+  return {
+    items: [
+      {
+        type: 'sync_batch',
+        call_sign: callSign,
+        device_id: OFFLINE_DEVICE,
+        measured_at: ctx.iso(ctx.nowMs),
+        body: { device_id: OFFLINE_DEVICE, sent_at: ctx.iso(ctx.nowMs), items },
+      },
+    ],
+    notes: [
+      'Lote de ~24 h sin conexión por POST /sync/push: el SpO₂ crítico de hace 6 h se procesa primero y escala desde la recepción (late_sync).',
+      'Trae un duplicado (reintento) y una corrección (supersedes_uuid). Repetirlo en el mismo minuto da todo duplicate.',
+    ],
+  };
+}
+
 const BUILDERS = {
   solar_event: solarEvent,
   crew_illness: crewIllness,
   co2_spike: co2Spike,
   wellbeing_decline: wellbeingDecline,
+  offline_batch: offlineBatch,
 };
 
 /**

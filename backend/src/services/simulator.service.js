@@ -24,6 +24,7 @@ const wellbeing = require('../models/wellbeing.model');
 const readingsService = require('./readings.service');
 const habitatService = require('./habitat.service');
 const recorder = require('./wellbeingRecorder');
+const syncPush = require('./syncPush.service');
 
 const MISSION_CODE = 'ARES-1';
 const MAX_DAYS = 60;
@@ -210,6 +211,53 @@ async function currentCheckins(ctx, callSign, fromDate) {
   return byDay;
 }
 
+const SYNC_GROUPS = {
+  wellbeing_checkin: 'checkins',
+  pvt_run: 'pvt_runs',
+  wellbeing_screening: 'instruments',
+};
+
+/**
+ * offline_batch: el lote entra por POST /sync/push (syncPush.service), como el astronauta y
+ * desde su tableta. Se cuentan las lecturas estándar por nivel; del bienestar, solo registros.
+ */
+async function writeSyncBatch(item, ctx, tally) {
+  const member = ctx.byCallSign.get(item.call_sign);
+  const response = await syncPush.push({
+    auth: { userId: member.user_id, deviceId: item.device_id },
+    body: item.body,
+  });
+  response.results.forEach((r, i) => {
+    const source = item.body.items[i];
+    if (r.status === 'conflict' || r.status === 'rejected') {
+      tally.readings.rejected += source.entity === 'reading' ? 1 : 0;
+      if (tally.errors.length < 5) {
+        tally.errors.push({ type: source.entity, code: r.error.code, details: r.error.details });
+      }
+      return;
+    }
+    if (source.entity === 'reading') {
+      countReading(tally, {
+        status: r.status,
+        code: source.payload.indicator_code,
+        level: r.result.evaluation.level,
+        id: r.server_id,
+      });
+    } else if (SYNC_GROUPS[source.entity]) {
+      tally.wellbeing[SYNC_GROUPS[source.entity]][
+        r.status === 'accepted' ? 'created' : 'duplicate'
+      ] += 1;
+    }
+  });
+  tally.sync = {
+    batch_id: response.batch_id,
+    device_id: item.device_id,
+    items: item.body.items.length,
+    counts: response.counts,
+    late_sync: response.results.filter((r) => r.result && r.result.late_sync).length,
+  };
+}
+
 async function writeHabitat(items, ctx, tally) {
   if (!items.length) return;
   if (!ctx.serviceUserId) {
@@ -268,6 +316,7 @@ async function writeItems(items, ctx) {
         : null;
       for (const item of queue) {
         if (item.type === 'reading') await writeReading(item, ctx, tally);
+        else if (item.type === 'sync_batch') await writeSyncBatch(item, ctx, tally);
         else if (item.type === 'wellbeing_day') await writeDeclineDay(item, ctx, tally, current);
         else await writeGroup(item, ctx, tally);
       }
@@ -294,6 +343,7 @@ async function summarize(tally, extra) {
     },
     confidential_note:
       'Los niveles y escalamientos de bienestar son confidenciales: solo los ve behavioral_health.',
+    ...(tally.sync ? { sync: tally.sync } : {}),
     errors: tally.errors,
   };
 }
