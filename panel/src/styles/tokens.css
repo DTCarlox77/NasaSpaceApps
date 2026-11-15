@@ -1,0 +1,64 @@
+/*
+ * Tema oscuro de control de misión [DECISIÓN]. Contraste AA: texto principal ≥ 12:1 y texto
+ * secundario ≥ 7:1 sobre las superficies. El semáforo nunca depende solo del color: los
+ * componentes siempre agregan texto o un ícono (StatusBadge).
+ */
+:root {
+  color-scheme: dark;
+
+  /* Superficies */
+  --color-bg: #0a0f15;
+  --color-surface: #111922;
+  --color-surface-raised: #17212d;
+  --color-surface-hover: #1d2937;
+  --color-border: #2b3b4d;
+  --color-border-strong: #3d5268;
+
+  /* Texto */
+  --color-text: #e8eef4;
+  --color-text-muted: #a3b3c4;
+  --color-text-inverse: #071018;
+
+  /* Acento (acciones) y foco */
+  --color-accent: #5fc6f5;
+  --color-accent-hover: #8ad7fa;
+  --color-focus: #ffd166;
+
+  /* Semáforo */
+  --color-normal: #3fcf8e;
+  --color-normal-bg: #0f2a1f;
+  --color-caution: #ffb547;
+  --color-caution-bg: #33250b;
+  --color-critical: #ff6b6b;
+  --color-critical-bg: #3a1214;
+  --color-nodata: #9aa8b8;
+  --color-nodata-bg: #1c2530;
+
+  /* Avisos */
+  --color-info: #5fc6f5;
+  --color-info-bg: #0d2433;
+
+  /* Tipografía del sistema */
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'SFMono-Regular', Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+
+  /* Espacios y formas */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 16px rgb(0 0 0 / 30%);
+
+  --sidebar-width: 15rem;
+  --header-height: 3.5rem;
+}
