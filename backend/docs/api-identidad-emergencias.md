@@ -324,7 +324,7 @@ Todos los `POST` llevan `client_uuid`: si la app los envía dos veces (reintento
   ]
 }
 ```
-`409 SESSION_ALREADY_ACTIVE` devuelve la sesión activa para unirse a ella (dos tripulantes pueden evaluar en paralelo a personas distintas).
+Si ya hay una sesión abierta en la misión, la activación **se une** a ella: 201 con `joined: true` y la sesión abierta (contrato v1.3; antes era `409 SESSION_ALREADY_ACTIVE`). Dos tripulantes pueden evaluar en paralelo a personas distintas. El detalle actual (hombre muerto, reevaluación, reporte) está en `docs/openapi.yaml` y en `docs/api-guia-frontend.md` §10.
 
 ### `POST /emergency/sessions/:id/assessments`
 ```json

@@ -59,7 +59,8 @@ La app trabaja sin enlace y sincroniza al volver: **sube** lo que hizo (`POST /s
 | `wellbeing_checkin` | `POST /wellbeing/checkins` (`mood`, `fatigue`, `stress`, `crew_conflict` enteros 0–100, `sleep_hours`) |
 | `pvt_run` | `POST /wellbeing/pvt-runs` |
 | `wellbeing_screening` | `POST /wellbeing/screenings` (PHQ-2 / GAD-2) |
-| `emergency_*`, `support_request` | Todavía no: salen `rejected` con `ENTITY_NOT_SUPPORTED` (déjalos en la cola). |
+| `emergency_session` · `emergency_assessment` · `emergency_answer` · `emergency_complete` · `emergency_confirm` · `emergency_heartbeat` · `emergency_question` · `emergency_close` | Los endpoints de `/emergency/*` (sección 10). Van **antes que todo** aunque el item diga `normal`. Las referencias (`session_id`, `assessment_id`) aceptan el `client_uuid`: sin conexión no conoces los id del servidor. |
+| `support_request` | Todavía no: sale `rejected` con `ENTITY_NOT_SUPPORTED` (déjalo en la cola). |
 
 ### Subir: `POST /sync/push`
 
@@ -143,7 +144,7 @@ La tripulación no ve nada del bienestar de los demás.
 
 ## 7. MVP y extra
 
-`x-status` en cada operación: 67 son `mvp` y 9 son `extra` (se pueden dejar para el final):
+`x-status` en cada operación: 69 son `mvp` y 9 son `extra` (se pueden dejar para el final):
 
 - `PUT /me/offline-pin`
 - `POST /crew/users/{id}/unlock`, `POST /crew/users/{id}/reset-pin`, `POST /crew/devices`
@@ -151,7 +152,7 @@ La tripulación no ve nada del bienestar de los demás.
 - `PUT /admin/indicators/{code}/rules`
 - `POST /admin/simulator/history`, `POST /admin/simulator/scenarios/{name}` (solo demo)
 
-## 8. Cambios del contrato (v1.1 y v1.2)
+## 8. Cambios del contrato (v1.1 a v1.3)
 
 - **Rol `service`**: cuenta de servicio de los sensores y del simulador del hábitat. Solo puede llamar `POST /api/v1/habitat/readings` (`x-roles: [astronaut, service]`); cualquier otra ruta le responde 403. El simulador ya no usa una cuenta `admin`.
 - **`trigger_type: crew_event`**: nueva forma de activar el modo emergencia (un tripulante avisa, p. ej. por voz), además de `manual_button`, `missed_checkin`, `critical_reading` y `environment_alarm`. Si la app muestra el motivo de la emergencia, agrega este valor.
@@ -165,7 +166,19 @@ La tripulación no ve nada del bienestar de los demás.
 - `GET /missions/{id}/crew` ya es real.
 - Simulador: escenario `offline_batch` (lote de 24 h por sync).
 
-## 9. Qué ya es real (tareas 1–8) y cómo pasar del mock a la API
+### v1.3 (tarea 9, triaje)
+
+- **Emergencia real** (sección 10). Cambios que pueden romper algo:
+  - `POST /emergency/sessions` con una sesión ya abierta **ya no da 409** `SESSION_ALREADY_ACTIVE`: se une a ella y responde **201** con `joined: true` y la sesión abierta. Si tu app manejaba el 409 para "unirse", usa `joined`.
+  - `POST /emergency/sessions/{id}/assessments` acepta una **reevaluación** del mismo tripulante (antes 409); el 409 queda para la sesión cerrada (`SESSION_CLOSED`).
+- `EmergencyStatus` agrega `pending` (activación automática esperando "estoy bien") y `merged` (activación que se unió a otra). `responder_safe` puede venir `null`.
+- Nuevos: `POST /emergency/sessions/{id}/confirm` ("estoy bien") y `POST /emergency/sessions/{id}/questions` (pregunta a Tierra).
+- La sesión trae `deadman`, `heartbeat`, `assessments` y `attention_order` (orden de atención con motivo). `complete` agrega `mismatch_fields`, `device_result`, `next` y `attention_order`.
+- `POST /readings` agrega `emergency` si la lectura crítica abrió una emergencia.
+- Panel: `GET /admin/emergencies` (`counts` null para admin) y `/{id}` con `timeline`, `attention_order`, `questions` y `report`; admin sin datos clínicos. La bandeja ya no le manda `triage` a admin.
+- Sync: los `emergency_*` ya tienen servicio y hay 4 nuevos (`emergency_confirm`, `emergency_complete`, `emergency_question`, `emergency_close`).
+
+## 9. Qué ya es real (tareas 1–9) y cómo pasar del mock a la API
 
 En el YAML, las operaciones que **todavía** son solo mock llevan `x-status-impl: pending`. Las que no la llevan ya responden en la API local:
 
@@ -176,6 +189,8 @@ En el YAML, las operaciones que **todavía** son solo mock llevan `x-status-impl
 | Cuentas (admin) | `POST /admin/users`, `/admin/users/{id}/reset-password`, `/admin/users/{id}/unlock`, `PATCH /admin/astronauts/{id}` |
 | Misión | `GET /missions/{id}/crew` |
 | Sync (tarea 8) | `POST /sync/push`, `GET /sync/pull` |
+| Emergencia (tarea 9) | `GET /emergency/protocol`, `POST /emergency/sessions`, `GET /emergency/sessions/{id}`, `POST /emergency/sessions/{id}/assessments`, `/confirm`, `/heartbeat`, `/questions`, `/close`, `PUT /emergency/assessments/{id}/answers`, `POST /emergency/assessments/{id}/complete` |
+| Emergencias en Tierra (tarea 9) | `GET /admin/emergencies`, `GET /admin/emergencies/{id}` |
 | Catálogo | `GET /indicators`, `/indicators/{code}`, `/rules`, `/body-zones`, `/symptoms` |
 | Lecturas | `POST /readings`, `GET /me/readings`, `GET /me/body-status` |
 | Hábitat | `POST /habitat/readings`, `GET /habitat/status` |
@@ -221,6 +236,7 @@ Para tener historia en las gráficas y alertas en vivo, la API trae un simulador
   - `co2_spike`: el CO₂ de `module_id` (HAB-1) sube a precaución; en `high`, a crítico.
   - `wellbeing_decline`: bienestar peor 5 días en `astronaut` (ATLAS): alerta **confidencial** a salud conductual. No aparece en la bandeja ni en el dashboard, y el resumen no la muestra.
   - `offline_batch`: 24 h sin conexión de `astronaut` (ORION) empujadas por `POST /sync/push` desde `TAB-1` (el mismo lote que `docs/examples/sync-push.json`): el SpO₂ crítico de hace 6 h escala con `late_sync`; trae una corrección y un duplicado. El resumen agrega `sync` con los conteos.
+  - `emergency_solar`: el triaje de punta a punta (sección 10): evento solar → VEGA y `astronaut` (LYRA) con náusea → activación automática → hombre muerto vencido → el comandante evalúa (LYRA no responde) → corte de enlace → el reporte sale al cerrar el corte. El resumen agrega `emergency`. Ojo: si ya hay una sesión abierta en la misión, se une a ella.
 - La respuesta es un resumen: lecturas creadas, niveles por indicador y escalamientos por destino (`crew`, `flight_surgeon`). Lo de `flight_surgeon` llega a `GET /admin/inbox` 90 s después.
 
 Contra Render, con curl:
@@ -237,6 +253,7 @@ curl -s -X POST $API/admin/simulator/scenarios/crew_illness -H "$AUTH" -H "$JSON
 curl -s -X POST $API/admin/simulator/scenarios/co2_spike -H "$AUTH" -H "$JSON" -d '{"module_id":"HAB-1","intensity":"high"}'
 curl -s -X POST $API/admin/simulator/scenarios/wellbeing_decline -H "$AUTH" -H "$JSON" -d '{"astronaut":"ATLAS"}'
 curl -s -X POST $API/admin/simulator/scenarios/offline_batch -H "$AUTH" -H "$JSON" -d '{"astronaut":"ORION"}'
+curl -s -X POST $API/admin/simulator/scenarios/emergency_solar -H "$AUTH" -H "$JSON" -d '{"astronaut":"LYRA"}'
 ```
 
 ### Sync contra Render (como astronauta)
@@ -256,3 +273,109 @@ curl -s "$API/sync/pull?limit=50&cursor=<cursor>" -H "Authorization: Bearer $ATO
 ```
 
 Los datos son compartidos: si otro equipo ya cargó la historia, la tuya sale toda en `duplicate` (está bien).
+
+## 10. Modo emergencia (triaje)
+
+Sin depender de Tierra, la tripulación abre una emergencia, evalúa a cada tripulante con el protocolo (START adaptado a microgravedad + módulo de radiación) y obtiene a quién atender primero. Tierra recibe todo cuando el enlace lo permite. **No diagnostica ni receta**: lo que no cubre el protocolo se pregunta a Tierra.
+
+### App: el mismo evaluador sin conexión
+
+1. Al iniciar sesión (y cuando `GET /sync/pull` diga `protocol.changed`), descarga `GET /emergency/protocol` y guárdalo. Es la **v2**: `definition.questions` (con `prompt`, `type`, `choices`, `next`), `results`, reglas de radiación y escalamiento, y `sources`.
+2. Corre **el mismo evaluador** que el servidor: copia `src/engine/triage.js` y `src/engine/conditions.js` (puros, sin dependencias) y llama `evaluateAssessment(definition, respuestas, context)`. Te da `pending` (la pregunta que sigue), `triage_category`, `radiation_flag` y `escalations`.
+3. Una sesión se evalúa siempre con su versión (`session.protocol.version`): si la tuya es vieja, `GET /emergency/protocol?version=N`.
+
+### App: voz que lee + botones
+
+- Lee en voz alta el `prompt` de la pregunta `pending` (reemplaza `{call_sign}`) y muestra **solo botones** con las opciones: sí/no (`{ "value": true }`), `choices` (`{ "choice": "1_2h" }`) o varias (`{ "choice": ["nausea", "fatigue"] }`). El servidor rechaza lo que no esté en el protocolo (400): no hay texto libre en el triaje.
+- Si el tripulante **no responde** (rojo por "no obedece órdenes" o por la vía aérea), la v2 solo pregunta lo que tú puedes observar: si alguien lo vio vomitar, cuándo, y su estado de conciencia (ACVPU). Nunca le preguntes síntomas.
+- `responder_safe` primero: si es `false`, `next_step: "secure_self"` → muestra "ponte a salvo" antes de evaluar.
+
+### App: flujo
+
+1. **Abrir**: botón → `POST /emergency/sessions` (`trigger_type: manual_button`, o `crew_event` si avisa un tripulante). Si ya había una abierta, la respuesta trae `joined: true` y esa sesión: únete, no abras otra.
+2. **Activación automática**: si `POST /readings` devuelve `emergency` (`status: "pending"`), o el pull trae una sesión `pending` con tu nombre en `deadman`, muestra a pantalla completa **"¿Estás bien?"** con cuenta regresiva hasta `deadline_at` (60 s). "Estoy bien" → `POST /emergency/sessions/{id}/confirm`. Si no responde nadie, el servidor la activa, avisa a la tripulación y escala a Tierra (y "estoy bien" tarde da 409 `DEADMAN_EXPIRED`).
+3. **Evaluar**: sigue el `roster` (primero quien no respondió, luego quien tiene una lectura crítica reciente; `prefill` sugiere respuestas desde lecturas). Por tripulante: `POST /emergency/sessions/{id}/assessments` → `PUT /emergency/assessments/{id}/answers` (puedes mandarlas de a poco; `preview.pending` dice qué sigue) → `POST /emergency/assessments/{id}/complete` con tu `device_result`.
+4. **Resultado**: usa siempre el del servidor. Si `matches_device` es `false`, muestra la clasificación del servidor y avisa "la tableta calculó otra cosa" (`mismatch_fields`). `attention_order` es a quién atender primero, con su `reason`; `next` es a quién evaluar después. Reevaluar = otra evaluación del mismo tripulante (la anterior no se borra).
+5. **Latido**: mientras alguien atiende una sesión activa, `POST /emergency/sessions/{id}/heartbeat` cada ~30 s. Si pasan 120 s sin latido, Tierra y la tripulación reciben un aviso.
+6. **Cerrar**: comandante o CMO, `POST /emergency/sessions/{id}/close` (`closed` = atendida, `cancelled` = falsa alarma).
+
+### App: sin conexión
+
+- Todo va a la cola de SQLite con `priority: "emergency"` (sección 3) y su `client_uuid`: sesión, evaluaciones, respuestas, completar, "estoy bien", preguntas y cierre. Referencia la sesión y la evaluación por **su `client_uuid`** (`session_id` / `assessment_id`). El servidor procesa primero la sesión, luego las evaluaciones, respuestas y cierres, aunque lleguen desordenados.
+- Si dos tabletas abrieron sesiones distintas sin conexión, la segunda se une a la primera (`result.joined`, `merged_into`) y sus evaluaciones quedan en la principal. No se pierde nada.
+- Evalúa y clasifica en la tableta con el evaluador local; al reconectar, manda `device_result` en el complete y toma el del servidor.
+
+### App: mientras Tierra no responde
+
+- Tierra tarda (ARES-1: 90 s de ida y otros 90 de vuelta) y durante un corte no recibe nada. Muestra el estado de cada aviso: `deliver_at` futuro = "en camino a Tierra (llega a las hh:mm)"; `null` = "pendiente de envío: sin enlace" (`mission.link.status: "outage"` en el pull).
+- Sigue el protocolo y el orden de atención sin esperar a Tierra. Lo que no cubre el protocolo → `POST /emergency/sessions/{id}/questions`. La respuesta llega a **toda la tripulación** por `GET /sync/pull` (`messages`, `channel: "escalation"`) cuando su `deliver_at` ya pasó.
+
+### Panel (flight surgeon y admin)
+
+- `GET /admin/emergencies`: sesiones que ya llegaron a Tierra. `counts` (cuántos rojos, amarillos…) solo para el flight surgeon; admin recibe `null`.
+- `GET /admin/emergencies/{id}`: lo que ya llegó, con su `timeline`. El flight surgeon ve las evaluaciones con respuestas, el `attention_order`, las `questions` de la tripulación y el `report` completo cuando llega el cierre (línea de tiempo, clasificaciones, versión del protocolo y diferencias tableta/servidor). Admin solo ve el **estado operativo**: estados de la sesión y de cada evaluación, sin categorías, respuestas, preguntas ni reporte.
+- Acuse y respuesta: los avisos de la emergencia están en `GET /admin/inbox?category=emergency`; `POST /admin/escalations/{id}/ack` y `/messages` (la respuesta viaja con retraso). Para contestar una pregunta, usa el `escalation_id` de la pregunta.
+- El triaje no incluye datos de bienestar.
+
+### Contra Render
+
+Git Bash:
+
+```bash
+API=https://astro-health-api-81jd.onrender.com/api/v1
+login() { curl -s -X POST $API/auth/login -H 'Content-Type: application/json' \
+  -d "{\"username\":\"$1\",\"password\":\"Demo2026!\",\"device_id\":\"demo-$1\"}" \
+  | node -pe 'JSON.parse(require("fs").readFileSync(0)).access_token'; }
+ORION=$(login a.ortega); REYES=$(login dr.reyes); JSON='Content-Type: application/json'
+uuid() { node -e 'console.log(require("crypto").randomUUID())'; }
+NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+curl -s $API/emergency/protocol -H "Authorization: Bearer $ORION" | head -c 300; echo
+S=$(curl -s -X POST $API/emergency/sessions -H "Authorization: Bearer $ORION" -H "$JSON" \
+  -d "{\"client_uuid\":\"$(uuid)\",\"trigger_type\":\"manual_button\",\"started_at\":\"$NOW\",\"context\":{\"solar_event_active\":true},\"responder_safe\":{\"value\":true}}" \
+  | node -pe 'JSON.parse(require("fs").readFileSync(0)).session.id'); echo "sesión $S"
+A=$(curl -s -X POST $API/emergency/sessions/$S/assessments -H "Authorization: Bearer $ORION" -H "$JSON" \
+  -d "{\"client_uuid\":\"$(uuid)\",\"astronaut_id\":\"10000000-0000-4000-8000-000000000013\",\"started_at\":\"$NOW\"}" \
+  | node -pe 'JSON.parse(require("fs").readFileSync(0)).id')
+curl -s -X PUT $API/emergency/assessments/$A/answers -H "Authorization: Bearer $ORION" -H "$JSON" -d "{\"answers\":[
+  {\"client_uuid\":\"$(uuid)\",\"question_code\":\"responsive_and_mobile\",\"answer\":{\"value\":true},\"source\":\"tap\",\"answered_at\":\"$NOW\"},
+  {\"client_uuid\":\"$(uuid)\",\"question_code\":\"vomiting\",\"answer\":{\"value\":false},\"source\":\"tap\",\"answered_at\":\"$NOW\"},
+  {\"client_uuid\":\"$(uuid)\",\"question_code\":\"prodromal_symptoms\",\"answer\":{\"choice\":[\"none\"]},\"source\":\"tap\",\"answered_at\":\"$NOW\"}]}"
+curl -s -X POST $API/emergency/assessments/$A/complete -H "Authorization: Bearer $ORION" -H "$JSON" \
+  -d "{\"completed_at\":\"$NOW\",\"device_result\":{\"status\":\"completed\",\"triage_category\":\"green\",\"radiation_flag\":\"none\",\"rules_version\":2}}"
+curl -s -X POST $API/emergency/sessions/$S/close -H "Authorization: Bearer $ORION" -H "$JSON" \
+  -d "{\"closed_at\":\"$NOW\",\"status\":\"closed\"}"
+sleep 95   # el retraso de ARES-1
+curl -s $API/admin/emergencies/$S -H "Authorization: Bearer $REYES"
+```
+
+PowerShell:
+
+```powershell
+$API = 'https://astro-health-api-81jd.onrender.com/api/v1'
+function Login($u) { (Invoke-RestMethod -Method Post "$API/auth/login" -ContentType 'application/json' `
+  -Body (@{ username = $u; password = 'Demo2026!'; device_id = "demo-$u" } | ConvertTo-Json)).access_token }
+$orion = @{ Authorization = "Bearer $(Login 'a.ortega')" }
+$reyes = @{ Authorization = "Bearer $(Login 'dr.reyes')" }
+$now = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+function Post($url, $headers, $body) { Invoke-RestMethod -Method Post "$API$url" -Headers $headers `
+  -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 6) }
+
+$s = Post '/emergency/sessions' $orion @{ client_uuid = "$([guid]::NewGuid())"; trigger_type = 'manual_button'
+  started_at = $now; context = @{ solar_event_active = $true }; responder_safe = @{ value = $true } }
+$a = Post "/emergency/sessions/$($s.session.id)/assessments" $orion @{ client_uuid = "$([guid]::NewGuid())"
+  astronaut_id = '10000000-0000-4000-8000-000000000013'; started_at = $now }
+$answers = @(
+  @{ client_uuid = "$([guid]::NewGuid())"; question_code = 'responsive_and_mobile'; answer = @{ value = $true }; source = 'tap'; answered_at = $now },
+  @{ client_uuid = "$([guid]::NewGuid())"; question_code = 'vomiting'; answer = @{ value = $false }; source = 'tap'; answered_at = $now },
+  @{ client_uuid = "$([guid]::NewGuid())"; question_code = 'prodromal_symptoms'; answer = @{ choice = @('none') }; source = 'tap'; answered_at = $now })
+Invoke-RestMethod -Method Put "$API/emergency/assessments/$($a.id)/answers" -Headers $orion `
+  -ContentType 'application/json' -Body (@{ answers = $answers } | ConvertTo-Json -Depth 6)
+Post "/emergency/assessments/$($a.id)/complete" $orion @{ completed_at = $now
+  device_result = @{ status = 'completed'; triage_category = 'green'; radiation_flag = 'none'; rules_version = 2 } }
+Post "/emergency/sessions/$($s.session.id)/close" $orion @{ closed_at = $now; status = 'closed' }
+Start-Sleep -Seconds 95   # el retraso de ARES-1
+Invoke-RestMethod "$API/admin/emergencies/$($s.session.id)" -Headers $reyes | ConvertTo-Json -Depth 8
+```
+
+Si ya hay una sesión abierta en ARES-1 (otra persona, o un escenario del simulador), tu `POST /emergency/sessions` sale `joined: true`: estás en esa sesión.
