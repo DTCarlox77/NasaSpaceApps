@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Astro Health API
-  version: 1.6.0
+  version: 1.7.0
   description: |
     API de apoyo a la decisión para el monitoreo de salud de astronautas.
 
@@ -59,6 +59,16 @@ info:
     `Prefer: code=423` o `Prefer: example=duplicate`.
 
     ## Cambios
+    **1.7.0** (pantalla "Tripulación" de la app). Cambio aditivo:
+    - Nuevo `GET /crew/status` (solo `astronaut` con asignación vigente; su misión): roster, la
+      sesión de emergencia abierta de la misión (`id` y estado) y las alertas físicas escaladas
+      a bordo (`crew`) en las últimas 24 h, sin valores. Solo el oficial médico (CMO) recibe
+      además `physical` de cada tripulante (peor nivel por zona y, por indicador estándar, nivel,
+      último valor y hora); para los demás, el comandante incluido, `physical: null`. Nunca
+      bienestar, check-ins, solicitudes de apoyo, escalamientos conductuales, `sex` ni notas.
+      Tierra y `service` → 403 (tienen el panel). Esquemas nuevos: `CrewStatus`,
+      `CrewStatusMember`, `CrewAlert` y `CrewPhysical`.
+
     **1.6.0** (tarea 12, despliegue y demo). Cambios al contrato (aditivos):
     - Nuevo `POST /admin/demo/reset` (`x-status: extra`, solo `admin`): reinicio de la demo de
       ARES-1 sin borrar nada. Mismo gate que el simulador: 404 fuera del modo demo
@@ -1315,6 +1325,151 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /api/v1/crew/status:
+    get:
+      tags: [Misión]
+      summary: Estado de la tripulación (pantalla "Tripulación" de la app)
+      description: |
+        Solo astronautas con asignación vigente; datos de **su** misión (sin parámetros).
+        - **Toda la tripulación**: roster, la sesión de emergencia abierta de la misión (`id` y
+          estado; una sola por misión y cubre a todos, así que es la misma en cada fila) y las
+          alertas **físicas** ya escaladas a bordo (`crew`) en las últimas 24 h: indicador, nivel
+          y hora, **sin valores**.
+        - **Solo el oficial médico** (`crew_medical_officer`) vigente: además, `physical` de cada
+          tripulante (también el suyo): peor nivel por zona del cuerpo y, por indicador estándar
+          con alguna lectura, nivel, último valor y hora (`v_readings_standard`). Para los demás,
+          `physical: null`; el comandante tampoco lo recibe (sus permisos delegados son de
+          acceso, no médicos).
+        - **Nunca**, para nadie: bienestar (`WB_*`, PHQ-2/GAD-2, `PVT_*`, aptitud), check-ins,
+          solicitudes de apoyo, escalamientos conductuales, `sex` ni notas. `SLEEP_HOURS` sí
+          puede salir en `physical` (indicador estándar de la pulsera).
+        - `admin`, `flight_surgeon`, `behavioral_health` y `service` → 403 (tienen el panel).
+          Astronauta sin asignación vigente → 403 `NO_ACTIVE_ASSIGNMENT`.
+        La regla vive en `canAccess` (vistas `crew_status` y `crew_physical`).
+      operationId: getCrewStatus
+      x-status: mvp
+      x-roles: [astronaut]
+      x-hazards: [isolation_confinement, distance_from_earth]
+      responses:
+        '200':
+          description: Estado de la tripulación vigente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrewStatus'
+              examples:
+                cmo:
+                  summary: Vista del CMO (VEGA), recortada a 2 tripulantes
+                  value:
+                    mission: { id: '20000000-0000-4000-8000-000000000001', code: ARES-1 }
+                    generated_at: '2026-11-15T10:00:00Z'
+                    viewer_crew_role: crew_medical_officer
+                    crew:
+                      - astronaut_id: '10000000-0000-4000-8000-000000000013'
+                        call_sign: LYRA
+                        display_name: Lin Tanaka (sintética)
+                        crew_role: flight_engineer
+                        emergency: null
+                        crew_alerts:
+                          - escalation_id: '30000000-0000-4000-8000-000000000101'
+                            indicator_code: HEART_RATE
+                            indicator_name: Frecuencia cardíaca en reposo
+                            level: caution
+                            created_at: '2026-11-15T09:42:00Z'
+                        physical:
+                          zones:
+                            - { zone: heart, worst_level: caution }
+                            - { zone: lungs, worst_level: normal }
+                            - { zone: immune, worst_level: unrated }
+                            - { zone: metabolism, worst_level: unrated }
+                            - { zone: muscle, worst_level: unrated }
+                            - { zone: bones, worst_level: unrated }
+                            - { zone: brain, worst_level: unrated }
+                            - { zone: eyes, worst_level: unrated }
+                          indicators:
+                            - code: HEART_RATE
+                              level: caution
+                              last_value: { value: 120 }
+                              measured_at: '2026-11-15T09:41:58Z'
+                            - code: SPO2
+                              level: normal
+                              last_value: { value: 98 }
+                              measured_at: '2026-11-15T09:30:00Z'
+                      - astronaut_id: '10000000-0000-4000-8000-000000000011'
+                        call_sign: ORION
+                        display_name: Ana Ortega (sintética)
+                        crew_role: commander
+                        emergency: null
+                        crew_alerts: []
+                        physical:
+                          zones:
+                            - { zone: heart, worst_level: normal }
+                            - { zone: lungs, worst_level: unrated }
+                            - { zone: immune, worst_level: unrated }
+                            - { zone: metabolism, worst_level: unrated }
+                            - { zone: muscle, worst_level: unrated }
+                            - { zone: bones, worst_level: unrated }
+                            - { zone: brain, worst_level: unrated }
+                            - { zone: eyes, worst_level: unrated }
+                          indicators:
+                            - code: BLOOD_PRESSURE
+                              level: normal
+                              last_value: { systolic: 118, diastolic: 76 }
+                              measured_at: '2026-11-15T08:00:00Z'
+                crew:
+                  summary: Vista de un tripulante (LYRA) con una emergencia abierta
+                  value:
+                    mission: { id: '20000000-0000-4000-8000-000000000001', code: ARES-1 }
+                    generated_at: '2026-11-15T10:00:00Z'
+                    viewer_crew_role: flight_engineer
+                    crew:
+                      - astronaut_id: '10000000-0000-4000-8000-000000000013'
+                        call_sign: LYRA
+                        display_name: Lin Tanaka (sintética)
+                        crew_role: flight_engineer
+                        emergency:
+                          { session_id: '40000000-0000-4000-8000-000000000001', status: active }
+                        crew_alerts:
+                          - escalation_id: '30000000-0000-4000-8000-000000000101'
+                            indicator_code: HEART_RATE
+                            indicator_name: Frecuencia cardíaca en reposo
+                            level: caution
+                            created_at: '2026-11-15T09:42:00Z'
+                        physical: null
+                      - astronaut_id: '10000000-0000-4000-8000-000000000012'
+                        call_sign: VEGA
+                        display_name: Kofi Mensah (sintético)
+                        crew_role: crew_medical_officer
+                        emergency:
+                          { session_id: '40000000-0000-4000-8000-000000000001', status: active }
+                        crew_alerts: []
+                        physical: null
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          description: |
+            Rol de Tierra o `service` (`FORBIDDEN`), o astronauta sin asignación vigente
+            (`NO_ACTIVE_ASSIGNMENT`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                ground:
+                  summary: Personal de Tierra (tiene el panel)
+                  value:
+                    error:
+                      code: FORBIDDEN
+                      message: Esta pantalla es de la tripulación a bordo; Tierra usa el panel.
+                      details: null
+                noAssignment:
+                  summary: Astronauta sin asignación vigente
+                  value:
+                    error:
+                      code: NO_ACTIVE_ASSIGNMENT
+                      message: No tienes una asignación de misión vigente.
+                      details: null
 
   /api/v1/admin/missions:
     get:
@@ -8650,6 +8805,86 @@ components:
           type: array
           items: { $ref: '#/components/schemas/CrewMember' }
         next_cursor: { $ref: '#/components/schemas/NextCursor' }
+    CrewAlert:
+      type: object
+      description: Alerta física ya escalada a bordo (`crew`). Sin valores ni motivo.
+      required: [escalation_id, indicator_code, indicator_name, level, created_at]
+      properties:
+        escalation_id: { $ref: '#/components/schemas/Uuid' }
+        indicator_code: { type: string, example: HEART_RATE }
+        indicator_name: { type: string, example: Frecuencia cardíaca en reposo }
+        level: { $ref: '#/components/schemas/Level' }
+        created_at: { $ref: '#/components/schemas/Timestamp' }
+    CrewPhysical:
+      type: object
+      nullable: true
+      description: |
+        Semáforo físico de un tripulante. Solo si quien consulta es el oficial médico (CMO)
+        vigente; null para los demás (el comandante incluido).
+      required: [zones, indicators]
+      properties:
+        zones:
+          type: array
+          description: |
+            Zonas del cuerpo (sin `environment` ni `by_symptom`), con el peor nivel de la última
+            lectura de sus indicadores estándar. `SYMPTOM` cuenta en la zona de cada síntoma
+            reportado. Zona sin lecturas = `unrated`. Igual que `GET /me/body-status`.
+          items:
+            type: object
+            required: [zone, worst_level]
+            properties:
+              zone: { type: string, example: heart }
+              worst_level: { $ref: '#/components/schemas/Level' }
+        indicators:
+          type: array
+          description: Indicadores estándar con alguna lectura en la misión, en el orden del catálogo.
+          items:
+            type: object
+            required: [code, level, last_value, measured_at]
+            properties:
+              code: { type: string, example: HEART_RATE }
+              level: { $ref: '#/components/schemas/Level' }
+              last_value: { $ref: '#/components/schemas/ReadingValues' }
+              measured_at: { $ref: '#/components/schemas/Timestamp' }
+    CrewStatusMember:
+      type: object
+      required: [astronaut_id, call_sign, display_name, crew_role, emergency, crew_alerts, physical]
+      properties:
+        astronaut_id: { $ref: '#/components/schemas/Uuid' }
+        call_sign: { type: string }
+        display_name: { type: string }
+        crew_role: { $ref: '#/components/schemas/CrewRole' }
+        emergency:
+          type: object
+          nullable: true
+          description: |
+            Sesión de emergencia abierta (`pending` o `active`) de la misión; null si no hay.
+            Es la misma en cada fila (una sesión cubre a toda la tripulación).
+          required: [session_id, status]
+          properties:
+            session_id: { $ref: '#/components/schemas/Uuid' }
+            status: { type: string, enum: [pending, active] }
+        crew_alerts:
+          type: array
+          description: Alertas físicas escaladas a bordo en las últimas 24 h, la más reciente primero.
+          items: { $ref: '#/components/schemas/CrewAlert' }
+        physical: { $ref: '#/components/schemas/CrewPhysical' }
+    CrewStatus:
+      type: object
+      required: [mission, generated_at, viewer_crew_role, crew]
+      properties:
+        mission:
+          type: object
+          required: [id, code]
+          properties:
+            id: { $ref: '#/components/schemas/Uuid' }
+            code: { type: string }
+        generated_at: { $ref: '#/components/schemas/Timestamp' }
+        viewer_crew_role: { $ref: '#/components/schemas/CrewRole' }
+        crew:
+          type: array
+          description: Tripulación vigente, por `call_sign`.
+          items: { $ref: '#/components/schemas/CrewStatusMember' }
 
     # ---------------------------------------------------------------- catálogo
     Component:
