@@ -36,6 +36,7 @@ export const queryKeys = {
   behavioralAstronaut: (missionId: string, astronautId: string) =>
     [MISSION_DATA, missionId, 'behavioral-astronaut', astronautId] as const,
   confidentialAccess: (missionId: string) => [MISSION_DATA, missionId, 'confidential-access'] as const,
+  compliance: (missionId: string) => [MISSION_DATA, missionId, 'compliance'] as const,
   // Equipo (solo admin).
   missionCrew: (missionId: string) => [MISSION_DATA, missionId, 'team', 'crew'] as const,
   assignments: (missionId: string) => [MISSION_DATA, missionId, 'team', 'assignments'] as const,

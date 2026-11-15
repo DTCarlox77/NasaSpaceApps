@@ -711,3 +711,44 @@ export interface TeamAccountPage {
   items: TeamAccount[];
   next_cursor: string | null;
 }
+
+// ---------------------------------------------------------------- cumplimiento (V1b)
+
+/** Fila de GET /admin/compliance (esquema `Compliance` del contrato). Sin valores de bienestar. */
+export interface ComplianceAstronaut {
+  astronaut_id: string;
+  call_sign: string;
+  /** Hizo el check-in hoy (día UTC). */
+  checkin_today?: boolean;
+  /** Racha: días seguidos completando (nunca el resultado). */
+  streak_days?: number;
+  checkins_completed: number;
+  checkins_expected: number;
+  screenings_completed?: number;
+  pvt_runs?: number;
+  fitness: 'fit' | 'not_confirmed';
+  last_checkin_at?: string | null;
+}
+
+/** GET /admin/compliance?mission_id= (solo admin). */
+export interface ComplianceReport {
+  mission_id: string;
+  from: string;
+  to: string;
+  generated_at?: string;
+  astronauts: ComplianceAstronaut[];
+}
+
+// ---------------------------------------------------------------- reinicio de la demo (V1b)
+
+/** POST /admin/demo/reset (DemoResetSummary; solo los campos que usa el panel). */
+export interface DemoResetSummary {
+  mission_code: string;
+  started_at: string;
+  finished_at: string;
+  fitness: Record<string, 'fit' | 'not_confirmed'>;
+  not_confirmed: string | null;
+  panel_flags: { call_sign: string; indicator_code: string; level: 'caution' | 'critical'; measured_at: string }[];
+  notes: string[];
+  [key: string]: unknown;
+}

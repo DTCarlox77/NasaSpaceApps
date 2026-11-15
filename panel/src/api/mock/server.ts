@@ -40,6 +40,7 @@ import {
   userFromToken,
 } from './accounts.ts';
 import {
+  ADMIN,
   BEHAVIORAL,
   checkMission,
   conflict,
@@ -66,6 +67,7 @@ import {
   buildScreenings,
   type MockSupportRequest,
 } from './fixtures/behavioral.ts';
+import { buildCompliance } from './fixtures/compliance.ts';
 import type { MockEmergency } from './fixtures/emergencies.ts';
 import { currentMission, DELAY_S, STANDARD_CATALOG } from './fixtures/mission.ts';
 import { crewDashboard } from './fixtures/readings.ts';
@@ -326,6 +328,20 @@ const ROUTES: Route[] = [
         fixture: !a.created_in_demo,
       }));
       return json(200, crewDashboard(ctx.state.t0, ctx.now, me(ctx).role === 'admin', crew));
+    },
+  },
+  {
+    method: 'GET',
+    pattern: '/admin/compliance',
+    roles: ADMIN,
+    handle: (ctx) => {
+      checkMission(ctx.query);
+      const crew = crewAccounts(ctx.state).map((a) => ({
+        astronaut_id: a.astronaut?.id as string,
+        call_sign: a.astronaut?.call_sign as string,
+        fixture: !a.created_in_demo,
+      }));
+      return json(200, buildCompliance(ctx.now, crew));
     },
   },
   {

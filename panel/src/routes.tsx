@@ -37,8 +37,11 @@ const ConfidentialAuditPage = lazy(() =>
   import('./features/behavioral/ConfidentialAuditPage.tsx').then((m) => ({ default: m.ConfidentialAuditPage })),
 );
 
-// Equipo: solo admin.
+// Equipo y Cumplimiento: solo admin.
 const TeamPage = lazy(() => import('./features/team/TeamPage.tsx').then((m) => ({ default: m.TeamPage })));
+const CompliancePage = lazy(() =>
+  import('./features/compliance/CompliancePage.tsx').then((m) => ({ default: m.CompliancePage })),
+);
 
 /** Pantallas ya implementadas; el resto sigue como placeholder de su fase. */
 const PAGES: Partial<Record<SectionId, ReactNode>> = {
@@ -46,6 +49,7 @@ const PAGES: Partial<Record<SectionId, ReactNode>> = {
   alerts: <AlertsPage />,
   emergencies: <EmergenciesPage />,
   team: <TeamPage />,
+  compliance: <CompliancePage />,
   behavioral: <BehavioralInboxPage />,
 };
 
