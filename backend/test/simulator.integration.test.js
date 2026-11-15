@@ -162,10 +162,12 @@ test('historia: crea la historia completa, sin críticos ni escalamientos', asyn
 test('historia: correrla otra vez no duplica (mismo conteo)', async (t) => {
   if (skip(t)) return;
   const before = await counts();
-  const res = await post('admin', '/history', { days: 14, seed: 42 });
-  assert.equal(res.status, 200);
-  assert.equal(res.body.readings.created, 0);
-  assert.equal(res.body.readings.duplicate, firstHistory.readings.created);
+  // Con el mismo "ahora" que la primera carga: si no, un horario de la historia que cae justo
+  // entre las dos (p. ej. la masa de las 06:50) agrega una lectura y la prueba falla según la hora.
+  const { loadHistory } = require('../src/services/simulator.service');
+  const body = await loadHistory({ body: { days: 14, seed: 42 }, now: new Date(firstHistory.to) });
+  assert.equal(body.readings.created, 0);
+  assert.equal(body.readings.duplicate, firstHistory.readings.created);
   assert.deepEqual(await counts(), before);
 });
 
