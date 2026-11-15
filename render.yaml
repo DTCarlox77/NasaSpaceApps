@@ -33,8 +33,10 @@ services:
         value: no-verify
       - key: JWT_SECRET
         generateValue: true
+      # Orígenes del panel y de Expo web separados por coma (con NODE_ENV=production el
+      # servidor no arranca con "*"). Se pone en el panel de Render: el Blueprint no lo pisa.
       - key: CORS_ORIGIN
-        value: '*'
+        sync: false
       - key: TRUST_PROXY
         value: '1'
       # Datos de demo SINTÉTICOS (usuarios con Demo2026!). Nunca con datos reales.
