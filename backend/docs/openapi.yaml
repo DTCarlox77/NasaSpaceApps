@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Astro Health API
-  version: 1.3.0
+  version: 1.4.0
   description: |
     API de apoyo a la decisión para el monitoreo de salud de astronautas.
 
@@ -59,6 +59,40 @@ info:
     `Prefer: code=423` o `Prefer: example=duplicate`.
 
     ## Cambios
+    **1.4.0** (tarea 10, bienestar). Cambios al contrato (aditivos salvo los marcados ⚠):
+    - Rutas de bienestar implementadas: `/wellbeing/*`, `GET /me/wellbeing`,
+      `GET /admin/compliance` y `/admin/behavioral/*`.
+    - ⚠ `CheckinCreate.sleep_hours` deja de ser obligatorio (viene de la pulsera; puede faltar).
+    - Un check-in por día de misión (día UTC de `measured_at`): otro el mismo día es una
+      **corrección** (append-only; `WellbeingAck.supersedes_id` = el check-in que corrige). Gana
+      el último que llega.
+    - `WellbeingAck` agrega `supersedes_id`, `streak` (racha: cuenta check-ins completados,
+      nunca el resultado) y `screening_due` (toca PHQ-2/GAD-2). `message` es el mensaje neutro
+      de la regla del catálogo; `offer_support` siempre es true (el botón no depende del
+      resultado). Nunca un nivel, un color ni un puntaje.
+    - `SupportRequest` agrega `suggestions` (con urgencia `now`: respiración guiada y hablar con
+      el oficial médico de a bordo; solo sugerencias, no se avisa a nadie). Las urgencias son
+      `later | today | now` (`later` = "puede esperar").
+    - Nuevos para behavioral_health: `POST /admin/behavioral/support-requests/{id}/ack` y
+      `/close`, `POST /admin/behavioral/escalations/{id}/ack` y `/close` (el contrato no tenía
+      acuse ni cierre). Un escalamiento conductual queda abierto por astronauta e indicador
+      hasta que behavioral_health lo cierra: mientras tanto, un cambio que sigue sostenido no
+      vuelve a escalar (regla de diseño, `WELLBEING_ONE_OPEN_ESCALATION`).
+    - `GET /admin/behavioral/inbox` agrega `include_closed`, y cada item `channel`, `priority`
+      y `measured_at`. `BehavioralAstronautDetail` agrega `checkins` (sin la nota privada),
+      `escalations` e `indicators[].trend`.
+    - `Compliance` agrega `generated_at` y por astronauta `checkin_today` y `streak_days`.
+    - ⚠ Aptitud (`fitness` en `GET /admin/dashboard/crew` y `GET /admin/compliance`): la de una
+      PVT de las últimas `WELLBEING_FITNESS_MAX_AGE_H` (12) horas; sin PVT reciente,
+      `not_confirmed` (antes: la PVT más reciente, de cuando fuera).
+    - `PVT_LAPSES` crítico: además del detalle a behavioral_health, el flight surgeon recibe en
+      `GET /admin/inbox` una alerta `wellbeing` con solo el estado ("aptitud no confirmada"),
+      sin métricas. Admin no la ve.
+    - Sync: `support_request` ya tiene servicio (antes `ENTITY_NOT_SUPPORTED`); el mismo
+      `client_uuid` con otro contenido es `conflict` `PAYLOAD_MISMATCH`.
+    - `POST /wellbeing/screenings` y `/wellbeing/pvt-runs` responden 200 con el registro
+      existente si el `client_uuid` ya llegó (como el resto).
+
     **1.3.0** (tarea 9, triaje). Cambios al contrato (aditivos salvo los marcados ⚠):
     - Rutas de emergencia implementadas: `/emergency/*` y `GET /admin/emergencies(/{id})`.
     - ⚠ `POST /emergency/sessions` con una sesión ya abierta en la misión ya no responde 409
@@ -5247,12 +5281,20 @@ paths:
       summary: Check-in diario de bienestar
       description: |
         Cuatro deslizadores 0–100 (ánimo, fatiga, estrés, conflicto con la tripulación), horas de
-        sueño y una nota privada opcional que solo ve el astronauta. La respuesta es un **mensaje
-        neutro**: nunca un color ni un puntaje. `offer_support: true` = mostrar el botón
-        "Quiero hablar con alguien".
+        sueño de la pulsera (opcional) y una nota privada opcional que **solo ve el astronauta**
+        (behavioral_health ve valores y tendencias, nunca la nota). La respuesta es el **mensaje
+        neutro** de la regla del catálogo: nunca un color, un nivel ni un puntaje.
+        `offer_support` siempre es true (mostrar "Quiero hablar con alguien").
+
+        Un check-in por día de misión (día UTC de `measured_at`): otro el mismo día **corrige**
+        al anterior (append-only, `supersedes_id`). Idempotente por `client_uuid` (también por
+        `/sync/push`, entity `wellbeing_checkin`, con el mismo body sin `client_uuid`).
+        `streak` cuenta check-ins completados, nunca el resultado. El servidor compara contra el
+        rango habitual (`baseline_ready`, `adverse_z_3d`, `adverse_sustained_days`) y, si el
+        cambio se sostiene, avisa de forma confidencial solo a behavioral_health, con el retraso
+        del enlace.
       operationId: createWellbeingCheckin
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -5312,7 +5354,6 @@ paths:
         (0–6), corte en 3.
       operationId: listWellbeingInstruments
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut, behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -5494,10 +5535,13 @@ paths:
     post:
       tags: [Bienestar]
       summary: Envía un cuestionario PHQ-2 o GAD-2
-      description: El puntaje lo calcula el servidor y solo lo ve behavioral_health. Al astronauta se le responde un mensaje neutro.
+      description: |
+        El puntaje (item_1 + item_2) lo calcula el servidor y solo lo ve behavioral_health; corte
+        en 3 → escalamiento confidencial a behavioral_health. Al astronauta se le responde el
+        mensaje neutro de la regla, nunca el puntaje. Cada 14 días, un día antes de la
+        conferencia psicológica (`WellbeingAck.screening_due` del check-in). No hay PHQ-9.
       operationId: createWellbeingScreening
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -5532,8 +5576,14 @@ paths:
                     id: 'a4000000-0000-4000-8000-000000000001'
                     client_uuid: 'cb000000-0000-4000-8000-000000000001'
                     received_at: '2026-11-14T21:05:02Z'
-                    message: Gracias por responder. Tus respuestas son confidenciales.
+                    message: Gracias por responder.
                     offer_support: true
+        '200':
+          description: Duplicado (mismo client_uuid)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WellbeingAck'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -5546,12 +5596,13 @@ paths:
       tags: [Bienestar]
       summary: Envía una corrida de la prueba de reacción (PVT)
       description: |
-        Métricas del minijuego, `device_id` (la línea base es por dispositivo) y
-        `before_critical_task`. Devuelve solo la aptitud: `fit` si los tres indicadores PVT
-        quedan en `normal`, si no `not_confirmed` (`fitnessFromPvt`). Es lo único que llega a admin.
+        Métricas del minijuego (lapso = respuesta ≥ 355 ms), `device_id` (la línea base es por
+        dispositivo: 3 corridas previas en descanso) y `before_critical_task`. Devuelve solo la
+        aptitud: `fit` si los tres indicadores PVT quedan en `normal`, si no `not_confirmed`
+        (`fitnessFromPvt`). Es lo único que llega a admin. `PVT_LAPSES` crítico: el detalle va a
+        behavioral_health y el flight surgeon recibe solo "aptitud no confirmada".
       operationId: createPvtRun
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -5598,6 +5649,12 @@ paths:
                     received_at: '2026-11-14T09:40:02Z'
                     fitness: not_confirmed
                     message: Tu resultado no confirma la aptitud para la tarea. Descansa y repite la prueba más tarde.
+        '200':
+          description: Duplicado (mismo client_uuid)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PvtRunResult'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -5610,11 +5667,16 @@ paths:
       tags: [Bienestar]
       summary: Quiero hablar con alguien
       description: |
-        Crea una solicitud confidencial para behavioral_health (nunca llega a la tripulación ni
-        a admin). Viaja a Tierra con el retraso del enlace (`deliver_at`).
+        Crea una solicitud confidencial para behavioral_health (nunca llega a la tripulación, al
+        comandante, al oficial médico ni a admin, ni siquiera en conteos). Viaja a Tierra con el
+        retraso del enlace (`deliver_at`; null = en cola durante un corte). Urgencia `later`
+        (puede esperar), `today` o `now`; canal `message` o `session`. Con `now`, `suggestions`
+        trae lo que la app puede ofrecer mientras tanto (respiración guiada y hablar con el
+        oficial médico de a bordo): son sugerencias, el servidor no avisa a nadie a bordo. Las
+        respuestas llegan por `GET /sync/pull` (`messages`, `channel: support`) cuando su
+        `deliver_at` ya pasó. También por `/sync/push` (entity `support_request`).
       operationId: createSupportRequest
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -5643,6 +5705,26 @@ paths:
               examples:
                 created:
                   $ref: '#/components/examples/SupportRequestOrion'
+                now:
+                  summary: Urgencia now (con sugerencias)
+                  value:
+                    id: 'a1000000-0000-4000-8000-000000000002'
+                    client_uuid: 'cd000000-0000-4000-8000-000000000002'
+                    astronaut_id: '10000000-0000-4000-8000-000000000014'
+                    status: open
+                    urgency: now
+                    channel: message
+                    content: Necesito hablar con alguien.
+                    created_at: '2026-11-14T22:10:00Z'
+                    received_at: '2026-11-14T22:10:01Z'
+                    deliver_at: '2026-11-14T22:11:31Z'
+                    suggestions:
+                      - code: guided_breathing
+                        title: Respiración guiada
+                        description: Un ejercicio de respiración guiada en la app mientras llega la respuesta.
+                      - code: talk_to_cmo
+                        title: Hablar con el oficial médico de a bordo
+                        description: 'Si lo necesitas ahora, puedes buscar al oficial médico. Es tu decisión: nadie a bordo recibe un aviso automático.'
         '200':
           description: Duplicado (mismo client_uuid)
           content:
@@ -5666,7 +5748,6 @@ paths:
       description: Solo mensajes ya entregados (`deliver_at <= now()`).
       operationId: listSupportMessages
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -5708,7 +5789,6 @@ paths:
       description: Lo que el propio astronauta registró. Sin colores, niveles ni puntajes.
       operationId: listMyWellbeing
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -5767,7 +5847,8 @@ paths:
         valor, serie (hasta 10 puntos; valor principal = `value` o la sistólica) y tendencia
         (último valor frente a la media de los anteriores, ±5 %; menos de 2 puntos =
         `insufficient_data`). Más aptitud (`flight_surgeon` y `admin`) y cumplimiento (solo `admin`).
-        **Sin estado conductual**: las lecturas salen de `v_readings_standard`.
+        **Sin estado conductual**: las lecturas salen de `v_readings_standard`. `fitness` = apto
+        para tarea crítica con una PVT de las últimas 12 h (si no, `not_confirmed`).
         `behavioral_health` → 403.
       operationId: getCrewDashboard
       x-status: mvp
@@ -6277,9 +6358,16 @@ paths:
     get:
       tags: [Tierra]
       summary: Cumplimiento y aptitud (lo único de bienestar que ve admin)
+      description: |
+        Por astronauta de la tripulación vigente: si hizo el check-in hoy, último check-in,
+        racha, check-ins hechos y esperados en el rango (un check-in por día UTC desde la
+        asignación), cuestionarios y PVT hechos, y "apto para tarea crítica" (`fitness`): `fit`
+        solo con una PVT de las últimas `WELLBEING_FITNESS_MAX_AGE_H` (12) horas con los 3
+        indicadores en normal; sin PVT reciente, `not_confirmed`. Sin valores, tendencias,
+        niveles ni solicitudes de apoyo. Rango por defecto: los últimos 7 días UTC (hoy
+        incluido).
       operationId: getCompliance
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -6301,10 +6389,13 @@ paths:
                     mission_id: '20000000-0000-4000-8000-000000000001'
                     from: '2026-11-07T00:00:00Z'
                     to: '2026-11-14T00:00:00Z'
+                    generated_at: '2026-11-14T00:00:00Z'
                     astronauts:
                       - {
                           astronaut_id: '10000000-0000-4000-8000-000000000011',
                           call_sign: ORION,
+                          checkin_today: true,
+                          streak_days: 12,
                           checkins_completed: 6,
                           checkins_expected: 7,
                           screenings_completed: 1,
@@ -6342,6 +6433,8 @@ paths:
                           fitness: not_confirmed,
                           last_checkin_at: '2026-11-11T21:00:00Z',
                         }
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -6450,15 +6543,23 @@ paths:
     get:
       tags: [Salud conductual]
       summary: Bandeja confidencial de behavioral_health
-      description: Alertas de bienestar, cuestionarios en precaución y solicitudes "Quiero hablar con alguien". Solo lo ya entregado en Tierra.
+      description: |
+        Escalamientos conductuales (`wellbeing_alert`, `screening_alert`) y solicitudes "Quiero
+        hablar con alguien" (`support_request`) de la misión, solo lo ya entregado en Tierra
+        (`deliver_at <= now()`). Orden (regla de diseño): apoyo `now`, alertas urgentes, apoyo
+        `today`, alertas de rutina, apoyo `later`; dentro, lo que llegó antes. Sin lo cerrado,
+        salvo `include_closed=true`. Cada astronauta que aparece queda en la bitácora de accesos.
       operationId: getBehavioralInbox
       x-status: mvp
-      x-status-impl: pending
       x-roles: [behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
       parameters:
         - $ref: '#/components/parameters/MissionIdQuery'
+        - name: include_closed
+          in: query
+          description: true = incluye lo cerrado.
+          schema: { type: boolean, default: false }
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
@@ -6480,9 +6581,12 @@ paths:
                           kind: support_request,
                           indicator_code: null,
                           urgency: today,
+                          channel: message,
+                          priority: null,
                           status: open,
                           summary: Solicitud de apoyo por mensaje,
                           created_at: '2026-11-14T21:10:00Z',
+                          measured_at: '2026-11-14T21:10:00Z',
                           deliver_at: '2026-11-14T21:11:30Z',
                         }
                       - {
@@ -6492,12 +6596,17 @@ paths:
                           kind: wellbeing_alert,
                           indicator_code: WB_STRESS,
                           urgency: null,
+                          channel: null,
+                          priority: routine,
                           status: delivered,
-                          summary: Estrés distinto de lo habitual durante 5 días,
+                          summary: Estrés distinto de lo habitual durante 5 check-ins seguidos,
                           created_at: '2026-11-14T06:00:00Z',
+                          measured_at: '2026-11-14T05:58:00Z',
                           deliver_at: '2026-11-14T06:01:30Z',
                         }
                     next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -6507,10 +6616,13 @@ paths:
     get:
       tags: [Salud conductual]
       summary: Detalle confidencial de un astronauta
-      description: Cada consulta queda registrada en `GET /admin/audit/confidential-access`.
+      description: |
+        Check-ins (valores, sin la nota privada: esa solo la ve el astronauta), tendencias, z
+        contra el rango habitual, cuestionarios con puntaje, PVT, solicitudes de apoyo ya
+        entregadas y escalamientos abiertos ya entregados. `{id}` = id del astronauta. Cada
+        consulta queda registrada en `GET /admin/audit/confidential-access`.
       operationId: getBehavioralAstronaut
       x-status: mvp
-      x-status-impl: pending
       x-roles: [behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -6537,6 +6649,7 @@ paths:
                         last_value: 90
                         adverse_z_3d: 2.1
                         adverse_sustained_days: 5
+                        trend: rising
                         series:
                           - { measured_at: '2026-11-12T21:00:00Z', value: 78 }
                           - { measured_at: '2026-11-13T21:00:00Z', value: 85 }
@@ -6547,8 +6660,21 @@ paths:
                         last_value: 60
                         adverse_z_3d: 0.2
                         adverse_sustained_days: 0
+                        trend: insufficient_data
                         series:
                           - { measured_at: '2026-11-14T21:00:00Z', value: 60 }
+                    checkins:
+                      - {
+                          id: 'a0000000-0000-4000-8000-000000000021',
+                          measured_at: '2026-11-14T21:00:00Z',
+                          received_at: '2026-11-14T21:00:02Z',
+                          mood: 60,
+                          fatigue: 55,
+                          stress: 90,
+                          crew_conflict: 20,
+                          sleep_hours: 6.2,
+                          supersedes_id: null,
+                        }
                     screenings:
                       - {
                           id: 'a4000000-0000-4000-8000-000000000002',
@@ -6570,6 +6696,16 @@ paths:
                           fitness: fit,
                         }
                     support_requests: []
+                    escalations:
+                      - {
+                          id: '60000000-0000-4000-8000-000000000221',
+                          indicator_code: WB_STRESS,
+                          status: delivered,
+                          priority: routine,
+                          created_at: '2026-11-14T06:00:00Z',
+                          deliver_at: '2026-11-14T06:01:30Z',
+                          measured_at: '2026-11-14T05:58:00Z',
+                        }
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -6583,7 +6719,6 @@ paths:
       summary: Responde una solicitud de apoyo (viaja con retraso)
       operationId: replySupportRequest
       x-status: mvp
-      x-status-impl: pending
       x-roles: [behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -6612,6 +6747,156 @@ paths:
                   $ref: '#/components/examples/SupportMessageReply'
         '400':
           $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/admin/behavioral/support-requests/{id}/ack:
+    post:
+      tags: [Salud conductual]
+      summary: Acuse de una solicitud de apoyo
+      description: |
+        Solo sobre lo que ya llegó a Tierra (`deliver_at <= now()`); antes, **404**. Idempotente
+        (`open` → `acknowledged`); responder también cuenta como acuse. **409** si está cerrada.
+      operationId: ackSupportRequest
+      x-status: mvp
+      x-roles: [behavioral_health]
+      x-sensitivity: confidential
+      x-hazards: [isolation_confinement, distance_from_earth]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Solicitud reconocida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupportRequestAck'
+              examples:
+                ack:
+                  summary: bh.salas reconoce la solicitud de ORION
+                  value:
+                    id: 'a1000000-0000-4000-8000-000000000001'
+                    status: acknowledged
+                    acknowledged_at: '2026-11-14T21:15:00Z'
+                    acknowledged_by: '00000000-0000-4000-8000-000000000003'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/admin/behavioral/support-requests/{id}/close:
+    post:
+      tags: [Salud conductual]
+      summary: Cierra una solicitud de apoyo
+      description: |
+        Solo sobre lo que ya llegó a Tierra (antes, **404**). Idempotente: cerrar otra vez devuelve
+        el primer cierre. Cerrada, ya no admite respuestas (**409**) ni sale en la bandeja (salvo
+        `include_closed=true`).
+      operationId: closeSupportRequest
+      x-status: mvp
+      x-roles: [behavioral_health]
+      x-sensitivity: confidential
+      x-hazards: [isolation_confinement, distance_from_earth]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Solicitud cerrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClosedItem'
+              examples:
+                closed:
+                  summary: Cierre de la solicitud de ORION
+                  value:
+                    id: 'a1000000-0000-4000-8000-000000000001'
+                    status: closed
+                    closed_at: '2026-11-15T15:40:00Z'
+                    closed_by: '00000000-0000-4000-8000-000000000003'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/admin/behavioral/escalations/{id}/ack:
+    post:
+      tags: [Salud conductual]
+      summary: Acuse de un escalamiento conductual
+      description: |
+        Escalamiento `behavioral_health` ya entregado (antes, **404**). Idempotente; **409** si
+        está cerrado.
+      operationId: ackBehavioralEscalation
+      x-status: mvp
+      x-roles: [behavioral_health]
+      x-sensitivity: confidential
+      x-hazards: [isolation_confinement, distance_from_earth]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Escalamiento reconocido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EscalationAck'
+              examples:
+                ack:
+                  summary: bh.salas reconoce la alerta de VEGA
+                  value:
+                    id: '60000000-0000-4000-8000-000000000221'
+                    status: acknowledged
+                    acknowledged_at: '2026-11-14T06:05:00Z'
+                    acknowledged_by: '00000000-0000-4000-8000-000000000003'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/admin/behavioral/escalations/{id}/close:
+    post:
+      tags: [Salud conductual]
+      summary: Cierra un escalamiento conductual
+      description: |
+        Escalamiento `behavioral_health` ya entregado (antes, **404**). Idempotente. Mientras está
+        abierto, un cambio que sigue sostenido en el mismo indicador no vuelve a escalar (regla de
+        diseño, `WELLBEING_ONE_OPEN_ESCALATION`); después de cerrarlo, sí.
+      operationId: closeBehavioralEscalation
+      x-status: mvp
+      x-roles: [behavioral_health]
+      x-sensitivity: confidential
+      x-hazards: [isolation_confinement, distance_from_earth]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Escalamiento cerrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClosedItem'
+              examples:
+                closed:
+                  summary: Cierre de la alerta de VEGA
+                  value:
+                    id: '60000000-0000-4000-8000-000000000221'
+                    status: closed
+                    closed_at: '2026-11-15T16:00:00Z'
+                    closed_by: '00000000-0000-4000-8000-000000000003'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -7148,7 +7433,10 @@ components:
         client_uuid: 'ca000000-0000-4000-8000-000000000001'
         received_at: '2026-11-14T06:45:03Z'
         message: Gracias por tu check-in.
-        offer_support: false
+        offer_support: true
+        supersedes_id: null
+        streak: { streak_days: 12, checkins_this_week: 7, checkins_goal_week: 7 }
+        screening_due: false
     SimulatorHistorySummary:
       summary: Historia de 14 días (primera vez)
       value:
@@ -8399,9 +8687,10 @@ components:
             (CloseRequest + `session_id`). `session_id` / `assessment_id` aceptan el id del
             servidor o el `client_uuid` (sin conexión la app solo conoce los suyos). Una sesión
             creada sin conexión cuando ya había otra abierta se une a ella (`result.joined`,
-            `merged_into`) y sus evaluaciones quedan en la principal. Todavía sin servicio
-            (`rejected` `ENTITY_NOT_SUPPORTED`): `support_request`. Cualquier otro: `rejected`
-            `UNKNOWN_ENTITY` (no tumba el lote).
+            `merged_into`) y sus evaluaciones quedan en la principal. `support_request`
+            (= SupportRequestCreate sin `client_uuid`, tarea 10). Un segundo `wellbeing_checkin`
+            del mismo día corrige al anterior (`result.supersedes_id`). Cualquier otro:
+            `rejected` `UNKNOWN_ENTITY` (no tumba el lote).
           example: reading
         priority:
           type: string
@@ -8448,9 +8737,10 @@ components:
           type: object
           description: |
             Lo mismo que devolvería el endpoint en línea (p. ej. `evaluation` y `escalation_id`
-            de una lectura; de bienestar, solo `message` neutro, `offer_support` y, en `pvt_run`,
-            `fitness`), más `late_sync` (boolean) y `lag_s` (segundos entre la medición y la
-            recepción).
+            de una lectura; de bienestar, solo `message` neutro, `offer_support`, en el check-in
+            `supersedes_id`, `streak` y `screening_due`, en `pvt_run` `fitness`, y en
+            `support_request` `status`, `urgency`, `channel`, `deliver_at` y `suggestions`), más
+            `late_sync` (boolean) y `lag_s` (segundos entre la medición y la recepción).
           additionalProperties: true
         error: { $ref: '#/components/schemas/ErrorBody' }
     SyncPushResponse:
@@ -9046,7 +9336,7 @@ components:
       maximum: 100
     CheckinCreate:
       type: object
-      required: [client_uuid, measured_at, mood, fatigue, stress, crew_conflict, sleep_hours]
+      required: [client_uuid, measured_at, mood, fatigue, stress, crew_conflict]
       properties:
         client_uuid: { $ref: '#/components/schemas/Uuid' }
         measured_at: { $ref: '#/components/schemas/Timestamp' }
@@ -9054,7 +9344,12 @@ components:
         fatigue: { $ref: '#/components/schemas/Slider' }
         stress: { $ref: '#/components/schemas/Slider' }
         crew_conflict: { $ref: '#/components/schemas/Slider' }
-        sleep_hours: { type: number, minimum: 0, maximum: 24 }
+        sleep_hours:
+          type: number
+          minimum: 0
+          maximum: 24
+          nullable: true
+          description: Horas de sueño de la pulsera (opcional).
         private_note:
           { type: string, nullable: true, maxLength: 1000, description: Solo la ve el astronauta. }
     WellbeingAck:
@@ -9065,8 +9360,35 @@ components:
         id: { $ref: '#/components/schemas/Uuid' }
         client_uuid: { $ref: '#/components/schemas/Uuid' }
         received_at: { $ref: '#/components/schemas/Timestamp' }
-        message: { type: string }
-        offer_support: { type: boolean, description: true = mostrar "Quiero hablar con alguien". }
+        message:
+          type: string
+          description: Mensaje neutro de la regla del catálogo (sin números ni colores).
+        offer_support:
+          type: boolean
+          description: true = mostrar "Quiero hablar con alguien" (siempre true).
+        supersedes_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Solo check-in. No null = corrigió el check-in de ese mismo día.
+        streak: { $ref: '#/components/schemas/Streak' }
+        screening_due:
+          type: boolean
+          description: |
+            Solo check-in. true = toca PHQ-2/GAD-2 (cada 14 días, un día antes de la conferencia
+            psicológica; regla de diseño).
+    Streak:
+      type: object
+      description: Racha del check-in. Cuenta check-ins completados, nunca el resultado.
+      required: [streak_days, checkins_this_week, checkins_goal_week]
+      properties:
+        streak_days:
+          type: integer
+          minimum: 0
+          description: Días UTC seguidos con check-in que terminan hoy (o ayer si hoy falta).
+        checkins_this_week:
+          { type: integer, minimum: 0, description: Días con check-in en los últimos 7 días. }
+        checkins_goal_week: { type: integer, minimum: 1 }
     Instrument:
       type: object
       required:
@@ -9197,6 +9519,35 @@ components:
             nullable: true,
             description: Llegada a Tierra; null = en cola.,
           }
+        suggestions:
+          type: array
+          description: |
+            Solo al crearla. Con urgencia `now`: qué ofrecer en la app mientras llega la respuesta.
+            Son sugerencias: el servidor no avisa a nadie a bordo. Vacío en `later` y `today`.
+          items: { $ref: '#/components/schemas/SupportSuggestion' }
+    SupportSuggestion:
+      type: object
+      required: [code, title, description]
+      properties:
+        code: { type: string, enum: [guided_breathing, talk_to_cmo] }
+        title: { type: string }
+        description: { type: string }
+    SupportRequestAck:
+      type: object
+      required: [id, status, acknowledged_at, acknowledged_by]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        status: { type: string, enum: [open, acknowledged, closed] }
+        acknowledged_at: { $ref: '#/components/schemas/Timestamp' }
+        acknowledged_by: { type: string, format: uuid, nullable: true }
+    ClosedItem:
+      type: object
+      required: [id, status, closed_at, closed_by]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        status: { type: string, enum: [closed] }
+        closed_at: { $ref: '#/components/schemas/Timestamp' }
+        closed_by: { type: string, format: uuid, nullable: true }
     SupportMessage:
       type: object
       required: [id, request_id, direction, author_role, body, created_at]
@@ -9304,9 +9655,10 @@ components:
                 enum: [fit, not_confirmed]
                 nullable: true
                 description: |
-                  Aptitud de la PVT más reciente (sin PVT = `not_confirmed`); solo el estado,
-                  nunca las métricas de la PVT. La ven `flight_surgeon` y `admin`; `null` para un
-                  rol que no pueda verla.
+                  Aptitud para tarea crítica: la de la PVT más reciente de las últimas
+                  `WELLBEING_FITNESS_MAX_AGE_H` (12) horas; sin PVT reciente = `not_confirmed`.
+                  Solo el estado, nunca las métricas de la PVT. La ven `flight_surgeon` y `admin`;
+                  `null` para un rol que no pueda verla.
     InboxItem:
       type: object
       required:
@@ -9522,6 +9874,7 @@ components:
         mission_id: { $ref: '#/components/schemas/Uuid' }
         from: { $ref: '#/components/schemas/Timestamp' }
         to: { $ref: '#/components/schemas/Timestamp' }
+        generated_at: { $ref: '#/components/schemas/Timestamp' }
         astronauts:
           type: array
           items:
@@ -9530,11 +9883,16 @@ components:
             properties:
               astronaut_id: { $ref: '#/components/schemas/Uuid' }
               call_sign: { type: string }
+              checkin_today: { type: boolean, description: Hizo el check-in hoy (día UTC). }
+              streak_days: { type: integer, minimum: 0, description: Racha (días seguidos). }
               checkins_completed: { type: integer, minimum: 0 }
               checkins_expected: { type: integer, minimum: 0 }
               screenings_completed: { type: integer, minimum: 0 }
               pvt_runs: { type: integer, minimum: 0 }
-              fitness: { $ref: '#/components/schemas/Fitness' }
+              fitness:
+                allOf:
+                  - $ref: '#/components/schemas/Fitness'
+                description: Apto para tarea crítica (PVT de las últimas 12 h; si no, not_confirmed).
               last_checkin_at: { type: string, format: date-time, nullable: true }
     RulesUpdate:
       type: object
@@ -9568,9 +9926,24 @@ components:
         kind: { type: string, enum: [wellbeing_alert, screening_alert, support_request] }
         indicator_code: { type: string, nullable: true }
         urgency: { type: string, nullable: true, enum: [later, today, now, null] }
-        status: { type: string }
+        channel: { type: string, nullable: true, enum: [message, session, null] }
+        priority:
+          type: string
+          nullable: true
+          enum: [routine, urgent, emergency, null]
+          description: Solo alertas.
+        status:
+          type: string
+          description: |
+            Alertas: delivered | acknowledged | responded | closed. Solicitudes: open |
+            acknowledged | closed.
         summary: { type: string }
         created_at: { $ref: '#/components/schemas/Timestamp' }
+        measured_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Cuándo se midió (alertas) o se pidió en el dispositivo (solicitudes).
         deliver_at: { type: string, format: date-time, nullable: true }
     BehavioralInboxPage:
       type: object
@@ -9613,9 +9986,40 @@ components:
               last_value: { type: number, nullable: true }
               adverse_z_3d: { type: number, nullable: true }
               adverse_sustained_days: { type: integer, minimum: 0 }
+              trend: { type: string, enum: [rising, falling, stable, insufficient_data] }
               series:
                 type: array
                 items: { $ref: '#/components/schemas/SeriesPoint' }
+        checkins:
+          type: array
+          description: Check-ins vigentes de los últimos 30 días (hasta 14). Sin la nota privada.
+          items:
+            type: object
+            required: [id, measured_at, mood, fatigue, stress, crew_conflict]
+            properties:
+              id: { $ref: '#/components/schemas/Uuid' }
+              measured_at: { $ref: '#/components/schemas/Timestamp' }
+              received_at: { $ref: '#/components/schemas/Timestamp' }
+              mood: { type: number, nullable: true }
+              fatigue: { type: number, nullable: true }
+              stress: { type: number, nullable: true }
+              crew_conflict: { type: number, nullable: true }
+              sleep_hours: { type: number, nullable: true }
+              supersedes_id: { type: string, format: uuid, nullable: true }
+        escalations:
+          type: array
+          description: Escalamientos conductuales abiertos y ya entregados (para el acuse y el cierre).
+          items:
+            type: object
+            required: [id, status, created_at, deliver_at]
+            properties:
+              id: { $ref: '#/components/schemas/Uuid' }
+              indicator_code: { type: string, nullable: true }
+              status: { type: string }
+              priority: { type: string }
+              created_at: { $ref: '#/components/schemas/Timestamp' }
+              deliver_at: { $ref: '#/components/schemas/Timestamp' }
+              measured_at: { type: string, format: date-time, nullable: true }
         screenings:
           type: array
           items:
