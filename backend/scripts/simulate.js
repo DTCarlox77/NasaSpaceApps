@@ -8,6 +8,8 @@
  *   npm run sim:scenario -- <solar_event|crew_illness|co2_spike|wellbeing_decline|offline_batch>
  *        [--astronaut VEGA] [--module HAB-2] [--intensity high] [--contagion]
  *   npm run sim:offline-batch -- [--astronaut ORION]          (lo empuja por /sync/push)
+ *   npm run sim:emergency -- [--astronaut LYRA] [--out docs/examples/emergency-session.json]
+ *        (escenario emergency_solar; --out guarda el reporte que recibe Tierra)
  *   npm run sim:offline-batch -- --dry-run [--now ISO] [--out docs/examples/sync-push.json]
  *        (solo arma el lote: no toca la base)
  *
@@ -81,6 +83,22 @@ async function main() {
         contagion: args.contagion === undefined ? undefined : args.contagion === true,
       },
     });
+  } else if (command === 'emergency') {
+    summary = await simulator.runScenario({
+      name: 'emergency_solar',
+      body: { astronaut: args.astronaut },
+    });
+    if (typeof args.out === 'string' && summary.emergency && summary.emergency.session_id) {
+      const fs = require('node:fs');
+      const { reportFor } = require('../src/models/emergency.model');
+      const report = await reportFor(summary.emergency.session_id);
+      fs.writeFileSync(
+        args.out,
+        `${JSON.stringify(report.report, null, 2)}
+`,
+      );
+      console.error(`[sim] Reporte de la emergencia en ${args.out}`);
+    }
   } else if (command === 'offline-batch') {
     summary = await simulator.runScenario({
       name: 'offline_batch',

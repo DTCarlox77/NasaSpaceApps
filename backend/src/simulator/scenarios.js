@@ -24,6 +24,7 @@ const SCENARIOS = [
   'co2_spike',
   'wellbeing_decline',
   'offline_batch',
+  'emergency_solar',
 ];
 const INTENSITIES = ['low', 'high'];
 
@@ -33,6 +34,7 @@ const DEFAULTS = Object.freeze({
   co2_spike: { module_id: 'HAB-1' },
   wellbeing_decline: { astronaut: 'ATLAS' },
   offline_batch: { astronaut: 'ORION' },
+  emergency_solar: { astronaut: 'LYRA' },
 });
 
 // Días seguidos de check-ins peores: la regla escala a behavioral_health desde 5
@@ -356,12 +358,127 @@ function offlineBatch(ctx, { astronaut }) {
   };
 }
 
+/**
+ * emergency_solar: el triaje de punta a punta.
+ * 1. Evento solar en los dosímetros de toda la tripulación (dosis de evento moderada) y dos
+ *    tripulantes con signos prodrómicos: VEGA y `astronaut` (LYRA) reportan náusea → crítico
+ *    por síntomas (orau_ars) → activación automática por lectura crítica (pending).
+ * 2. Nadie responde "estoy bien": el hombre muerto vence → activa, avisa a bordo y a Tierra.
+ * 3. El comandante evalúa: VEGA responde (verde, vomitó entre 1 y 2 h → radiación probable),
+ *    `astronaut` NO responde (rojo, solo signos observables del protocolo v2) y ATLAS (verde).
+ *    La tableta manda su resultado (el mismo evaluador): coincide con el servidor.
+ * 4. Corte de enlace: una pregunta fuera del protocolo y el cierre quedan en cola.
+ * 5. Al cerrar el corte, el reporte sale hacia Tierra (llega tras el retraso de la misión).
+ * Respuestas y curva: suposición de diseño para recorrer el protocolo.
+ */
+function emergencySolar(ctx, { crew, astronaut, radiation = {} }) {
+  const unresponsive = astronaut;
+  const names = crew.map((m) => m.call_sign);
+  const conscious =
+    names.includes('VEGA') && unresponsive !== 'VEGA'
+      ? 'VEGA'
+      : names.find((c) => c !== unresponsive && c !== 'ORION');
+  const affected = [conscious, unresponsive].filter(Boolean);
+  const profile = [10, 45, 75]; // dosis de evento moderada (precaución), cada 20 min
+  const items = [];
+  for (const { call_sign: callSign } of crew) {
+    const factor = ctx.rng(callSign, 'factor').uniform(0.92, 1.08);
+    const device = { device_id: `sim-dosimeter-${callSign.toLowerCase()}` };
+    let eventDose = 0;
+    profile.forEach((dose, i) => {
+      const ms = ctx.nowMs - (profile.length - 1 - i) * 20 * MIN_MS;
+      const last = i === profile.length - 1;
+      const symptoms = last && affected.includes(callSign) ? ['nausea'] : [];
+      const value = round(dose * factor, 2);
+      eventDose += value;
+      items.push(
+        reading(
+          ctx,
+          callSign,
+          'RAD_DOSE_DAILY',
+          { value, event_active: true, symptoms },
+          'sensor',
+          ms,
+          device,
+        ),
+      );
+    });
+    const base = radiation[callSign] ?? P.profileFor(callSign).rad_prior_msv;
+    items.push(
+      reading(
+        ctx,
+        callSign,
+        'RAD_DOSE_CUM',
+        { value: round(base + eventDose, 2) },
+        'sensor',
+        ctx.nowMs,
+        device,
+      ),
+    );
+  }
+  const others = crew.map((m) => m.call_sign).filter((c) => !affected.includes(c) && c !== 'ORION');
+  const assessments = [
+    {
+      call_sign: conscious,
+      answers: {
+        responsive_and_mobile: true,
+        vomiting: true,
+        time_to_vomiting: '1_2h',
+        prodromal_symptoms: ['nausea', 'fatigue'],
+      },
+    },
+    {
+      call_sign: unresponsive,
+      answers: {
+        responsive_and_mobile: false,
+        breathing: true,
+        resp_rate_over_30: false,
+        perfusion_ok: true,
+        follows_commands: false,
+        vomiting_observed: true,
+        time_to_vomiting_observed: 'lt_1h',
+        consciousness_level: 'pain',
+      },
+    },
+    ...others.slice(0, 1).map((callSign) => ({
+      call_sign: callSign,
+      answers: { responsive_and_mobile: true, vomiting: false, prodromal_symptoms: ['none'] },
+    })),
+  ].filter((a) => a.call_sign);
+  items.push({
+    type: 'emergency_flow',
+    call_sign: 'ORION',
+    measured_at: ctx.iso(ctx.nowMs),
+    affected,
+    evaluator: 'ORION',
+    assessments: assessments.map((a, i) => ({
+      ...a,
+      client_uuid: ctx.id('assessment', a.call_sign),
+      sequence_no: i + 1,
+    })),
+    question: {
+      client_uuid: ctx.id('question'),
+      body: `Fuera del protocolo: ${conscious} pide algo para la náusea y ${unresponsive} sigue sin responder. ¿Qué indican?`,
+    },
+    close_notes: `${affected.join(' y ')} en el refugio; ${unresponsive} bajo observación del CMO.`,
+  });
+  return {
+    items,
+    notes: [
+      'Activación automática por lectura crítica (náusea con evento solar) y hombre muerto vencido (el barrido se adelanta TRIAGE_DEADMAN_S).',
+      `Evaluaciones del comandante: ${unresponsive} no responde (solo signos observables, protocolo v2).`,
+      'Corte de enlace durante la pregunta a Tierra y el cierre: el reporte sale al cerrar el corte y llega tras el retraso de la misión.',
+    ],
+  };
+}
+
 const BUILDERS = {
   solar_event: solarEvent,
   crew_illness: crewIllness,
   co2_spike: co2Spike,
   wellbeing_decline: wellbeingDecline,
   offline_batch: offlineBatch,
+  emergency_solar: emergencySolar,
 };
 
 /**

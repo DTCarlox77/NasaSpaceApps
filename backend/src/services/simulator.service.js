@@ -25,6 +25,9 @@ const readingsService = require('./readings.service');
 const habitatService = require('./habitat.service');
 const recorder = require('./wellbeingRecorder');
 const syncPush = require('./syncPush.service');
+const env = require('../config/env');
+const { derivedUuid } = require('../utils/derivedUuid');
+const { evaluateAssessment } = require('../engine/triage');
 
 const MISSION_CODE = 'ARES-1';
 const MAX_DAYS = 60;
@@ -344,6 +347,7 @@ async function summarize(tally, extra) {
     confidential_note:
       'Los niveles y escalamientos de bienestar son confidenciales: solo los ve behavioral_health.',
     ...(tally.sync ? { sync: tally.sync } : {}),
+    ...(tally.emergency ? { emergency: tally.emergency } : {}),
     errors: tally.errors,
   };
 }
@@ -440,6 +444,156 @@ async function cumulativeBase(ctx) {
   return base;
 }
 
+// ---------------------------------------------------------------- emergencia (emergency_solar)
+
+const toAnswer = (value) =>
+  Array.isArray(value) || typeof value === 'string' ? { choice: value } : { value };
+
+/**
+ * El triaje de punta a punta, por los servicios reales: la sesión la abrió la lectura
+ * crítica (si TRIAGE_AUTO está apagado, se activa aquí igual); el barrido del hombre muerto
+ * se adelanta TRIAGE_DEADMAN_S; el comandante evalúa; corte de enlace con pregunta y cierre en
+ * cola; al cerrar el corte, el reporte sale hacia Tierra.
+ */
+async function runEmergencyFlow(item, ctx) {
+  const emergency = require('./emergency.service');
+  const triage = require('./triageAssessment.service');
+  const common = require('./emergencyCommon');
+  const emergencyModel = require('../models/emergency.model');
+  const missionAdmin = require('./missionAdmin.service');
+
+  const first = item.assessments[0];
+  const already = first && (await emergencyModel.findAssessmentByRef(first.client_uuid));
+  if (already) {
+    return { session_id: already.session_id, note: 'Ya corrió en este minuto: no se repite.' };
+  }
+  let session = await emergencyModel.openSession(ctx.mission.id);
+  if (!session) {
+    for (const callSign of item.affected) {
+      await emergency.activateAutomatic({
+        missionId: ctx.mission.id,
+        astronautId: ctx.byCallSign.get(callSign).astronaut_id,
+        triggerType: 'critical_reading',
+        key: `sim:${item.question.client_uuid}:${callSign}`,
+        details: { simulator: true },
+      });
+    }
+    session = await emergencyModel.openSession(ctx.mission.id);
+  }
+  if (!session) throw conflict('CONFLICT', 'No se pudo abrir la sesión de emergencia.');
+  const deadman = await emergency.sweepDeadman(
+    new Date(Date.now() + (env.triage.deadmanSeconds + 1) * 1000),
+  );
+  session = await emergencyModel.findSession(session.id);
+
+  const actor = await common.userActor(ctx.byCallSign.get(item.evaluator).user_id);
+  const protocol = await emergencyModel.protocolById(session.protocol_id);
+  const nowIso = () => new Date().toISOString();
+  const assessments = [];
+  let last = null;
+  for (const a of item.assessments) {
+    const member = ctx.byCallSign.get(a.call_sign);
+    if (!member) continue;
+    const { body: created } = await triage.createAssessment({
+      actor,
+      sessionId: session.id,
+      input: {
+        client_uuid: a.client_uuid,
+        astronaut_id: member.astronaut_id,
+        sequence_no: a.sequence_no,
+        is_self_assessment: false,
+        started_at: nowIso(),
+      },
+    });
+    const answers = { responder_safe: true, ...a.answers };
+    await triage.putAnswers({
+      actor,
+      id: created.id,
+      input: {
+        answers: Object.entries(answers).map(([code, value]) => ({
+          client_uuid: derivedUuid('sim-answer', a.client_uuid, code),
+          question_code: code,
+          answer: toAnswer(value),
+          source: 'voice',
+          answered_at: nowIso(),
+        })),
+      },
+    });
+    // La tableta calcula con el mismo evaluador y el mismo protocolo.
+    const current = await emergencyModel.findSession(session.id);
+    const device = evaluateAssessment(protocol.definition, answers, current.context || {});
+    last = await triage.completeAssessment({
+      actor,
+      id: created.id,
+      input: {
+        completed_at: nowIso(),
+        device_result: {
+          status: device.status,
+          triage_category: device.triage_category,
+          radiation_flag: device.radiation_flag,
+          rules_version: protocol.version,
+        },
+      },
+    });
+    assessments.push({
+      call_sign: a.call_sign,
+      assessment_id: created.id,
+      status: last.status,
+      triage_category: last.triage_category,
+      radiation_flag: last.radiation_flag || null,
+      matches_device: last.matches_device,
+    });
+  }
+
+  // Corte de enlace (si no hay uno en curso): la pregunta y el cierre quedan en cola.
+  let outage = null;
+  if (!(await simulator.activeOutage(ctx.mission.id))) {
+    try {
+      outage = await missionAdmin.createOutage({
+        body: {
+          mission_id: ctx.mission.id,
+          starts_at: new Date(Date.now() - 1000).toISOString(),
+          reason: 'Corte de enlace (simulador, emergency_solar)',
+        },
+      });
+    } catch (err) {
+      if (!(err instanceof HttpError)) throw err;
+    }
+  }
+  const { body: question } = await emergency.askEarth({
+    actor,
+    id: session.id,
+    input: { client_uuid: item.question.client_uuid, body: item.question.body, asked_at: nowIso() },
+  });
+  const closed = await emergency.closeSession({
+    actor,
+    id: session.id,
+    input: { closed_at: nowIso(), status: 'closed', notes: item.close_notes },
+  });
+  const queuedReport = (await emergencyModel.eventsFor(session.id)).find(
+    (e) => e.event_type === 'closed',
+  );
+  if (outage) {
+    await missionAdmin.updateOutage({ id: outage.id, body: { ends_at: nowIso() } });
+  }
+  const closedEvent = (await emergencyModel.eventsFor(session.id)).find(
+    (e) => e.event_type === 'closed',
+  );
+  return {
+    session_id: session.id,
+    status: closed.session.status,
+    trigger_type: session.trigger_type,
+    deadman,
+    assessments,
+    attention_order: last ? last.attention_order : [],
+    question: { id: question.id, deliver_at: question.deliver_at },
+    outage: outage
+      ? { id: outage.id, report_queued: queuedReport ? queuedReport.deliver_at === null : null }
+      : null,
+    report_deliver_at: closedEvent ? closedEvent.deliver_at : null,
+  };
+}
+
 // ---------------------------------------------------------------- API
 
 /** Historia normal de `days` días que termina en `now`. Idempotente. */
@@ -456,6 +610,8 @@ async function loadHistory({ body, now = new Date() } = {}) {
   const { from, to } = history;
   const items = await withEventDoses(history.items, ctx);
   const tally = await writeItems(items, ctx);
+  // El check-in perdido del triaje cuenta desde aquí: la historia sintética no lo dispara.
+  await require('./emergency.service').markHistoryLoaded(new Date());
   return summarize(tally, {
     kind: 'history',
     mission_code: MISSION_CODE,
@@ -469,7 +625,9 @@ async function loadHistory({ body, now = new Date() } = {}) {
 async function runScenario({ name, body, now = new Date() } = {}) {
   const ctx = await missionContext();
   const params = scenarioParams(name, body, ctx);
-  const radiation = name === 'solar_event' ? await cumulativeBase(ctx) : undefined;
+  const radiation = ['solar_event', 'emergency_solar'].includes(name)
+    ? await cumulativeBase(ctx)
+    : undefined;
   const scenario = buildScenario(name, { now, crew: ctx.crew, radiation, ...params });
   if (scenario.params.astronaut && !ctx.byCallSign.has(scenario.params.astronaut)) {
     throw badRequest([
@@ -482,7 +640,13 @@ async function runScenario({ name, body, now = new Date() } = {}) {
   if (name === 'crew_illness' && scenario.params.contagion && ctx.crew.length < 2) {
     throw badRequest([{ field: 'contagion', issue: 'hace falta un segundo tripulante' }]);
   }
-  const tally = await writeItems(scenario.items, ctx);
+  const flows = scenario.items.filter((i) => i.type === 'emergency_flow');
+  const tally = await writeItems(
+    scenario.items.filter((i) => i.type !== 'emergency_flow'),
+    ctx,
+  );
+  // Después de las lecturas (la lectura crítica abre la sesión).
+  for (const flow of flows) tally.emergency = await runEmergencyFlow(flow, ctx);
   return summarize(tally, {
     kind: 'scenario',
     scenario: name,

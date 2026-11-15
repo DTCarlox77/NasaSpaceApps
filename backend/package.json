@@ -20,6 +20,7 @@
     "sim:history": "node scripts/simulate.js history",
     "sim:scenario": "node scripts/simulate.js scenario",
     "sim:offline-batch": "node scripts/simulate.js offline-batch",
+    "sim:emergency": "node scripts/simulate.js emergency",
     "lint": "eslint .",
     "format": "prettier --write .",
     "api:lint": "npx --yes @redocly/cli@2.72.1 lint docs/openapi.yaml",

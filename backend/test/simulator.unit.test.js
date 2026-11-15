@@ -170,6 +170,7 @@ test('escenarios: valores por defecto y validación de nombre', () => {
     'co2_spike',
     'wellbeing_decline',
     'offline_batch',
+    'emergency_solar',
   ]);
   assert.deepEqual(buildScenario('crew_illness', { now: NOW, crew: CREW }).params, {
     intensity: 'low',

@@ -84,4 +84,21 @@ async function radiationState(astronautIds, db = pool) {
   return state;
 }
 
-module.exports = { missionByCode, currentCrew, serviceUser, escalationCounts, radiationState };
+/** ¿Hay un corte de enlace en curso en la misión? */
+async function activeOutage(missionId, db = pool) {
+  const { rows } = await db.query(
+    `SELECT id FROM mission_comm_outages
+     WHERE mission_id = $1 AND starts_at <= now() AND (ends_at IS NULL OR ends_at > now())`,
+    [missionId],
+  );
+  return rows[0] || null;
+}
+
+module.exports = {
+  missionByCode,
+  currentCrew,
+  serviceUser,
+  escalationCounts,
+  radiationState,
+  activeOutage,
+};
