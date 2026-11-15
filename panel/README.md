@@ -4,7 +4,7 @@ Panel web para el equipo en Tierra del reto *Health Monitoring Software for Astr
 
 > **Datos sintéticos.** Es una herramienta de apoyo a la decisión, **no** un diagnóstico.
 
-Esta es la base (P1): proyecto, cliente HTTP, despertar del servidor, login, layout y navegación por rol. Las pantallas con datos llegan en P2–P4; por ahora cada sección es un placeholder que dice qué endpoint usará.
+Hecho hasta P2: base (cliente HTTP, despertar del servidor, login, navegación por rol), estado del enlace en la cabecera, **dashboard de tripulación** y **bandeja de alertas**. Emergencias, Cumplimiento y Demo llegan en P3, y Salud conductual en P4; mientras tanto, cada una es un placeholder que dice qué endpoint usará.
 
 ## Requisitos
 
@@ -36,7 +36,7 @@ Abre http://localhost:5173. El puerto es fijo (`strictPort`): ese origen está p
 
 ## A qué backend apunta
 
-`VITE_API_URL` en `panel/.env` es la URL base **sin** `/api/v1` (el panel la agrega). Después de cambiarla, reinicia `npm run dev`.
+`VITE_API_URL` en `panel/.env` es la URL base **sin** `/api/v1` (el panel la agrega). Para probar escrituras (acuse, respuesta) sin tocar la base compartida de Render, ponla en `panel/.env.local` apuntando al backend local; `.env.local` tiene prioridad y no se sube. Después de cambiarla, reinicia `npm run dev`.
 
 | Backend | `VITE_API_URL` |
 |---|---|
@@ -75,16 +75,25 @@ Un astronauta (`a.ortega`, …) se rechaza: "Este panel es para el equipo en Tie
   - una caída de red o un timeout (20 s) es `NetworkError` y no cierra la sesión.
 - **Navegación por rol** (`src/nav/access.ts`): única fuente de qué ve cada rol, tomada del `x-roles` del contrato. Salud conductual es solo de `behavioral_health`; Cumplimiento y Demo, solo de `admin`. Una URL sin permiso muestra "Sin acceso" (no redirige). El backend vuelve a comprobar el rol en cada petición.
 - **React Query**: no reintenta 401/403/404; errores de red y 5xx, hasta 2 veces; sin refetch al volver a la ventana.
+- **Misión seleccionada** (`useMission()`): una de `context.ground_missions`. Toda consulta de datos lleva `mission_id` en la URL y en la clave (`['mission', mission_id, …]`); al cambiar de misión se borran.
+- **Cabecera**: estado del enlace con `GET /missions/current` cada 30 s (activo con su retraso, o sin enlace hasta hh:mm; próximo corte; entorno y gravedad).
+- **Dashboard** (`/tripulacion`, cada 30 s): semáforo físico por tripulante, sparkline y tendencia de la API, aptitud y, solo para admin, cumplimiento. El detalle está en `/tripulacion/:astronautId`. Si llega algo fuera del semáforo físico, no se muestra y se avisa.
+- **Alertas** (`/alertas`, cada 15 s): bandeja por prioridad, filtros, "Cargar más", acuse y respuesta a bordo con su estado según `deliver_at`. De bienestar solo se ve el estado. El panel no puede leer el hilo (en el contrato es solo del astronauta): muestra lo enviado en la sesión.
+- **Carga por ruta**: el dashboard (con Recharts) y la bandeja se cargan al abrirlos.
 
 ## Estructura
 
 ```
 src/
   config/env.ts        VITE_API_URL → API_BASE (/api/v1)
-  api/                 http (cliente), auth, health, queryClient, types
+  api/                 http (cliente), auth, missions, ground, queryKeys, types
   auth/                storage (tokens), AuthProvider, SessionGate, RequireRole, mensajes
-  nav/access.ts        matriz rol → secciones
-  layout/AppShell.tsx  cabecera + barra lateral
+  nav/access.ts        matriz rol → secciones y acciones (x-roles)
+  mission/             misión seleccionada y resumen del enlace
+  lib/time.ts          hh:mm, "hace X", retraso, cuenta regresiva, estado a bordo
+  features/crew/       dashboard y detalle por tripulante
+  features/alerts/     bandeja, acuse y respuesta
+  layout/AppShell.tsx  cabecera (enlace) + barra lateral (contador de alertas)
   pages/               WakeGate, Login, ChangePassword, Forbidden, NotFound, placeholders
   components/          Button, Field, Banner, Spinner, StatusBadge
   styles/              tokens.css (colores, semáforo) y global.css
