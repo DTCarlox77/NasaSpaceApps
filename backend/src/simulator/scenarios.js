@@ -214,7 +214,8 @@ function co2Spike(ctx, { module_id: moduleId, intensity }) {
  * Al 5.º check-in peor, adverse_sustained_days llega a 5: escalamiento CONFIDENCIAL a
  * behavioral_health (nunca a la tripulación ni a admin). En high, además, PHQ-2 = 4 y
  * GAD-2 = 3 (≥ 3: behavioral_health). El servicio corrige el check-in de cada día si existe
- * (supersedes_uuid) o crea uno nuevo.
+ * (supersedes_uuid) o crea uno nuevo. Al final, el tripulante pide hablar con alguien
+ * (urgencia `now`, por mensaje): solo lo ve behavioral_health, cuando llega a Tierra.
  */
 function wellbeingDecline(ctx, { astronaut, intensity }) {
   const p = P.profileFor(astronaut);
@@ -260,6 +261,16 @@ function wellbeingDecline(ctx, { astronaut, intensity }) {
       });
     }
   }
+  items.push({
+    type: 'support_request',
+    call_sign: astronaut,
+    client_uuid: ctx.id(astronaut, 'support_request'),
+    urgency: 'now',
+    channel: 'message',
+    content: 'Llevo varios días durmiendo mal y me cuesta concentrarme. ¿Podemos hablar hoy?',
+    created_at: ctx.iso(ctx.nowMs),
+    measured_at: ctx.iso(ctx.nowMs), // orden: al final, después del 5.º check-in
+  });
   return {
     items,
     notes: [

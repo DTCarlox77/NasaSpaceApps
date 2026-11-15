@@ -44,7 +44,7 @@ async function escalationCounts(readingIds, db = pool) {
   const { rows } = await db.query(
     `SELECT level::text AS level, count(*)::int AS count
      FROM escalations
-     WHERE source_id = ANY($1::uuid[]) AND NOT is_confidential
+     WHERE source_id = ANY($1::uuid[]) AND NOT is_confidential AND category <> 'behavioral'
      GROUP BY level ORDER BY level`,
     [readingIds],
   );

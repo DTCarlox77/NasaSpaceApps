@@ -24,6 +24,7 @@ const wellbeing = require('../models/wellbeing.model');
 const readingsService = require('./readings.service');
 const habitatService = require('./habitat.service');
 const recorder = require('./wellbeingRecorder');
+const supportService = require('./supportRequest.service');
 const syncPush = require('./syncPush.service');
 const env = require('../config/env');
 const { derivedUuid } = require('../utils/derivedUuid');
@@ -127,6 +128,29 @@ function countGroup(tally, group, result) {
       id: r.reading_id,
       confidential: r.sensitivity === 'confidential',
     });
+  }
+}
+
+/**
+ * "Quiero hablar con alguien" por el servicio real. Confidencial: NO entra en el resumen (ni
+ * siquiera como conteo; admin dispara el simulador). Un error se informa sin decir qué era.
+ */
+async function writeSupportRequest(item, ctx, tally) {
+  const userId = ctx.byCallSign.get(item.call_sign).user_id;
+  try {
+    await supportService.createSupportRequest({
+      userId,
+      body: {
+        client_uuid: item.client_uuid,
+        urgency: item.urgency,
+        channel: item.channel,
+        content: item.content,
+        created_at: item.created_at,
+      },
+    });
+  } catch (err) {
+    if (!(err instanceof HttpError)) throw err;
+    if (tally.errors.length < 5) tally.errors.push({ type: 'wellbeing', code: err.code });
   }
 }
 
@@ -321,6 +345,7 @@ async function writeItems(items, ctx) {
         if (item.type === 'reading') await writeReading(item, ctx, tally);
         else if (item.type === 'sync_batch') await writeSyncBatch(item, ctx, tally);
         else if (item.type === 'wellbeing_day') await writeDeclineDay(item, ctx, tally, current);
+        else if (item.type === 'support_request') await writeSupportRequest(item, ctx, tally);
         else await writeGroup(item, ctx, tally);
       }
     }),
