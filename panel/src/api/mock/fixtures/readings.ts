@@ -4,7 +4,7 @@
  * Los niveles son DATOS del fixture (en la API los calcula el motor); el panel no los calcula.
  * Sin SLEEP_HOURS: desde v1.8 no sale en el dashboard para ningún rol.
  */
-import type { Compliance, CrewDashboard, DashboardIndicator, Level, Trend } from '../../types.ts';
+import type { Compliance, CrewDashboard, CrewRole, DashboardIndicator, Level, Trend } from '../../types.ts';
 import { CREW } from './people.ts';
 import { MISSION_ID } from './mission.ts';
 
@@ -127,24 +127,55 @@ function indicator(spec: Spec, t0: number): DashboardIndicator {
   };
 }
 
-/** GET /admin/dashboard/crew. `compliance` solo para admin (null para el flight surgeon). */
-export function crewDashboard(t0: number, now: number, withCompliance: boolean): CrewDashboard {
+export interface DashboardCrewEntry {
+  astronaut_id: string;
+  call_sign: string;
+  crew_role: CrewRole;
+  /** false = alta hecha en el demo: todavía sin lecturas, check-ins ni PVT. */
+  fixture: boolean;
+}
+
+/** Tripulación del seed (para quien llama sin la lista del estado). */
+const SEED_CREW: DashboardCrewEntry[] = CREW.map((c) => ({
+  astronaut_id: c.astronaut_id,
+  call_sign: c.call_sign,
+  crew_role: c.crew_role,
+  fixture: true,
+}));
+
+/** Aptitud del demo por indicativo (la misma que ve el dashboard). */
+export const fitnessOf = (callSign: string): 'fit' | 'not_confirmed' => FITNESS[callSign] ?? 'not_confirmed';
+
+/**
+ * GET /admin/dashboard/crew. `compliance` solo para admin (null para el flight surgeon).
+ * Un tripulante dado de alta en el demo sale sin indicadores ("Sin lecturas todavía"), con nivel
+ * `unrated`, 0 check-ins y aptitud `not_confirmed` (no tiene PVT).
+ */
+export function crewDashboard(
+  t0: number,
+  now: number,
+  withCompliance: boolean,
+  crew: DashboardCrewEntry[] = SEED_CREW,
+): CrewDashboard {
   return {
     mission_id: MISSION_ID,
     mission_code: 'ARES-1',
     generated_at: new Date(now).toISOString(),
-    astronauts: CREW.map((member) => {
-      const indicators = (SPECS[member.call_sign] ?? []).map((spec) => indicator(spec, t0));
+    astronauts: crew.map((member) => {
+      const indicators = member.fixture ? (SPECS[member.call_sign] ?? []).map((spec) => indicator(spec, t0)) : [];
       const worst =
         LEVEL_RANK.find((level) => indicators.some((i) => i.level === level)) ?? 'unrated';
+      const compliance = member.fixture
+        ? (COMPLIANCE[member.call_sign] ?? null)
+        : { checkins_completed_7d: 0, checkins_expected_7d: 1 };
       return {
         astronaut_id: member.astronaut_id,
         call_sign: member.call_sign,
         crew_role: member.crew_role,
         worst_level: worst,
         indicators,
-        compliance: withCompliance ? (COMPLIANCE[member.call_sign] ?? null) : null,
-        fitness: FITNESS[member.call_sign] ?? 'not_confirmed',
+        compliance: withCompliance ? compliance : null,
+        fitness: member.fixture ? fitnessOf(member.call_sign) : 'not_confirmed',
       };
     }),
   };

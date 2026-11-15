@@ -20,6 +20,9 @@ import type {
 /** Orden del dashboard: crítico, precaución, normal, sin datos. */
 export const LEVEL_ORDER: readonly Level[] = ['critical', 'caution', 'normal', 'unrated'];
 
+/** Tripulante sin indicadores (p. ej. alta reciente): sin semáforo inventado. */
+export const NO_READINGS_TEXT = 'Sin lecturas todavía';
+
 export const LEVEL_LABELS: Record<Level, string> = {
   critical: 'Crítico',
   caution: 'Precaución',

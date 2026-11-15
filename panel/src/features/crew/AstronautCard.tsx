@@ -7,6 +7,7 @@ import { Sparkline } from './charts.tsx';
 import {
   complianceLabel,
   crewRoleLabel,
+  NO_READINGS_TEXT,
   fitnessLabel,
   formatReading,
   sortIndicators,
@@ -79,14 +80,22 @@ export function AstronautCard({
 }) {
   const headingId = `astronauta-${astronaut.astronaut_id}`;
   const indicators = sortIndicators(astronaut.indicators);
+  // Sin lecturas (p. ej. alta reciente): ningún semáforo, solo el texto.
+  const noReadings = indicators.length === 0;
   return (
-    <article className={`crew-card crew-card-${astronaut.worst_level}`} aria-labelledby={headingId}>
+    <article className={`crew-card crew-card-${noReadings ? 'empty' : astronaut.worst_level}`} aria-labelledby={headingId}>
       <header className="crew-card-header">
         <div>
           <h2 id={headingId}>{astronaut.call_sign}</h2>
           <p className="muted">{crewRoleLabel(astronaut.crew_role)}</p>
         </div>
-        <StatusBadge level={astronaut.worst_level} />
+        {noReadings ? (
+          <span className="no-readings">
+            <span aria-hidden="true">○</span> {NO_READINGS_TEXT}
+          </span>
+        ) : (
+          <StatusBadge level={astronaut.worst_level} />
+        )}
       </header>
       <AstronautFacts astronaut={astronaut} role={role} />
       {indicators.length > 0 ? (
@@ -101,7 +110,7 @@ export function AstronautCard({
           ))}
         </ul>
       ) : (
-        <p className="muted">Sin lecturas físicas.</p>
+        <p className="muted">{NO_READINGS_TEXT}: aparecerán cuando la app envíe sus primeras mediciones.</p>
       )}
       <Link className="crew-card-link" to={`/tripulacion/${astronaut.astronaut_id}`}>
         Ver detalle de {astronaut.call_sign}

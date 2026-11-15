@@ -15,6 +15,7 @@ import type {
   LoginResponse,
   Role,
   TeamAccount,
+  TemporaryPasswordResponse,
   TokenPair,
   UserAdmin,
   UserContext,
@@ -32,21 +33,27 @@ export const ACCESS = 'mock-at.';
 export const REFRESH = 'mock-rt.';
 let tokenSeq = 0;
 
-export function tokensFor(user: MockAccount): TokenPair {
+/** Tokens del demo: <prefijo><id de usuario>.<secuencia>.<emitido en ms>. */
+export function tokensFor(user: MockAccount, now: number = Date.now()): TokenPair {
   tokenSeq += 1;
   return {
-    access_token: `${ACCESS}${user.id}.${tokenSeq}`,
+    access_token: `${ACCESS}${user.id}.${tokenSeq}.${now}`,
     token_type: 'Bearer',
     expires_in: 900,
-    refresh_token: `${REFRESH}${user.id}.${tokenSeq}`,
+    refresh_token: `${REFRESH}${user.id}.${tokenSeq}.${now}`,
   };
 }
 
 export function userFromToken(state: MockState, token: string | null | undefined, prefix: string): MockAccount | undefined {
   if (!token || !token.startsWith(prefix)) return undefined;
-  const id = token.slice(prefix.length).split('.')[0] ?? '';
+  const [id = '', , issued] = token.slice(prefix.length).split('.');
   const account = state.accounts.find((a) => a.id === id);
-  return account && account.is_active ? account : undefined;
+  if (!account || !account.is_active) return undefined;
+  // Un reset o un cambio de contraseña revoca los refresh tokens anteriores.
+  if (prefix === REFRESH && account.tokens_valid_after && Number(issued ?? 0) < account.tokens_valid_after) {
+    return undefined;
+  }
+  return account;
 }
 
 // ---------------------------------------------------------------- consultas
@@ -136,6 +143,11 @@ export async function prepareSecrets(
 
 /** Cuenta del token de cambio de contraseña (el del 428) o del token normal. */
 export const PASSWORD_CHANGE = 'mock-pct.';
+/** Contrato: 5 intentos fallidos bloquean la cuenta 15 min. */
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCK_MINUTES = 15;
+/** Contrato (change-password): mínimo 10 caracteres y distinta de la actual. */
+const MIN_PASSWORD = 10;
 export function changePasswordAccount(state: MockState, bearer: string | null): MockAccount | undefined {
   return userFromToken(state, bearer, PASSWORD_CHANGE) ?? userFromToken(state, bearer, ACCESS);
 }
@@ -285,12 +297,38 @@ export const ACCOUNT_ROUTES: Route[] = [
         return fail(400, 'VALIDATION_ERROR', 'username y password son obligatorios.');
       }
       const user = accountByUsername(state, username);
-      if (!user || !user.is_active || !passwordMatches(user, secrets.password)) {
+      if (!user || !user.is_active) return fail(401, 'INVALID_CREDENTIALS', 'Usuario o contraseña incorrectos.');
+      if (user.locked_until && new Date(user.locked_until).getTime() > now) {
+        return fail(423, 'ACCOUNT_LOCKED', 'Cuenta bloqueada por intentos fallidos. Intenta más tarde o pide al comandante que la desbloquee.', {
+          locked_until: user.locked_until,
+        });
+      }
+      if (!passwordMatches(user, secrets.password)) {
+        const attempts = user.failed_login_attempts + 1;
+        const lock = attempts >= MAX_FAILED_ATTEMPTS;
+        patchAccount(state, user, {
+          failed_login_attempts: attempts,
+          ...(lock ? { locked_until: new Date(now + LOCK_MINUTES * 60_000).toISOString() } : {}),
+        });
+        if (lock) {
+          return fail(423, 'ACCOUNT_LOCKED', 'Cuenta bloqueada por intentos fallidos.', { locked_until: user.locked_until });
+        }
         return fail(401, 'INVALID_CREDENTIALS', 'Usuario o contraseña incorrectos.');
+      }
+      if (user.must_change_password) {
+        tokenSeq += 1;
+        return fail(428, 'PASSWORD_CHANGE_REQUIRED', 'Debes cambiar tu contraseña temporal antes de continuar.', {
+          password_change_token: `${PASSWORD_CHANGE}${user.id}.${tokenSeq}.${now}`,
+          expires_in: 600,
+          user_id: user.id,
+          // SOLO modo demo (no está en el contrato): permite rechazar a un astronauta en el panel
+          // antes de que cambie su contraseña temporal.
+          role: user.role,
+        });
       }
       patchAccount(state, user, { last_login_at: new Date(now).toISOString(), failed_login_attempts: 0 });
       const response: LoginResponse = {
-        ...tokensFor(user),
+        ...tokensFor(user, now),
         must_change_password: false,
         offline_unlock_until: null,
         user: summary(user),
@@ -303,10 +341,10 @@ export const ACCOUNT_ROUTES: Route[] = [
     method: 'POST',
     pattern: '/auth/refresh',
     roles: 'public',
-    handle: ({ body, state }) => {
+    handle: ({ body, state, now }) => {
       const user = userFromToken(state, (body as { refresh_token?: string } | undefined)?.refresh_token, REFRESH);
       if (!user) return fail(401, 'UNAUTHENTICATED', 'El refresh token no es válido.');
-      return json(200, tokensFor(user));
+      return json(200, tokensFor(user, now));
     },
   },
   { method: 'POST', pattern: '/auth/logout', roles: 'public', handle: () => json(204, undefined) },
@@ -378,6 +416,91 @@ export const ACCOUNT_ROUTES: Route[] = [
       // Todas las del demo son vigentes (sin fecha de fin): active=false no devuelve nada.
       const items = query.get('active') === 'false' ? [] : crewAccounts(state).map((a) => assignmentOf(a) as Assignment);
       return json(200, paginate(items, query));
+    },
+  },
+  {
+    method: 'PATCH',
+    pattern: '/admin/assignments/:id',
+    roles: ADMIN,
+    handle: ({ state, params, body }) => {
+      const account = state.accounts.find((a) => a.astronaut?.assignment_id === params.id);
+      if (!account?.astronaut) return notFound('La asignación no existe.');
+      const input = (body ?? {}) as Record<string, unknown>;
+      if ('assigned_to' in input) {
+        return fail(400, 'VALIDATION_ERROR', 'El modo demo solo cambia el rol (no termina asignaciones).', { field: 'assigned_to' });
+      }
+      const crewRole = input.crew_role as CrewRole;
+      if (!CREW_ROLES.includes(crewRole)) return invalid('Rol de tripulación inválido.', 'crew_role');
+      assertCrewRoleFree(state, account.astronaut.mission_id, crewRole, account.id);
+      patchAccount(state, account, { astronaut: { ...account.astronaut, crew_role: crewRole } });
+      return json(200, assignmentOf(account));
+    },
+  },
+  {
+    method: 'POST',
+    pattern: '/admin/users/:id/reset-password',
+    roles: ADMIN,
+    handle: ({ state, params, now }) => {
+      const account = state.accounts.find((a) => a.id === params.id);
+      if (!account) return notFound('La cuenta no existe.');
+      const hadSession = !!account.last_login_at;
+      const temporaryPassword = issueTemporaryPassword(state, account);
+      // Revoca sus refresh tokens (se cierran sus sesiones).
+      patchAccount(state, account, { tokens_valid_after: now });
+      const response: TemporaryPasswordResponse = {
+        user_id: account.id,
+        temporary_password: temporaryPassword,
+        must_change_password: true,
+        revoked_refresh_tokens: hadSession ? 1 : 0,
+      };
+      return json(200, response);
+    },
+  },
+  {
+    method: 'POST',
+    pattern: '/admin/users/:id/unlock',
+    roles: ADMIN,
+    handle: ({ state, params }) => {
+      const account = state.accounts.find((a) => a.id === params.id);
+      if (!account) return notFound('La cuenta no existe.');
+      patchAccount(state, account, { failed_login_attempts: 0, locked_until: null });
+      return json(200, userAdmin(account));
+    },
+  },
+  {
+    // Acepta el token normal o el password_change_token del 428 (valida su propio token).
+    method: 'POST',
+    pattern: '/auth/change-password',
+    roles: 'public',
+    handle: ({ state, bearer, body, secrets, now }) => {
+      const account = changePasswordAccount(state, bearer);
+      if (!account) return fail(401, 'UNAUTHENTICATED', 'La sesión ya no es válida. Inicia sesión de nuevo.');
+      const input = (body ?? {}) as Record<string, unknown>;
+      const current = typeof input.current_password === 'string' ? input.current_password : '';
+      const next = typeof input.new_password === 'string' ? input.new_password : '';
+      if (!current || !passwordMatches(account, secrets.current)) {
+        return fail(401, 'INVALID_CREDENTIALS', 'Usuario o contraseña incorrectos.');
+      }
+      if (next.length < MIN_PASSWORD || next === current || !secrets.next) {
+        return fail(400, 'WEAK_PASSWORD', 'La contraseña debe tener al menos 10 caracteres y ser distinta de la actual.', {
+          min_length: MIN_PASSWORD,
+        });
+      }
+      patchAccount(state, account, {
+        password_hash: secrets.next,
+        must_change_password: false,
+        failed_login_attempts: 0,
+        tokens_valid_after: now,
+        last_login_at: new Date(now).toISOString(),
+      });
+      const response: LoginResponse = {
+        ...tokensFor(account, now),
+        must_change_password: false,
+        offline_unlock_until: null,
+        user: summary(account),
+        context: contextFor(account),
+      };
+      return json(200, response);
     },
   },
 ];

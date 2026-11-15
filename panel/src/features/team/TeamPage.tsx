@@ -22,9 +22,17 @@ import { useNow } from '../../lib/useNow.ts';
 import { useMission } from '../../mission/useMission.ts';
 import { canDo } from '../../nav/access.ts';
 import { CREW_ROLE_INFO, CREW_ROLES, GLOBAL_ROLE_INFO, GROUND_ACCOUNT_ROLES } from '../../nav/roles.ts';
-import { CreateAccountWizard, type CreatedAccount } from './CreateAccountWizard.tsx';
+import { AccountActions } from './AccountActions.tsx';
+import { CreateAccountWizard } from './CreateAccountWizard.tsx';
 import { TemporaryPasswordDialog } from './TemporaryPasswordDialog.tsx';
-import { ACCOUNT_STATUS_META, accountStatus, matchesSearch, type CrewRow, type TeamKind } from './team.ts';
+import {
+  ACCOUNT_STATUS_META,
+  accountStatus,
+  matchesSearch,
+  takenCrewRoles,
+  type CrewRow,
+  type TeamKind,
+} from './team.ts';
 import { useCrewRoster, useGroundAccounts, useRefreshMission } from './useTeam.ts';
 import './team.css';
 
@@ -175,8 +183,9 @@ export function TeamPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [wizard, setWizard] = useState<TeamKind | null>(null);
-  const [created, setCreated] = useState<CreatedAccount | null>(null);
-  const [lastCreated, setLastCreated] = useState<string | null>(null);
+  /** Contraseña temporal a mostrar UNA vez (alta o restablecimiento); se descarta al cerrar. */
+  const [oneTime, setOneTime] = useState<{ username: string; password: string; heading: string } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const roster = useCrewRoster();
   const ground = useGroundAccounts();
   const refresh = useRefreshMission();
@@ -192,6 +201,19 @@ export function TeamPage() {
         ),
       )
     : null;
+
+  const taken = takenCrewRoles(roster.rows);
+
+  function onActionDone(message: string) {
+    setNotice(message);
+    void refresh();
+  }
+
+  function onTemporaryPassword(result: { username: string; password: string; heading: string }) {
+    setNotice(null);
+    setOneTime(result);
+    void refresh();
+  }
 
   function setView(next: TeamKind) {
     const p = new URLSearchParams(params);
@@ -227,7 +249,27 @@ export function TeamPage() {
         ) : (
           <div className="team-grid">
             {crewRows.map((row) => (
-              <CrewCard key={row.astronaut_id} row={row} missionCode={missionCode} mock={mock} now={now} />
+              <CrewCard
+                key={row.astronaut_id}
+                row={row}
+                missionCode={missionCode}
+                mock={mock}
+                now={now}
+                actions={
+                  <AccountActions
+                    target={{
+                      userId: row.user_id,
+                      username: row.account?.username ?? null,
+                      label: row.call_sign,
+                      status: row.account ? accountStatus(row.account, now) : null,
+                      crew: { assignmentId: row.assignment_id, crewRole: row.crew_role, callSign: row.call_sign },
+                    }}
+                    takenRoles={taken}
+                    onDone={onActionDone}
+                    onTemporaryPassword={onTemporaryPassword}
+                  />
+                }
+              />
             ))}
           </div>
         );
@@ -250,7 +292,18 @@ export function TeamPage() {
       groundRows.length === 0 ? (
         <p className="muted">Nadie coincide con la búsqueda.</p>
       ) : (
-        <GroundTable accounts={groundRows} now={now} />
+        <GroundTable
+          accounts={groundRows}
+          now={now}
+          actions={(a) => (
+            <AccountActions
+              target={{ userId: a.id, username: a.username, label: a.full_name, status: accountStatus(a, now) }}
+              takenRoles={taken}
+              onDone={onActionDone}
+              onTemporaryPassword={onTemporaryPassword}
+            />
+          )}
+        />
       );
   }
 
@@ -277,7 +330,7 @@ export function TeamPage() {
         ) : null}
       </div>
 
-      {lastCreated ? <Banner tone="success">{lastCreated}</Banner> : null}
+      {notice ? <Banner tone="success">{notice}</Banner> : null}
 
       <div className="tabs" role="tablist" aria-label="Equipo">
         <button
@@ -338,21 +391,24 @@ export function TeamPage() {
           onCancel={() => setWizard(null)}
           onCreated={(account) => {
             setWizard(null);
-            setCreated(account);
-            void refresh();
+            onTemporaryPassword({
+              username: account.username,
+              password: account.temporaryPassword,
+              heading: `Cuenta creada: ${account.description}.`,
+            });
           }}
         />
       ) : null}
 
-      {created ? (
+      {oneTime ? (
         <TemporaryPasswordDialog
-          username={created.username}
-          password={created.temporaryPassword}
-          heading={`Cuenta creada: ${created.description}.`}
+          username={oneTime.username}
+          password={oneTime.password}
+          heading={oneTime.heading}
           onClose={() => {
-            setLastCreated(`Cuenta de ${created.username} creada (${created.description}).`);
+            setNotice(`${oneTime.heading} La contraseña temporal ya no se puede volver a ver.`);
             // Al cerrar, la contraseña temporal se descarta: no se puede volver a ver.
-            setCreated(null);
+            setOneTime(null);
           }}
         />
       ) : null}

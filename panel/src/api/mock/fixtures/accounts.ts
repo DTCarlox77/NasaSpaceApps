@@ -35,6 +35,8 @@ export interface MockAccount {
   password_hash: string | null;
   /** true si control de misión la creó en el demo (se guarda completa). */
   created_in_demo?: boolean;
+  /** Los refresh tokens emitidos antes de este instante (ms) ya no sirven (reset, cambio). */
+  tokens_valid_after?: number;
   astronaut?: MockAstronautProfile;
   ground_mission_ids?: string[];
 }

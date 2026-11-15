@@ -16,6 +16,7 @@ import type {
   BehavioralInboxItem,
   ClosedItem,
   ConfidentialAccess,
+  CrewRole,
   EmergencyDetail,
   EmergencyListItem,
   EmergencyQuestion,
@@ -33,6 +34,7 @@ import {
   ACCESS,
   ACCOUNT_ROUTES,
   astronautAccount,
+  crewAccounts,
   prepareSecrets,
   settlePasswords,
   userFromToken,
@@ -317,7 +319,13 @@ const ROUTES: Route[] = [
     roles: GROUND,
     handle: (ctx) => {
       checkMission(ctx.query);
-      return json(200, crewDashboard(ctx.state.t0, ctx.now, me(ctx).role === 'admin'));
+      const crew = crewAccounts(ctx.state).map((a) => ({
+        astronaut_id: a.astronaut?.id as string,
+        call_sign: a.astronaut?.call_sign as string,
+        crew_role: a.astronaut?.crew_role as CrewRole,
+        fixture: !a.created_in_demo,
+      }));
+      return json(200, crewDashboard(ctx.state.t0, ctx.now, me(ctx).role === 'admin', crew));
     },
   },
   {

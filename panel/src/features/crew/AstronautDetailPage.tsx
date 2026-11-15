@@ -13,7 +13,7 @@ import { dateClock, registeredLabel } from '../../lib/time.ts';
 import { useNow } from '../../lib/useNow.ts';
 import { AstronautFacts, TrendText } from './AstronautCard.tsx';
 import { IndicatorChart } from './charts.tsx';
-import { crewRoleLabel, formatReading, sortIndicators } from './crew.ts';
+import { crewRoleLabel, formatReading, NO_READINGS_TEXT, sortIndicators } from './crew.ts';
 import { HiddenDataNotice } from './CrewDashboardPage.tsx';
 import { DASHBOARD_POLL_MS, useCrewDashboard } from './useCrewDashboard.ts';
 import './crew.css';
@@ -116,7 +116,13 @@ export function AstronautDetailPage() {
               <h1 id="detail-title">{astronaut.call_sign}</h1>
               <p className="muted">{crewRoleLabel(astronaut.crew_role)}</p>
             </div>
-            <StatusBadge level={astronaut.worst_level} />
+            {indicators.length === 0 ? (
+              <span className="no-readings">
+                <span aria-hidden="true">○</span> {NO_READINGS_TEXT}
+              </span>
+            ) : (
+              <StatusBadge level={astronaut.worst_level} />
+            )}
           </header>
           <AstronautFacts astronaut={astronaut} role={role} />
           <p className="muted small">
@@ -129,7 +135,7 @@ export function AstronautDetailPage() {
           </p>
         </div>
         <HiddenDataNotice hidden={screened.hidden} />
-        {indicators.length === 0 ? <p className="muted">Sin lecturas físicas.</p> : null}
+        {indicators.length === 0 ? <p className="muted">{NO_READINGS_TEXT}.</p> : null}
         {indicators.map((indicator) => (
           <IndicatorDetail
             key={indicator.code}

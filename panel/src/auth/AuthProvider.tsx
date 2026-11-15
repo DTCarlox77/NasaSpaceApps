@@ -113,7 +113,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return await acceptLogin(await authApi.login(username, password));
       } catch (err) {
         if (err instanceof HttpError && err.code === 'PASSWORD_CHANGE_REQUIRED') {
-          const token = (err.details as { password_change_token?: string } | null)?.password_change_token;
+          const details = err.details as { password_change_token?: string; role?: string } | null;
+          const token = details?.password_change_token;
+          // Si el 428 dice el rol (solo el modo demo; el contrato v1.8 no lo trae), un astronauta
+          // se rechaza aquí, antes de cambiar en el panel una contraseña que es de la app.
+          if (details?.role && !isGroundRole(details.role)) {
+            return { kind: 'error', message: ASTRONAUT_MESSAGE };
+          }
           if (token) {
             setState({ ...ANONYMOUS, pendingPasswordChange: { token, username } });
             return { kind: 'password_change' };

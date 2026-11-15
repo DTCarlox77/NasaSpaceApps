@@ -62,7 +62,8 @@ function StepIndicator({ step }: { step: number }) {
   );
 }
 
-function RoleOption({
+/** Opción de rol (radio) con su etiqueta y lo que ve; también la usa "Cambiar rol". */
+export function RoleOption({
   name,
   value,
   checked,
