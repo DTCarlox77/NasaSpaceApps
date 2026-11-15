@@ -1,0 +1,278 @@
+'use strict';
+
+/**
+ * Escenarios de la demo (puros): qué registros crear "ahora", encima de la historia normal.
+ *
+ * buildScenario(name, { now, crew, astronaut, module_id, intensity, contagion }) →
+ * { name, params, items, notes }. Los client_uuid salen del escenario, sus parámetros y el
+ * minuto de `now`: un reintento en el mismo minuto no duplica, y volver a dispararlo más tarde
+ * crea un episodio nuevo (para repetirlo en vivo).
+ *
+ * Los perfiles de cada escenario (forma de la curva y valores pico) son SUPOSICIÓN DE DISEÑO,
+ * elegidos para cruzar los umbrales del catálogo que se quieren mostrar.
+ */
+const { rngFor, uuidFor, round } = require('./random');
+const P = require('./profiles');
+const { WB_CODES, isoDate, epochDay } = require('./history');
+
+const MIN_MS = 60 * 1000;
+const DAY_MS = 24 * 60 * MIN_MS;
+
+const SCENARIOS = ['solar_event', 'crew_illness', 'co2_spike', 'wellbeing_decline'];
+const INTENSITIES = ['low', 'high'];
+
+// Valores por defecto de cada escenario (suposición de diseño).
+const DEFAULTS = Object.freeze({
+  crew_illness: { astronaut: 'LYRA' },
+  co2_spike: { module_id: 'HAB-1' },
+  wellbeing_decline: { astronaut: 'ATLAS' },
+});
+
+// Días seguidos de check-ins peores: la regla escala a behavioral_health desde 5
+// (adverse_sustained_days ≥ 5). Al 5.º día la línea base (14 días sin los últimos 3) ya
+// incluye los 2 primeros días malos y su desviación crece: por eso el empeoramiento es
+// progresivo (2 días moderados y 3 más marcados), así el z del 5.º día queda ≈ 2.8 (≥ 1.5).
+// Con más días la línea base se "contamina" y el z baja. Brechas: suposición de diseño.
+const DECLINE_DAYS = 5;
+const DECLINE_GAPS = { low: [35, 35, 50, 50, 50], high: [45, 45, 60, 60, 60] };
+
+function context({ name, now, params }) {
+  // Ancla = el minuto de `now`: las horas del escenario y sus client_uuid salen de ella.
+  const nowMs = Math.floor(new Date(now).getTime() / MIN_MS) * MIN_MS;
+  const anchor = new Date(nowMs).toISOString();
+  const parts = [name, params.astronaut || '-', params.module_id || '-', params.intensity, anchor];
+  return {
+    nowMs,
+    id: (...rest) => uuidFor('scenario', ...parts, ...rest),
+    rng: (...rest) => rngFor('scenario', ...parts, ...rest),
+    iso: (ms) => new Date(Math.min(ms, nowMs)).toISOString(),
+  };
+}
+
+const reading = (ctx, callSign, code, values, inputMethod, ms, extra = {}) => ({
+  type: 'reading',
+  call_sign: callSign,
+  client_uuid: ctx.id(callSign, code, ms),
+  indicator_code: code,
+  values,
+  input_method: inputMethod,
+  device_id: extra.device_id || 'sim-wearable',
+  measured_at: ctx.iso(ms),
+});
+
+/**
+ * solar_event: evento de partículas solares. El dosímetro de cada tripulante marca
+ * event_active y 3 lecturas (inicio, subida y pico, cada 45 min). La suma del evento
+ * (event_dose_msv) llega a ~140 mSv en low (≥ 125: precaución a flight_surgeon) y a ~285 mSv
+ * en high (≥ 250: crítico). Desde la primera lectura, el doble de la mediana diaria da
+ * precaución a crew. Con `astronaut`, ese tripulante reporta náusea en el pico: crítico por
+ * síntomas (orau_ars, ntrs_ars_spe).
+ */
+function solarEvent(ctx, { crew, astronaut, intensity }) {
+  const profile = intensity === 'high' ? [15, 100, 170] : [8, 50, 85];
+  const items = [];
+  for (const { call_sign: callSign } of crew) {
+    const factor = ctx.rng(callSign, 'factor').uniform(0.92, 1.08); // blindaje de cada puesto
+    profile.forEach((dose, i) => {
+      const ms = ctx.nowMs - (profile.length - 1 - i) * 45 * MIN_MS;
+      const symptoms = astronaut === callSign && i === profile.length - 1 ? ['nausea'] : [];
+      items.push(
+        reading(
+          ctx,
+          callSign,
+          'RAD_DOSE_DAILY',
+          { value: round(dose * factor, 2), event_active: true, symptoms },
+          'sensor',
+          ms,
+          { device_id: `sim-dosimeter-${callSign.toLowerCase()}` },
+        ),
+      );
+    });
+  }
+  return {
+    items,
+    notes: [
+      'La suma del evento sigue mientras las lecturas tengan event_active: si lo disparas otra vez, la dosis del evento se acumula.',
+    ],
+  };
+}
+
+/**
+ * crew_illness: un tripulante con fiebre (≥ 38.0 °C: precaución a crew; ≥ 39.4 en high:
+ * crítico), tos y sensación de fiebre (SYMPTOM: crew) y FC en reposo elevada (≥ 111: crew).
+ * Con `contagion`, el primer caso empezó ayer (hace 24 h, con su control de hoy) y un segundo
+ * tripulante enferma hoy.
+ */
+function crewIllness(ctx, { crew, astronaut, intensity, contagion }) {
+  const high = intensity === 'high';
+  const items = [];
+  const sick = (callSign, ms, severity) => {
+    const p = P.profileFor(callSign);
+    const temp = severity === 'high' ? 39.6 : severity === 'low' ? 38.4 : 38.1;
+    const hr = severity === 'high' ? 124 : severity === 'low' ? 112 : 106;
+    const symptoms =
+      severity === 'mild' ? ['cough', 'sore_throat'] : ['fever_feeling', 'cough', 'fatigue'];
+    items.push(
+      reading(ctx, callSign, 'BODY_TEMP', { value: temp }, 'manual', ms),
+      reading(
+        ctx,
+        callSign,
+        'HEART_RATE',
+        { value: hr, at_rest: true, symptoms: [] },
+        'wearable',
+        ms + MIN_MS,
+      ),
+      reading(
+        ctx,
+        callSign,
+        'SYMPTOM',
+        { symptoms, severity: severity === 'high' ? 3 : 2 },
+        'clicks',
+        ms + 2 * MIN_MS,
+      ),
+      reading(
+        ctx,
+        callSign,
+        'RESP_RATE',
+        { value: severity === 'high' ? 22 : p.rr + 3 },
+        'wearable',
+        ms + 3 * MIN_MS,
+      ),
+    );
+  };
+  const severity = high ? 'high' : 'low';
+  if (contagion) {
+    const second = crew.find((m) => m.call_sign !== astronaut);
+    sick(astronaut, ctx.nowMs - DAY_MS - 10 * MIN_MS, severity); // ayer
+    sick(astronaut, ctx.nowMs - 10 * MIN_MS, severity); // control de hoy
+    if (second) sick(second.call_sign, ctx.nowMs - 4 * MIN_MS, 'mild'); // contagio: hoy
+  } else {
+    sick(astronaut, ctx.nowMs - 4 * MIN_MS, severity);
+  }
+  return { items, notes: [] };
+}
+
+/**
+ * co2_spike: falla de la remoción de CO₂ en un módulo. Lecturas cada 10 min durante 50 min:
+ * pasa de 3 mmHg y luego de 4.5 (precaución a crew, ochmo_co2). En high sigue hasta ~10.8
+ * mmHg (≥ 10: crítico a flight_surgeon, ntrs_co2_smac).
+ */
+function co2Spike(ctx, { module_id: moduleId, intensity }) {
+  const curve =
+    intensity === 'high' ? [2.6, 3.5, 5.0, 6.8, 8.9, 10.8] : [2.4, 2.9, 3.4, 4.1, 4.8, 5.2];
+  const rng = ctx.rng(moduleId, 'noise');
+  const items = curve.map((value, i) => {
+    const ms = ctx.nowMs - (curve.length - 1 - i) * 10 * MIN_MS;
+    return {
+      type: 'habitat',
+      client_uuid: ctx.id(moduleId, 'HAB_CO2', ms),
+      indicator_code: 'HAB_CO2',
+      module_id: moduleId,
+      value: round(value + rng.uniform(-0.05, 0.05), 2),
+      source: 'simulator',
+      measured_at: ctx.iso(ms),
+    };
+  });
+  return { items, notes: [] };
+}
+
+/**
+ * wellbeing_decline: un tripulante con los deslizadores claramente peores que su línea base
+ * durante los últimos 5 días: ánimo más bajo y fatiga, estrés y conflicto más altos, 35 puntos
+ * los 2 primeros días y 50 los 3 siguientes (45 y 60 en high).
+ * Al 5.º check-in peor, adverse_sustained_days llega a 5: escalamiento CONFIDENCIAL a
+ * behavioral_health (nunca a la tripulación ni a admin). En high, además, PHQ-2 = 4 y
+ * GAD-2 = 3 (≥ 3: behavioral_health). El servicio corrige el check-in de cada día si existe
+ * (supersedes_uuid) o crea uno nuevo.
+ */
+function wellbeingDecline(ctx, { astronaut, intensity }) {
+  const p = P.profileFor(astronaut);
+  const gaps = DECLINE_GAPS[intensity] || DECLINE_GAPS.low;
+  const today = epochDay(ctx.nowMs);
+  const items = [];
+  for (let k = DECLINE_DAYS - 1; k >= 0; k -= 1) {
+    const day = today - k;
+    const gap = gaps[DECLINE_DAYS - 1 - k];
+    const rng = ctx.rng(astronaut, 'WB', day);
+    const worse = (code) => {
+      const sign = code === 'WB_MOOD' ? -1 : 1; // ánimo: más bajo es peor
+      return Math.max(0, Math.min(100, Math.round(p.wb[code] + sign * gap + rng.uniform(-3, 3))));
+    };
+    items.push({
+      type: 'wellbeing_day',
+      call_sign: astronaut,
+      date: isoDate(day),
+      measured_at: ctx.iso(day * DAY_MS + 7 * 60 * MIN_MS),
+      checkin_uuid: ctx.id(astronaut, 'checkin', day),
+      sliders: Object.fromEntries(
+        WB_CODES.map((code) => [
+          code,
+          { value: worse(code), client_uuid: ctx.id(astronaut, code, day) },
+        ]),
+      ),
+    });
+  }
+  if (intensity === 'high') {
+    for (const [instrument, code, answers] of [
+      ['PHQ2', 'PHQ2_SCORE', { item_1: 2, item_2: 2 }],
+      ['GAD2', 'GAD2_SCORE', { item_1: 2, item_2: 1 }],
+    ]) {
+      items.push({
+        type: 'instrument',
+        call_sign: astronaut,
+        client_uuid: ctx.id(astronaut, instrument),
+        reading_uuid: ctx.id(astronaut, code),
+        instrument,
+        indicator_code: code,
+        answers,
+        measured_at: ctx.iso(ctx.nowMs - MIN_MS),
+      });
+    }
+  }
+  return {
+    items,
+    notes: [
+      'Necesita la historia (14 días) para que exista la línea base del bienestar.',
+      'Los resultados son confidenciales: solo los ve behavioral_health.',
+    ],
+  };
+}
+
+const BUILDERS = {
+  solar_event: solarEvent,
+  crew_illness: crewIllness,
+  co2_spike: co2Spike,
+  wellbeing_decline: wellbeingDecline,
+};
+
+/**
+ * Arma el escenario. params ya validados (el servicio revisa que el astronauta sea de la
+ * tripulación vigente y el módulo exista). Aplica los valores por defecto.
+ */
+function buildScenario(name, { now = new Date(), crew, ...input }) {
+  if (!BUILDERS[name]) throw new Error(`Escenario desconocido: ${name}`);
+  const params = {
+    intensity: input.intensity || 'low',
+    ...(DEFAULTS[name] || {}),
+    ...Object.fromEntries(
+      Object.entries({
+        astronaut: input.astronaut,
+        module_id: input.module_id,
+        contagion: input.contagion,
+      }).filter(([, v]) => v !== undefined && v !== null),
+    ),
+  };
+  if (name !== 'crew_illness') delete params.contagion;
+  if (name === 'crew_illness') params.contagion = Boolean(params.contagion);
+  if (name !== 'co2_spike') delete params.module_id;
+  const ctx = context({ name, now, params });
+  const { items, notes } = BUILDERS[name](ctx, { crew, ...params });
+  return {
+    name,
+    params,
+    items: items.sort((a, b) => a.measured_at.localeCompare(b.measured_at)),
+    notes,
+  };
+}
+
+module.exports = { buildScenario, SCENARIOS, INTENSITIES, DEFAULTS, DECLINE_DAYS };
