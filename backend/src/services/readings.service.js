@@ -6,7 +6,7 @@
  * Todo pasa por accessPolicy; las lecturas que se muestran salen de v_readings_standard.
  */
 const { HttpError, badRequest, conflict } = require('../utils/httpError');
-const { isUuid } = require('../utils/validate');
+const { isUuid, validate } = require('../utils/validate');
 const { LEVEL_ORDER } = require('../engine/conditions');
 const { withTransaction } = require('../models/transaction');
 const readings = require('../models/readings.model');
@@ -44,6 +44,37 @@ const toCreated = (row) => ({
 });
 
 // ---------------------------------------------------------------- registro + evaluación
+
+const INPUT_METHODS = [
+  'manual',
+  'camera',
+  'wearable',
+  'sensor',
+  'slider',
+  'questionnaire',
+  'minigame',
+  'clicks',
+];
+
+/**
+ * Forma del body de POST /readings (también el payload `reading` de /sync/push). La
+ * validación contra el catálogo la hace createReading. `prefix` antepone el nombre del campo
+ * en los errores (p. ej. 'payload.').
+ */
+function validateReadingBody(body, { prefix = '' } = {}) {
+  const v = validate(body)
+    .uuid('client_uuid')
+    .uuid('supersedes_uuid', { required: false })
+    .string('indicator_code', { max: 40 })
+    .string('measured_at', { max: 40 })
+    .oneOf('input_method', INPUT_METHODS)
+    .string('device_id', { required: false, max: 100 })
+    .uuid('attachment_id', { required: false })
+    .string('note', { required: false, max: 500 });
+  if (v.get('values') === undefined) v.add('values', 'es obligatorio');
+  if (prefix) v.problems = v.problems.map((p) => ({ ...p, field: `${prefix}${p.field}` }));
+  return v.check();
+}
 
 async function astronautActor(userId) {
   const actor = await loadActor(userId);
@@ -318,4 +349,4 @@ async function bodyStatus({ userId, moduleId }) {
   return out;
 }
 
-module.exports = { createReading, listMyReadings, bodyStatus };
+module.exports = { validateReadingBody, createReading, listMyReadings, bodyStatus };

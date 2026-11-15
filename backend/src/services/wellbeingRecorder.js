@@ -103,8 +103,9 @@ async function recordGroup(actor, { insertGroup, entries, afterReadings }) {
 }
 
 /**
- * Check-in diario: { client_uuid, measured_at, sleep_hours?, sleep_uuid?, sliders } con
- * sliders = { WB_MOOD: { value, client_uuid }, ... }. SLEEP_HOURS (estándar) va en el grupo.
+ * Check-in diario: { client_uuid, measured_at, sleep_hours?, sleep_uuid?, sleep_input_method?,
+ * private_note?, sliders } con sliders = { WB_MOOD: { value, client_uuid }, ... }.
+ * SLEEP_HOURS (estándar) va en el grupo (input_method wearable por defecto).
  */
 async function recordCheckin({ userId, checkin }) {
   const actor = await astronautActor(userId);
@@ -122,7 +123,7 @@ async function recordCheckin({ userId, checkin }) {
       code: 'SLEEP_HOURS',
       clientUuid: checkin.sleep_uuid,
       components: { value: checkin.sleep_hours },
-      inputMethod: 'wearable',
+      inputMethod: checkin.sleep_input_method || 'wearable',
       measuredAt: checkin.measured_at,
       groupColumn: 'wellbeingCheckinId',
     });
@@ -136,6 +137,7 @@ async function recordCheckin({ userId, checkin }) {
           astronautId: actor.astronaut_id,
           measuredAt: checkin.measured_at,
           sleepHours: checkin.sleep_hours,
+          privateNote: checkin.private_note,
         },
         db,
       ),

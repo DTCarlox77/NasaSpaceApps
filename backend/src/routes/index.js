@@ -11,6 +11,7 @@ const readingsRoutes = require('./readings.routes');
 const habitatRoutes = require('./habitat.routes');
 const groundRoutes = require('./ground.routes');
 const missionsRoutes = require('./missions.routes');
+const syncRoutes = require('./sync.routes');
 const adminMissionRoutes = require('./admin.mission.routes');
 const adminSimulatorRoutes = require('./admin.simulator.routes');
 const { restrictServiceAccounts } = require('../middlewares/auth');
@@ -31,6 +32,7 @@ router.use(readingsRoutes);
 router.use(habitatRoutes);
 router.use(groundRoutes);
 router.use(missionsRoutes);
+router.use('/sync', syncRoutes);
 // Antes de /admin: su router exige admin a todo /admin/* y el simulador apagado debe dar 404.
 router.use('/admin/simulator', adminSimulatorRoutes);
 router.use('/admin', adminMissionRoutes);

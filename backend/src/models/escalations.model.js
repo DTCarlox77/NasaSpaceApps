@@ -130,7 +130,8 @@ async function inboxPage({ missionId, categories, sourceTypes, status, after, li
             re.level AS ev_level, re.rule_index AS ev_rule_index,
             re.rules_version AS ev_rules_version, re.recommendation AS ev_recommendation,
             re.escalation AS ev_escalation, re.basis AS ev_basis, re.source_ids AS ev_source_ids,
-            r.indicator_code AS ev_code,
+            r.indicator_code AS ev_code, r.measured_at AS r_measured_at,
+            r.received_at AS r_received_at,
             ea.triage_category, ea.radiation_flag
      FROM v_ground_inbox i
      LEFT JOIN v_readings_standard r ON i.source_type = 'reading' AND r.id = i.source_id

@@ -9,6 +9,7 @@
  *   (si no, 404: el panel todavía no sabe que existe). La respuesta viaja con deliver_at.
  * - GET /escalations/{id}/messages: lado astronauta; lo de Tierra solo si ya llegó.
  */
+const env = require('../config/env');
 const { badRequest, notFound, conflict, forbidden } = require('../utils/httpError');
 const { isUuid, uuidParam, validate } = require('../utils/validate');
 const {
@@ -94,6 +95,17 @@ function toInboxItem(row) {
     acknowledged_at: row.acknowledged_at,
     acknowledged_by: row.acknowledged_by,
   };
+  if (row.r_measured_at) {
+    // Para "registrado hace X h": una lectura que llegó tarde (p. ej. por /sync/push) escala
+    // desde la recepción, pero el panel ve cuándo se midió.
+    const lag = Math.max(
+      0,
+      Math.round((new Date(row.r_received_at) - new Date(row.r_measured_at)) / 1000),
+    );
+    item.measured_at = row.r_measured_at;
+    item.late_sync = lag > env.sync.lateAfterS;
+    item.lag_s = lag;
+  }
   if (row.ev_level) {
     item.evaluation = { code: row.ev_code, level: row.ev_level, rule_index: row.ev_rule_index };
     if (row.ev_rules_version != null) item.evaluation.rules_version = row.ev_rules_version;

@@ -25,11 +25,14 @@ async function insertGroup(table, columns, values, db) {
   return { id: existing.rows[0].id, created: false };
 }
 
-const insertCheckin = ({ clientUuid, astronautId, measuredAt, sleepHours }, db = pool) =>
+const insertCheckin = (
+  { clientUuid, astronautId, measuredAt, sleepHours, privateNote },
+  db = pool,
+) =>
   insertGroup(
     'wellbeing_checkins',
-    ['measured_at', 'sleep_hours'],
-    [clientUuid, astronautId, measuredAt, sleepHours ?? null],
+    ['measured_at', 'sleep_hours', 'private_note'],
+    [clientUuid, astronautId, measuredAt, sleepHours ?? null, privateNote ?? null],
     db,
   );
 
@@ -56,6 +59,11 @@ const insertPvtRun = (
 
 async function setPvtFitness(id, fitness, db = pool) {
   await db.query('UPDATE pvt_runs SET fitness = $2 WHERE id = $1', [id, fitness]);
+}
+
+async function pvtFitness(id, db = pool) {
+  const { rows } = await db.query('SELECT fitness FROM pvt_runs WHERE id = $1', [id]);
+  return rows[0] ? rows[0].fitness : null;
 }
 
 const insertAdministration = (
@@ -100,6 +108,7 @@ module.exports = {
   insertCheckin,
   insertPvtRun,
   setPvtFitness,
+  pvtFitness,
   insertAdministration,
   activeInstrument,
   currentSliderReadings,
