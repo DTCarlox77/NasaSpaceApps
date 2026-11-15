@@ -41,12 +41,17 @@ async function findSupersedeTarget(recordedBy, clientUuid, db = pool) {
   return rows[0] || null;
 }
 
+/**
+ * Inserta una lectura. Las de bienestar van agrupadas (como máximo un grupo):
+ * wellbeingCheckinId, pvtRunId o instrumentAdministrationId.
+ */
 async function insert(row, db = pool) {
   const { rows } = await db.query(
     `INSERT INTO readings (client_uuid, recorded_by, mission_id, astronaut_id, module_id,
                            indicator_code, components, source, device_id, attachment_id, note,
-                           supersedes_uuid, measured_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                           supersedes_uuid, measured_at, wellbeing_checkin_id, pvt_run_id,
+                           instrument_administration_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
      RETURNING id`,
     [
       row.clientUuid,
@@ -62,6 +67,9 @@ async function insert(row, db = pool) {
       row.note || null,
       row.supersedesUuid || null,
       row.measuredAt,
+      row.wellbeingCheckinId || null,
+      row.pvtRunId || null,
+      row.instrumentAdministrationId || null,
     ],
   );
   const { rows: full } = await db.query(
