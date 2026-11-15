@@ -174,7 +174,7 @@ test('push: un item malo no tumba el lote (resultado por item)', async (t) => {
     { client_uuid: randomUUID(), entity: 'triage_x', created_at: iso(ago(5)), payload: {} },
     {
       client_uuid: randomUUID(),
-      entity: 'support_request', // del contrato, todavía sin servicio (tarea 10)
+      entity: 'support_request', // con servicio desde la tarea 10: payload vacío → 400
       created_at: iso(ago(5)),
       payload: {},
     },
@@ -189,7 +189,7 @@ test('push: un item malo no tumba el lote (resultado por item)', async (t) => {
     ['rejected', 'VALIDATION_ERROR'],
     ['rejected', 'VALIDATION_ERROR'],
     ['rejected', 'UNKNOWN_ENTITY'],
-    ['rejected', 'ENTITY_NOT_SUPPORTED'],
+    ['rejected', 'VALIDATION_ERROR'],
     ['rejected', 'VALIDATION_ERROR'],
     ['accepted', null],
   ]);
