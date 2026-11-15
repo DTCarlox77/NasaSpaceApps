@@ -260,21 +260,62 @@ lee el texto del protocolo): una traducción nunca cambia el significado.
 | Responder por voz | Android: con un toque en "Responder por voz" se abre el reconocedor del sistema (`dictateWithSystem`); sin red funciona solo si el teléfono tiene el paquete de idioma offline. iOS: solo botones | Sí, también sin red con el modelo del idioma instalado (Android 13+: Laboratorio de voz → descargar modelo; iOS: dictado en el dispositivo) |
 | Permiso de micrófono | `expo-audio` | `expo-speech-recognition` |
 
-**Development build (Android, desde Windows), lo más rápido:**
-- En la nube (EAS, no necesita Android Studio):
-  ```bash
-  npx expo install expo-dev-client
-  npx eas-cli@latest login
-  npx eas-cli@latest build --platform android --profile development
-  ```
-  Instala el APK con el QR/enlace que da EAS y luego `npx expo start` (abre el development build, no Expo Go).
-  Para un APK independiente sin Metro (demo), un perfil con `"distribution": "internal"` y
-  `npx eas-cli@latest build --platform android --profile preview`.
-- Local (con Android Studio y el SDK instalados; el plugin fija el NDK `28.2.13676358`):
-  `npx expo install expo-dev-client` y `npx expo run:android --device` con el teléfono por USB (depuración USB).
-  No se versiona `android/` (CNG).
-- `expo-dev-client` todavía **no** está en `package.json` (no se agregó en este cambio): sin él, arranca con
-  `npx expo start --dev-client`.
+### Development build (APK de Android)
+
+`expo-dev-client` ya está en `package.json` y `eas.json` trae dos perfiles, ambos con distribución interna y APK:
+
+| Perfil | Qué es | JS |
+|---|---|---|
+| `development` | Development build (`developmentClient: true`): la app con los módulos nativos (`expo-speech-recognition`) y el lanzador del dev client. | Lo sirve Metro desde tu PC (`npx expo start`), con tu `.env` local. |
+| `preview` | APK instalable sin dev client ni PC: para probar o presentar en un teléfono. | Va dentro del APK (se fija al compilar). |
+
+**Con EAS (en la nube, desde Windows; no necesita Android Studio).** La cuenta de Expo la decide el equipo: el
+repo NO trae `projectId` ni `owner` en `app.json`. La primera vez, quien tenga la cuenta enlaza el proyecto
+(`eas init` / el propio `eas build` lo ofrece) y versiona ese cambio de `app.json`.
+```bash
+npx eas-cli@latest login
+```
+```bash
+npx eas-cli@latest build --platform android --profile development
+```
+Instala el APK con el QR o el enlace que da EAS y, en la PC (misma red que el teléfono):
+```bash
+npx expo start
+```
+Con `expo-dev-client` instalado, `npx expo start` abre el development build; para seguir usando Expo Go:
+`npx expo start --go`.
+
+APK independiente (sin Metro):
+```bash
+npx eas-cli@latest build --platform android --profile preview
+```
+- El `.env` está en `.gitignore`, así que **EAS no lo sube**: sin variables, el APK `preview` queda en **modo
+  demo**. Para que hable con la API, define `EXPO_PUBLIC_API_URL` (y `EXPO_PUBLIC_REQUIRE_AUTH=true`) en el perfil
+  (`"env": { … }` en `eas.json`) o como variable de entorno del proyecto en EAS (expo.dev o `eas env`) antes de compilar. Son
+  valores públicos (quedan dentro del APK): nunca secretos.
+- `eas build --local` no está soportado en Windows (solo macOS/Linux o WSL sin soporte oficial): desde Windows,
+  compila en la nube o con `expo run:android`.
+
+**Local, sin EAS (Android Studio + SDK de Android instalados; el plugin `withNdkVersion` fija el NDK
+`28.2.13676358`):** con el teléfono por USB y la depuración USB activada,
+```bash
+npx expo run:android --device
+```
+Genera `android/` (CNG: está en `.gitignore`, no se versiona ni se edita a mano), compila, instala el development
+build y arranca Metro. Vuelve a correrlo solo al agregar una librería nativa o cambiar `app.json`; para cambios de
+JS basta `npx expo start`. Para un APK de release local: `npx expo run:android --variant release`.
+
+**Qué cambia en la voz con el development build:**
+- Después de leer cada pregunta, la app **escucha sola** unos segundos (no hace falta tocar nada): se pasa de
+  "toca para dictar" (Expo Go Android) o "solo botones" (Expo Go iOS) a manos libres.
+- El reconocimiento corre **en el dispositivo** cuando `getOfflineSupport` dice que hay modelo del idioma
+  (`requiresOnDeviceRecognition`): funciona sin internet. En Android 13+ el modelo se descarga desde el
+  Laboratorio de voz; si falta, la tarjeta de voz lo avisa.
+- Usa `contextualStrings` con las opciones de la pregunta y comandos ("sí", "no", "repetir", "botones", "atrás") y
+  devuelve varias alternativas: entiende mejor el vocabulario cerrado.
+- El permiso de micrófono lo pide `expo-speech-recognition` (en Expo Go lo pedía `expo-audio`).
+- No cambia: la lectura en voz alta, la confirmación "Entendí: X. ¿Correcto?", el paso a botones tras 2 fallos y
+  los botones siempre visibles. Si el modelo offline no está y no hay red, la voz falla y se responde con botones.
 
 ## 13. Evaluación sin conexión de las lecturas
 
