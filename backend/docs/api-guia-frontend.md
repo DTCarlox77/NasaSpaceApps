@@ -92,7 +92,7 @@ Cada operación del YAML trae `x-roles` (quién puede llamarla), `x-crew-role` (
 | Rol | App / panel | Ve |
 |---|---|---|
 | `astronaut` | App móvil | Lo suyo: lecturas, figura, bienestar propio, emergencia. El comandante tiene además acciones delegadas (`/crew/...`). |
-| `flight_surgeon` | Panel | Semáforo físico de la tripulación, bandeja (`/admin/inbox`), emergencias y alertas de bienestar escaladas (solo estado). |
+| `flight_surgeon` | Panel | Semáforo físico de la tripulación, bandeja (`/admin/inbox`), emergencias, alertas de bienestar escaladas (solo estado) y aptitud `fit` / `not_confirmed`. |
 | `behavioral_health` | Panel | Detalle confidencial de bienestar (`/admin/behavioral/...`). Cada acceso queda auditado. |
 | `admin` | Panel | Cuentas, dispositivos, misiones y entornos; de bienestar, solo cumplimiento y aptitud `fit` / `not_confirmed`. |
 | Tableta sin sesión | App móvil | Solo emergencia, con `X-Device-Credential`. |
@@ -144,7 +144,7 @@ Comportamientos reales que el mock no muestra:
 - **Retraso con Tierra (ARES-1 = 90 s)**: una alerta a `flight_surgeon` aparece en `GET /admin/inbox` 90 s después de la lectura; antes, el acuse y la respuesta responden 404. La respuesta del flight surgeon llega a la app otros 90 s después (`deliver_at`). Lo crítico físico avisa a bordo al instante.
 - **Cortes de enlace**: con un corte abierto (`POST /admin/comm-outages` sin `ends_at`), lo nuevo queda con `deliver_at: null` ("pendiente de envío"). Al cerrarlo (`PATCH ... { ends_at }`) se recalcula: sale al volver el enlace + 90 s.
 - **Bandeja**: orden por prioridad (`emergency` > `urgent` > `routine`) y luego lo que espera desde hace más tiempo. Filtros `category` (`reading|emergency|wellbeing|manual`) y `status` (`delivered|acknowledged|responded`). El acuse es idempotente; responder marca `responded`.
-- **Dashboard**: solo indicadores físicos con lecturas, serie de hasta 10 puntos y `trend` (`rising|falling|stable|insufficient_data`). `compliance` y `fitness` vienen **`null` para el flight surgeon** (la matriz de permisos solo se los muestra a admin); pinta "sin acceso", no "0".
+- **Dashboard**: solo indicadores físicos con lecturas, serie de hasta 10 puntos y `trend` (`rising|falling|stable|insufficient_data`). `fitness` (`fit` / `not_confirmed`) lo ven el flight surgeon y admin; `compliance` viene **`null` para el flight surgeon** (solo admin): pinta "sin acceso", no "0".
 - **Hilo a bordo**: `GET /escalations/{id}/messages` con el `escalation_id` que devolvió `POST /readings`. Lo ve el astronauta dueño (y el CMO si es físico).
 
 ### API desplegada (Render)

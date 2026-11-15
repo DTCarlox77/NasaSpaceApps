@@ -4,7 +4,7 @@
  * Dashboard de tripulación (GET /admin/dashboard/crew): semáforo FÍSICO por astronauta e
  * indicador, con último valor, serie y tendencia. Sin estado conductual: las lecturas salen
  * de v_readings_standard. `compliance` y `fitness` solo si accessPolicy lo permite
- * (views compliance y fitness: hoy, admin); si no, null.
+ * (fitness: flight_surgeon y admin; compliance: solo admin); si no, null.
  */
 const { LEVEL_ORDER } = require('../engine/conditions');
 const dashboard = require('../models/dashboard.model');

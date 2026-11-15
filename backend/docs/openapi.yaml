@@ -49,7 +49,7 @@ info:
     |---|---|
     | `astronaut` | Solo lo suyo. Recibe mensajes neutros: nunca un color ni un puntaje. |
     | `behavioral_health` | Detalle: valores, tendencias, cuestionarios y solicitudes de apoyo. Cada acceso queda auditado. |
-    | `flight_surgeon` | Estado y alertas escaladas a `flight_surgeon`, sin respuestas individuales. |
+    | `flight_surgeon` | Estado y alertas escaladas a `flight_surgeon`, y aptitud `fit` / `not_confirmed`; sin respuestas individuales ni cumplimiento. |
     | `admin` | Solo cumplimiento (check-ins completados) y aptitud: `fit` / `not_confirmed`. |
     | Tripulación | Nada. |
 
@@ -5203,7 +5203,7 @@ paths:
         Por astronauta de la tripulación vigente e indicador físico con lecturas: nivel, último
         valor, serie (hasta 10 puntos; valor principal = `value` o la sistólica) y tendencia
         (último valor frente a la media de los anteriores, ±5 %; menos de 2 puntos =
-        `insufficient_data`). Más cumplimiento y aptitud según la matriz de permisos.
+        `insufficient_data`). Más aptitud (`flight_surgeon` y `admin`) y cumplimiento (solo `admin`).
         **Sin estado conductual**: las lecturas salen de `v_readings_standard`.
         `behavioral_health` → 403.
       operationId: getCrewDashboard
@@ -8251,8 +8251,8 @@ components:
                 type: object
                 nullable: true
                 description: |
-                  Check-ins de bienestar hechos en 7 días (solo el conteo). `null` si la matriz de
-                  permisos no deja verlo a tu rol (hoy lo ve `admin`; el flight surgeon, no).
+                  Check-ins de bienestar hechos en 7 días (solo el conteo). Solo para `admin`;
+                  para el flight surgeon es `null`.
                 required: [checkins_completed_7d, checkins_expected_7d]
                 properties:
                   checkins_completed_7d: { type: integer, minimum: 0, maximum: 7 }
@@ -8265,7 +8265,10 @@ components:
                 type: string
                 enum: [fit, not_confirmed]
                 nullable: true
-                description: Aptitud de la PVT más reciente (sin PVT = `not_confirmed`). `null` si tu rol no puede verla.
+                description: |
+                  Aptitud de la PVT más reciente (sin PVT = `not_confirmed`); solo el estado,
+                  nunca las métricas de la PVT. La ven `flight_surgeon` y `admin`; `null` para un
+                  rol que no pueda verla.
     InboxItem:
       type: object
       required:

@@ -452,8 +452,11 @@ test('dashboard: semáforo físico con tendencia y sin datos confidenciales', as
   assert.ok(!JSON.stringify(res.body).includes('WB_'));
   for (const a of res.body.astronauts) {
     assert.equal(a.compliance, null, 'el flight surgeon no ve cumplimiento');
-    assert.equal(a.fitness, null, 'ni aptitud');
+    assert.ok(['fit', 'not_confirmed'].includes(a.fitness), 'sí ve la aptitud (solo el estado)');
   }
+  assert.equal(orion.fitness, 'fit');
+  assert.equal(res.body.astronauts.find((a) => a.call_sign === 'VEGA').fitness, 'not_confirmed');
+  assert.ok(!JSON.stringify(res.body).includes('PVT_'), 'sin métricas de la PVT');
 
   // admin: cumplimiento y aptitud (lo único de bienestar que la matriz le permite).
   const admin = await api('admin', 'get', `/admin/dashboard/crew?mission_id=${ARES1}`);

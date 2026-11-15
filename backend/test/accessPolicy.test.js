@@ -170,7 +170,7 @@ const MATRIX = {
   commander:         [1,  1,  0,  0,  0,  0,  0,  0,  0,  1,  1,  0,  0,  1,  1,  0,  0],
   cmo:               [1,  1,  1,  0,  0,  1,  0,  0,  0,  1,  1,  0,  0,  1,  1,  0,  0],
   behavioral_health: [0,  1,  0,  0,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0,  0,  0,  0],
-  flight_surgeon:    [1,  0,  1,  0,  0,  0,  1,  0,  0,  1,  0,  0,  0,  1,  0,  0,  0],
+  flight_surgeon:    [1,  0,  1,  0,  0,  0,  1,  0,  1,  1,  0,  0,  0,  1,  0,  0,  0],
   admin:             [1,  0,  1,  0,  0,  0,  0,  1,  1,  1,  0,  0,  0,  1,  0,  1,  0],
   service:           [0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0],
 };
@@ -227,6 +227,14 @@ test('flight surgeon: solo lectura de lo físico (responde por mensajes de escal
   }
   assert.equal(canAccess(fs, RESOURCES.other_physical), true);
   assert.equal(canAccess(fs, { ...RESOURCES.emergency_triage, action: 'read' }), true);
+});
+
+test('flight surgeon: aptitud sí, cumplimiento no, y solo en su misión', () => {
+  const fs = ACTORS.flight_surgeon;
+  assert.equal(canAccess(fs, RESOURCES.fitness), true, 'aptitud (fit | not_confirmed)');
+  assert.equal(canAccess(fs, RESOURCES.compliance), false, 'cumplimiento es de admin');
+  assert.equal(canAccess(fs, { ...RESOURCES.fitness, mission_id: M2 }), false, 'otra misión');
+  assert.equal(canAccess(fs, { ...RESOURCES.fitness, ...conf }), false, 'nunca confidencial');
 });
 
 test('behavioral_health de otra misión no ve nada', () => {

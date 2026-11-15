@@ -89,8 +89,9 @@ function canAccess(actor, resource) {
       // Solo LEE: no registra datos por el astronauta; responde con mensajes de escalamiento.
       if (!sameMission || confidential || action !== 'read') return false;
       if (category === 'physical' || category === 'emergency') return true;
-      // De bienestar, solo el estado de las alertas escaladas a él (nunca el detalle).
-      return category === 'behavioral' && view === 'escalated_alert';
+      // De bienestar, solo el estado de las alertas escaladas a él y la aptitud de la PVT
+      // (fit | not_confirmed): nunca el detalle ni el cumplimiento (eso es de admin).
+      return category === 'behavioral' && (view === 'escalated_alert' || view === 'fitness');
 
     case 'admin':
       // Solo lectura de lo estándar del panel; de bienestar, cumplimiento y aptitud.
