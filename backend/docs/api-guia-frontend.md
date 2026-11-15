@@ -1,6 +1,6 @@
 # Guía de la API para los frontends (app móvil y panel web)
 
-Contrato completo: [`docs/openapi.yaml`](openapi.yaml) (OpenAPI 3.0.3, v1.4). Si esta guía y el YAML difieren, manda el YAML. Los cambios desde v1 están en la [sección 8](#8-cambios-del-contrato-v11-a-v14).
+Contrato completo: [`docs/openapi.yaml`](openapi.yaml) (OpenAPI 3.0.3, v1.5). Si esta guía y el YAML difieren, manda el YAML. Los cambios desde v1 están en la [sección 8](#8-cambios-del-contrato-v11-a-v15).
 
 > Datos sintéticos. La app es apoyo a la decisión, no un diagnóstico médico.
 
@@ -118,10 +118,10 @@ Siempre `{ "error": { "code", "message", "details" } }`. Programa contra `code`,
 | HTTP | `code` | Uso |
 |---|---|---|
 | 400 | `VALIDATION_ERROR` (o uno específico, p. ej. `WEAK_PASSWORD`) | `details` lista los campos. |
-| 401 | `UNAUTHENTICATED`, `INVALID_CREDENTIALS`, `TOKEN_REUSE_DETECTED` | Refresh o volver al login. |
-| 403 | `FORBIDDEN`, `NO_ACTIVE_ASSIGNMENT`, `DEVICE_NOT_OWNED` | El rol no puede hacer esto (o el dispositivo del lote no es tuyo). |
+| 401 | `UNAUTHENTICATED`, `INVALID_CREDENTIALS`, `TOKEN_REUSE_DETECTED`, `INVALID_DEVICE_CREDENTIAL` | Refresh o volver al login. `INVALID_DEVICE_CREDENTIAL`: la tableta no está registrada, se revocó o es de otra misión (sección 12). |
+| 403 | `FORBIDDEN`, `NO_ACTIVE_ASSIGNMENT`, `DEVICE_NOT_OWNED`, `DEVICE_REVOKED` | El rol no puede hacer esto (o el dispositivo del lote o del PIN no es tuyo, o la tableta se revocó). |
 | 404 | `NOT_FOUND` | |
-| 409 | `CONFLICT`, `USERNAME_TAKEN`, `CREW_ROLE_TAKEN`, `ASSIGNMENT_OVERLAP`, `OUTAGE_OVERLAP`, `SESSION_ALREADY_ACTIVE` | `details` dice con qué choca. |
+| 409 | `CONFLICT`, `USERNAME_TAKEN`, `CREW_ROLE_TAKEN`, `ASSIGNMENT_OVERLAP`, `OUTAGE_OVERLAP`, `DEVICE_LABEL_TAKEN`, `DEADMAN_EXPIRED` | `details` dice con qué choca. |
 | 413 | `PAYLOAD_TOO_LARGE` | Foto de más de 5 MB o lote de sync con más de 500 items. |
 | 423 | `ACCOUNT_LOCKED` | `details.locked_until`. |
 | 428 | `PASSWORD_CHANGE_REQUIRED` | `details.password_change_token`. |
@@ -133,11 +133,11 @@ Cada operación del YAML trae `x-roles` (quién puede llamarla), `x-crew-role` (
 
 | Rol | App / panel | Ve |
 |---|---|---|
-| `astronaut` | App móvil | Lo suyo: lecturas, figura, bienestar propio, emergencia. El comandante tiene además acciones delegadas (`/crew/...`). |
+| `astronaut` | App móvil | Lo suyo: lecturas, figura, bienestar propio, emergencia. El comandante tiene además acciones delegadas de **acceso** (`/crew/...`: desbloquear, restablecer PIN, tableta de repuesto), que no le dan datos médicos ni de bienestar de nadie. |
 | `flight_surgeon` | Panel | Semáforo físico de la tripulación, bandeja (`/admin/inbox`), emergencias, la alerta de bienestar que el catálogo le escala (`PVT_LAPSES` crítico: solo "aptitud no confirmada", sin métricas) y aptitud `fit` / `not_confirmed`. Nunca los valores del check-in ni la nota. |
 | `behavioral_health` | Panel | Detalle confidencial de bienestar (`/admin/behavioral/...`): valores, tendencias, z, cuestionarios, PVT y solicitudes de apoyo (nunca la nota privada del check-in). Cada lectura queda auditada. |
 | `admin` | Panel | Cuentas, dispositivos, misiones y entornos; de bienestar, solo cumplimiento (`/admin/compliance`) y aptitud `fit` / `not_confirmed`. Nunca valores, tendencias ni solicitudes. |
-| Tableta sin sesión | App móvil | Solo emergencia, con `X-Device-Credential`. |
+| Tableta sin sesión | App móvil | Solo el triaje de su misión, con `X-Device-Credential` (sección 12). Nada más: ni `/me`, ni lecturas, ni bienestar, ni sync. |
 | `service` | Sensores y simulador | Solo `POST /api/v1/habitat/readings`. Cualquier otra ruta responde 403. |
 
 La tripulación no ve nada del bienestar de los demás: ni el comandante ni el oficial médico (CMO), tampoco las solicitudes de apoyo.
@@ -152,7 +152,7 @@ La tripulación no ve nada del bienestar de los demás: ni el comandante ni el o
 - `PUT /admin/indicators/{code}/rules`
 - `POST /admin/simulator/history`, `POST /admin/simulator/scenarios/{name}` (solo demo)
 
-## 8. Cambios del contrato (v1.1 a v1.4)
+## 8. Cambios del contrato (v1.1 a v1.5)
 
 - **Rol `service`**: cuenta de servicio de los sensores y del simulador del hábitat. Solo puede llamar `POST /api/v1/habitat/readings` (`x-roles: [astronaut, service]`); cualquier otra ruta le responde 403. El simulador ya no usa una cuenta `admin`.
 - **`trigger_type: crew_event`**: nueva forma de activar el modo emergencia (un tripulante avisa, p. ej. por voz), además de `manual_button`, `missed_checkin`, `critical_reading` y `environment_alarm`. Si la app muestra el motivo de la emergencia, agrega este valor.
@@ -191,7 +191,15 @@ La tripulación no ve nada del bienestar de los demás: ni el comandante ni el o
 - `PVT_LAPSES` crítico: el flight surgeon recibe en su bandeja (`category: wellbeing`) solo "aptitud no confirmada".
 - Sync: `support_request` ya tiene servicio.
 
-## 9. Qué ya es real (tareas 1–10) y cómo pasar del mock a la API
+### v1.5 (tarea 11, acceso)
+
+- **Acceso real** (sección 12): tabletas (`GET`/`POST /admin/devices`, `/revoke`), acciones del comandante (`/crew/...`), `PUT /me/offline-pin`, `GET /admin/audit/delegated-actions` y `GET /missions/current`.
+- `X-Device-Credential` ya funciona en el triaje; se suma a "estoy bien" (con `astronaut_id`) y a preguntas a Tierra. Errores: 401 `INVALID_DEVICE_CREDENTIAL`, 429 `RATE_LIMITED`.
+- `Device` agrega `status`; nuevo `GET /admin/devices`; 409 `DEVICE_LABEL_TAKEN`.
+- `OfflinePinResponse` agrega `offline_verifier`; el PIN se define en el dispositivo de la sesión (403 `DEVICE_NOT_OWNED`).
+- Puede romper algo: `audit.reported_to_earth` ahora es `false` mientras la acción espera enlace (antes siempre `true` en los ejemplos).
+
+## 9. Qué ya es real (tareas 1–11) y cómo pasar del mock a la API
 
 En el YAML, las operaciones que **todavía** son solo mock llevan `x-status-impl: pending`. Las que no la llevan ya responden en la API local:
 
@@ -211,6 +219,7 @@ En el YAML, las operaciones que **todavía** son solo mock llevan `x-status-impl
 | Misión (admin) | `GET`/`POST /admin/missions`, `PATCH /admin/missions/{id}`, `GET`/`POST /admin/environments`, `PATCH /admin/environments/{code}`, `GET`/`POST /admin/assignments`, `PATCH /admin/assignments/{id}`, `GET`/`POST /admin/comm-outages`, `PATCH /admin/comm-outages/{id}` |
 | Simulador (admin, solo demo) | `POST /admin/simulator/history`, `POST /admin/simulator/scenarios/{name}` |
 | Bienestar (tarea 10) | `POST /wellbeing/checkins`, `GET /wellbeing/instruments`, `POST /wellbeing/screenings`, `POST /wellbeing/pvt-runs`, `POST /wellbeing/support-requests`, `GET /wellbeing/support-requests/{id}/messages`, `GET /me/wellbeing` |
+| Acceso (tarea 11) | `GET`/`POST /admin/devices`, `POST /admin/devices/{id}/revoke`, `POST /crew/users/{id}/unlock`, `POST /crew/users/{id}/reset-pin`, `POST /crew/devices`, `PUT /me/offline-pin`, `GET /admin/audit/delegated-actions`, `GET /missions/current`; `X-Device-Credential` en el triaje |
 | Salud conductual y cumplimiento (tarea 10) | `GET /admin/behavioral/inbox`, `GET /admin/behavioral/astronauts/{id}`, `POST /admin/behavioral/support-requests/{id}/messages`, `/ack`, `/close`, `POST /admin/behavioral/escalations/{id}/ack`, `/close`, `GET /admin/compliance` |
 
 Para pasar del mock a la API local:
@@ -323,7 +332,8 @@ Sin depender de Tierra, la tripulación abre una emergencia, evalúa a cada trip
 ### App: mientras Tierra no responde
 
 - Tierra tarda (ARES-1: 90 s de ida y otros 90 de vuelta) y durante un corte no recibe nada. Muestra el estado de cada aviso: `deliver_at` futuro = "en camino a Tierra (llega a las hh:mm)"; `null` = "pendiente de envío: sin enlace" (`mission.link.status: "outage"` en el pull).
-- Sigue el protocolo y el orden de atención sin esperar a Tierra. Lo que no cubre el protocolo → `POST /emergency/sessions/{id}/questions`. La respuesta llega a **toda la tripulación** por `GET /sync/pull` (`messages`, `channel: "escalation"`) cuando su `deliver_at` ya pasó.
+- Sigue el protocolo y el orden de atención sin esperar a Tierra.
+- Sin nadie con sesión, la tableta registrada abre y opera el triaje con `X-Device-Credential` (sección 12). Lo que no cubre el protocolo → `POST /emergency/sessions/{id}/questions`. La respuesta llega a **toda la tripulación** por `GET /sync/pull` (`messages`, `channel: "escalation"`) cuando su `deliver_at` ya pasó.
 
 ### Panel (flight surgeon y admin)
 
@@ -502,3 +512,127 @@ Call Post "/admin/behavioral/support-requests/$sr/ack" $bh
 ```
 
 Para la demo sin esperar a nadie: `POST /admin/simulator/scenarios/wellbeing_decline` como `mission.control` (necesita la historia) y, 90 s después, la bandeja de `bh.salas` muestra las alertas de ATLAS y su solicitud "ahora".
+
+## 12. Acceso: tableta sin sesión, bloqueo, comandante y PIN
+
+### App: emergencia sin sesión (credencial de la tableta)
+
+- Cada tableta compartida de la misión tiene una **credencial** (`dc_…`) que control de misión (`POST /admin/devices`) o el comandante (`POST /crew/devices`) genera **una sola vez**. Guárdala en el almacén seguro del sistema (Keychain / Keystore) al configurar la tableta; el servidor solo guarda su SHA-256 y no la puede volver a mostrar.
+- Si no hay nadie con sesión, el botón de emergencia usa el header `X-Device-Credential: <credencial>` **en lugar de** `Authorization`. Sirve solo para el triaje de la misión de esa tableta: `GET /emergency/protocol`, `POST /emergency/sessions`, `GET /emergency/sessions/{id}`, evaluaciones (`/assessments`, `/answers`, `/complete`), `/heartbeat`, `/questions` y `/close`. En cualquier otra ruta responde 401.
+- **"Estoy bien" desde la tableta**: como no hay usuario, el body lleva quién confirma: `{ "astronaut_id": "…", "confirmed_at": "…" }`. Solo vale para un afectado con plazo pendiente (si no, 409).
+- La tableta queda como actor en la línea de tiempo (`actor_device`) y Tierra ve "emergencia iniciada sin sesión" en la bitácora.
+- Errores: 401 `INVALID_DEVICE_CREDENTIAL` (no registrada, revocada, de otra misión o misión no activa: pide a control de misión o al comandante una credencial nueva); 429 `RATE_LIMITED` (demasiados intentos fallidos desde esa red: espera `Retry-After` segundos). Con sesión iniciada, usa siempre el Bearer: la tableta es el respaldo.
+- Sin conexión, el triaje sigue con el evaluador local (sección 10) y lo sube por `/sync/push` cuando alguien inicie sesión.
+
+### App: cuenta bloqueada
+
+- 5 contraseñas incorrectas (`LOCKOUT_MAX_ATTEMPTS`) bloquean la cuenta 15 min (`LOCKOUT_MINUTES`): login → **423 `ACCOUNT_LOCKED`** con `details.locked_until`.
+- Muestra: "Cuenta bloqueada hasta las hh:mm. Pide al comandante que la desbloquee." Durante el bloqueo el login responde 423 **aunque la contraseña sea correcta**: no digas si acertó.
+- El 401 `INVALID_CREDENTIALS` es el mismo exista o no el usuario: muestra siempre "Usuario o contraseña incorrectos".
+- Se desbloquea solo al vencer el plazo, por admin (`POST /admin/users/{id}/unlock`) o por el comandante a bordo. Todo queda en la bitácora de autenticación.
+
+### App: acciones del comandante
+
+Solo el comandante vigente (`context.crew_role: "commander"`) y solo sobre los tripulantes de su misión (`{id}` = id de usuario; otro → 404). Muestra estos botones solo a él:
+
+| Acción | Petición | Resultado |
+|---|---|---|
+| Desbloquear la cuenta de un tripulante | `POST /crew/users/{id}/unlock` | `DelegatedActionResult` |
+| Restablecer su PIN sin conexión | `POST /crew/users/{id}/reset-pin` | El PIN anterior deja de servir en todos sus dispositivos; lo define otra vez en su próximo login |
+| Registrar una tableta de repuesto | `POST /crew/devices` `{ label, module_id }` | `device` + `credential` (**una sola vez**: guárdala en la tableta nueva) + `audit` |
+
+- Cada acción queda auditada y se reporta a Tierra: `audit.deliver_at` = cuándo llega (ARES-1: 90 s); `reported_to_earth: false` y `deliver_at: null` = en cola por un corte. Muestra "Tierra lo sabrá a las hh:mm" o "se avisará cuando vuelva el enlace".
+- Estas acciones **no** dan acceso a datos médicos ni de bienestar: el comandante sigue viendo solo lo suyo.
+
+### App: PIN sin conexión
+
+1. Tras un login en línea, si `offline_unlock_until` viene `null`, pide definir un PIN (4–8 dígitos).
+2. `PUT /me/offline-pin` `{ pin, device_id }` con el **mismo `device_id` del login** (otro → 403 `DEVICE_NOT_OWNED`). Responde `offline_unlock_until` (ahora + `OFFLINE_UNLOCK_DAYS`, 7 días) y `offline_verifier`.
+3. Guarda en el dispositivo **tu propio verificador**, nunca el PIN: deriva una clave con `offline_verifier` (PBKDF2-HMAC-SHA256, `iterations`, una sal aleatoria de `salt_bytes` bytes generada en el dispositivo) y guarda sal + resultado en el almacén seguro. El servidor nunca te devuelve el PIN ni su hash.
+4. Sin conexión, desbloquea la app comparando el PIN con tu verificador mientras no pase `offline_unlock_until`. Tras `max_attempts` fallos (5), borra el verificador y exige un login en línea.
+5. **El PIN no da acceso al servidor**: al volver la conexión, haz login o refresh antes de `/sync/push` y `/sync/pull`. Cada login en línea en ese dispositivo renueva `offline_unlock_until`.
+6. Si un login trae `offline_unlock_until: null` habiendo PIN, el comandante lo restableció o la tableta se revocó: borra el verificador y pide uno nuevo.
+
+### Panel: tabletas y auditoría (control de misión)
+
+- `GET /admin/devices?mission_id=&include_revoked=`: lista sin credenciales (`status`, `last_seen_at`, quién la registró y si fue admin o el comandante).
+- `POST /admin/devices` `{ label, mission_id, module_id }` → muestra `credential` **una sola vez**, con un botón de copiar y el aviso "no se podrá volver a ver". Etiqueta repetida en la misión → 409 `DEVICE_LABEL_TAKEN`.
+- `POST /admin/devices/{id}/revoke`: deja de servir de inmediato y borra los PIN offline definidos en esa tableta. Pide confirmación.
+- `GET /admin/audit/delegated-actions?mission_id=&from=&to=`: lo que hizo el comandante, cuando ya llegó a Tierra (`deliver_at`).
+- `GET /missions/current`: misión, entorno, rol y estado del enlace (`comm.link`: `up` | `down`, cortes en curso y próximos).
+
+### Contra Render
+
+> La base de Render es compartida: estos ejemplos abren y **cancelan** una emergencia real de ARES-1 con la credencial sintética de TAB-1. Si ya había una sesión abierta, la tableta se une a ella (`joined: true`) y el ejemplo **no** la cierra. Desde `backend/`.
+
+Git Bash:
+
+```bash
+API=https://astro-health-api-81jd.onrender.com/api/v1
+TAB1='dc_demo_tab1_sintetica'   # credencial SINTÉTICA del seed de demo
+JSON='Content-Type: application/json'
+uuid() { node -e 'console.log(require("crypto").randomUUID())'; }
+NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+# Emergencia sin sesión desde TAB-1: abrir, latido y cerrar.
+OPEN=$(curl -s -X POST $API/emergency/sessions -H "X-Device-Credential: $TAB1" -H "$JSON" \
+  -d "{\"client_uuid\":\"$(uuid)\",\"trigger_type\":\"manual_button\",\"started_at\":\"$NOW\",\"responder_safe\":{\"value\":true}}")
+S=$(echo "$OPEN" | node -pe 'JSON.parse(require("fs").readFileSync(0)).session.id')
+JOINED=$(echo "$OPEN" | node -pe 'JSON.parse(require("fs").readFileSync(0)).joined'); echo "sesión $S (joined: $JOINED)"
+curl -s -X POST $API/emergency/sessions/$S/heartbeat -H "X-Device-Credential: $TAB1" -H "$JSON" -d "{\"sent_at\":\"$NOW\"}"
+curl -s -o /dev/null -w "con la credencial, /me → %{http_code}\n" $API/me -H "X-Device-Credential: $TAB1"
+# Solo se cancela si la abrió esta prueba (si se unió a una de otra persona, no se toca).
+[ "$JOINED" = "false" ] && curl -s -X POST $API/emergency/sessions/$S/close -H "X-Device-Credential: $TAB1" -H "$JSON" \
+  -d "{\"closed_at\":\"$NOW\",\"status\":\"cancelled\",\"notes\":\"Prueba de la tableta\"}"
+
+# Comandante (ORION): restablece el PIN de LYRA; admin ve la auditoría cuando llega (90 s).
+login() { curl -s -X POST $API/auth/login -H "$JSON" \
+  -d "{\"username\":\"$1\",\"password\":\"Demo2026!\",\"device_id\":\"demo-$1\"}" \
+  | node -pe 'JSON.parse(require("fs").readFileSync(0)).access_token'; }
+ORION=$(login a.ortega); ADMIN=$(login mission.control)
+curl -s -X POST $API/crew/users/00000000-0000-4000-8000-000000000013/reset-pin -H "Authorization: Bearer $ORION"
+curl -s $API/missions/current -H "Authorization: Bearer $ORION"
+curl -s "$API/admin/devices?mission_id=20000000-0000-4000-8000-000000000001" -H "Authorization: Bearer $ADMIN"
+sleep 95
+curl -s "$API/admin/audit/delegated-actions?mission_id=20000000-0000-4000-8000-000000000001" -H "Authorization: Bearer $ADMIN"
+
+# PIN sin conexión de ORION en su dispositivo (el mismo device_id del login).
+curl -s -X PUT $API/me/offline-pin -H "Authorization: Bearer $ORION" -H "$JSON" \
+  -d '{"pin":"482915","device_id":"demo-a.ortega"}'
+```
+
+PowerShell:
+
+```powershell
+$API = 'https://astro-health-api-81jd.onrender.com/api/v1'
+$tab1 = @{ 'X-Device-Credential' = 'dc_demo_tab1_sintetica' }   # credencial SINTÉTICA del seed
+$now = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+function Post($url, $headers, $body) { Invoke-RestMethod -Method Post "$API$url" -Headers $headers `
+  -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 6) }
+
+# Emergencia sin sesión desde TAB-1: abrir, latido y cerrar.
+$s = Post '/emergency/sessions' $tab1 @{ client_uuid = "$([guid]::NewGuid())"; trigger_type = 'manual_button'
+  started_at = $now; responder_safe = @{ value = $true } }
+"sesión $($s.session.id) (joined: $($s.joined))"
+Post "/emergency/sessions/$($s.session.id)/heartbeat" $tab1 @{ sent_at = $now }
+try { Invoke-RestMethod "$API/me" -Headers $tab1 } catch { "con la credencial, /me → $($_.Exception.Response.StatusCode.value__)" }
+# Solo se cancela si la abrió esta prueba (si se unió a una de otra persona, no se toca).
+if (-not $s.joined) { Post "/emergency/sessions/$($s.session.id)/close" $tab1 @{ closed_at = $now; status = 'cancelled'; notes = 'Prueba de la tableta' } }
+
+# Comandante, misión vigente, tabletas y auditoría.
+function Login($u) { (Invoke-RestMethod -Method Post "$API/auth/login" -ContentType 'application/json' `
+  -Body (@{ username = $u; password = 'Demo2026!'; device_id = "demo-$u" } | ConvertTo-Json)).access_token }
+$orion = @{ Authorization = "Bearer $(Login 'a.ortega')" }
+$admin = @{ Authorization = "Bearer $(Login 'mission.control')" }
+Invoke-RestMethod -Method Post "$API/crew/users/00000000-0000-4000-8000-000000000013/reset-pin" -Headers $orion
+Invoke-RestMethod "$API/missions/current" -Headers $orion | ConvertTo-Json -Depth 5
+(Invoke-RestMethod "$API/admin/devices?mission_id=20000000-0000-4000-8000-000000000001" -Headers $admin).items |
+  Format-Table label, status, registered_via, last_seen_at
+Start-Sleep -Seconds 95   # el retraso de ARES-1
+(Invoke-RestMethod "$API/admin/audit/delegated-actions?mission_id=20000000-0000-4000-8000-000000000001" -Headers $admin).items |
+  Format-Table actor_call_sign, action, performed_at, deliver_at
+
+# PIN sin conexión de ORION en su dispositivo.
+Invoke-RestMethod -Method Put "$API/me/offline-pin" -Headers $orion -ContentType 'application/json' `
+  -Body (@{ pin = '482915'; device_id = 'demo-a.ortega' } | ConvertTo-Json)
+```
