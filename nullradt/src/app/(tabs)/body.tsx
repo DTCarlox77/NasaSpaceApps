@@ -12,7 +12,6 @@ import { AppText, Button, Card, FadeInView, PressableScale, Screen, StatusBadge 
 import { formatValue, StatusLegend, SystemIcon, timeAgo } from '@/presentation/features/health/healthUi';
 import { useHealthOverview } from '@/presentation/hooks/useHealthOverview';
 import { isMeasurable } from '@/domain/usecases/SimulateMeasurement';
-import { showToast } from '@/presentation/store/toastStore';
 import { useUiStore } from '@/presentation/store/uiStore';
 
 /** Monitor (Figma "Health monitoring"): mapa corporal + detalle del sistema elegido. */
@@ -27,7 +26,6 @@ export default function MonitorScreen() {
     [overview],
   );
   const system = overview?.systems.find((s) => s.id === selectedSystem);
-  const comingSoon = (title: string) => showToast({ level: 'info', title, body: t('common.comingSoon') });
 
   return (
     <Screen topInset={false}>
@@ -90,7 +88,7 @@ export default function MonitorScreen() {
 
           {system.indicators.map((ind, i) => (
             <FadeInView key={ind.id} index={3 + i}>
-              <IndicatorCard indicator={ind} onDetails={() => comingSoon(t('body.details'))} onMeasure={() => (isMeasurable(ind.id) ? router.push({ pathname: '/measure', params: { indicator: ind.id } }) : comingSoon(t('body.measure')))} />
+              <IndicatorCard indicator={ind} onDetails={() => router.push({ pathname: '/indicator/[id]', params: { id: ind.id } })} onMeasure={() => (isMeasurable(ind.id) ? router.push({ pathname: '/measure', params: { indicator: ind.id } }) : router.push({ pathname: '/register', params: { indicator: ind.id } }))} />
             </FadeInView>
           ))}
 

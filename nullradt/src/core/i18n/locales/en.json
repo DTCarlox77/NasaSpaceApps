@@ -279,7 +279,10 @@
     "roles": {
       "astronaut": "Astronaut",
       "crew": "Crew",
-      "flightSurgeon": "Flight surgeon"
+      "flightSurgeon": "Flight surgeon",
+      "admin": "Mission control",
+      "flight_surgeon": "Flight surgeon",
+      "behavioral_health": "Behavioral health"
     },
     "scan": {
       "idle": "Verify your identity with your {{method}}",
@@ -434,9 +437,20 @@
       "brainTests": {
         "title": "Daily tests",
         "body": "Reflexes, vision, mental agility and memory (6 min)."
+      },
+      "fitCheck": {
+        "title": "Reaction test (fitness)",
+        "body": "3 minutes before the critical task. Earth only receives fit / not confirmed."
+      },
+      "criticalTask": {
+        "title": "Robotic arm operation",
+        "body": "Critical task: requires a “fit” result in today's reaction test."
       }
     },
-    "source": "Sample routine inspired by a typical ISS day (≈ 2 h of daily exercise, NASA). Synthetic data."
+    "source": "Sample routine inspired by a typical ISS day (≈ 2 h of daily exercise, NASA). Synthetic data.",
+    "dueTitle": "Measurements due",
+    "dueBody": "Per the protocol frequency, it's time to measure:",
+    "everyHours": "every {{hours}} h"
   },
   "wellbeing": {
     "title": "Wellbeing",
@@ -501,7 +515,12 @@
       "crew": "Crew",
       "connectivity": "Connectivity",
       "measure": "Measure vital signs",
-      "tests": "Daily tests"
+      "tests": "Daily tests",
+      "comms": "Earth communications",
+      "access": "Security & access",
+      "earth": "Earth inbox",
+      "register": "Log with camera",
+      "voiceCommands": "Voice commands"
     }
   },
   "systems": {

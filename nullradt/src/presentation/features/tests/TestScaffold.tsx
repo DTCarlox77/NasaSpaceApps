@@ -36,7 +36,9 @@ export function TestScaffold({
   format,
   extra,
   onSaved,
+  introExtra,
 }: {
+  introExtra?: ReactNode;
   id: TestId;
   Run: (p: TestRunProps) => ReactNode;
   format: (score: number) => string;
@@ -110,6 +112,7 @@ export function TestScaffold({
                   </View>
                 ))}
               </Card>
+              {introExtra}
               <Button label={t('tests.start')} leftIcon="play" size="lg" fullWidth onPress={start} />
             </Animated.View>
           )}

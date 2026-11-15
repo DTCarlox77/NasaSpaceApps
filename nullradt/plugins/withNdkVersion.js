@@ -9,7 +9,8 @@ const { withProjectBuildGradle } = require('expo/config-plugins');
 const MARKER = '// @nullradt ndkVersion';
 
 module.exports = function withNdkVersion(config, { version } = {}) {
-  if (!version) return config;
+  // En EAS Build (nube) se usa el NDK por defecto de la imagen de Expo: este ajuste es solo para la PC local.
+  if (!version || process.env.EAS_BUILD) return config;
   return withProjectBuildGradle(config, (cfg) => {
     let src = cfg.modResults.contents;
     // Quitar una inserción previa (idempotente).

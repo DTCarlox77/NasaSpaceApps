@@ -1,0 +1,134 @@
+{
+  "wellbeingPlus": {
+    "formEyebrow": "Daily check-in · 20 seconds · confidential",
+    "vas": {
+      "mood": { "label": "How is your mood?", "low": "Very low", "high": "Very good", "short": "Mood" },
+      "fatigue": { "label": "How fatigued do you feel?", "low": "Not at all", "high": "Exhausted", "short": "Fatigue" },
+      "stress": { "label": "How stressed do you feel?", "low": "Not at all", "high": "Extremely", "short": "Stress" },
+      "friction": { "label": "Friction with the crew?", "low": "None", "high": "A lot", "short": "Friction" }
+    },
+    "fromWristband": "from wristband (synthetic)",
+    "corrected": "corrected manually",
+    "addMore": "Add symptoms or a note (optional)",
+    "completeScales": "Move all 4 scales to save.",
+    "doneBody": "Thanks. It is compared with your usual range, never a single day.",
+    "sleepLine": "Sleep {{hours}} h",
+    "sustainedTitle": "Sustained change in your wellbeing",
+    "sustained": {
+      "mood": "Your mood has been below your usual range for several days.",
+      "fatigue": "Your fatigue has been above your usual range for several days.",
+      "stress": "Your stress has been above your usual range for several days.",
+      "friction": "Friction with the crew has been above usual for several days."
+    },
+    "sustainedNote": "Not a diagnosis. Behavioral health will see this alert confidentially; your crew will not.",
+    "seedStable": "Demo: 14 stable days",
+    "seedWorsening": "Demo: 14 days, worsening",
+    "limits": "Limits: the app does not handle severe crises (in immediate danger, tell the medical officer and use the mission emergency channel). The reaction test is inspired by the PVT-B; it is not NASA's validated software.",
+    "fit": {
+      "title": "Critical-task fitness",
+      "pending": "3-min reaction test pending today",
+      "requiredTitle": "Reaction test required",
+      "requiredBody": "Before a critical task you need a “fit” result today.",
+      "criticalTag": "Critical task · requires reaction test"
+    },
+    "pvt": {
+      "duration": "Duration",
+      "full": "3 min (PVT-B)",
+      "demo": "30 s (demo)",
+      "disclaimer": "Inspired by the PVT-B (Basner et al., 2011): stimuli every 1–4 s, lapse ≥ 355 ms. Compared with your baseline on this same tablet. Not the validated software.",
+      "remaining": "{{seconds}} s left",
+      "responses_one": "{{count}} response",
+      "responses_other": "{{count}} responses",
+      "lapses": "Lapses (≥ 355 ms)",
+      "verdict": {
+        "yes": "Fit: yes",
+        "notConfirmed": "Fit: not confirmed",
+        "baseline": "Building your baseline (3 tests)"
+      },
+      "onlyFitToEarth": "Mission control only receives “fit: yes / not confirmed”, never your times.",
+      "earthTitle": "Critical-task fitness",
+      "fitYes": "Fit: yes",
+      "fitNotConfirmed": "Fit: not confirmed"
+    },
+    "screening": {
+      "title": "Biweekly questionnaire",
+      "subtitle": "PHQ-2 + GAD-2 · before your psychological conference",
+      "open": "Available: conference on mission day {{day}}",
+      "next_one": "Opens in {{count}} day (conference: day {{day}})",
+      "next_other": "Opens in {{count}} days (conference: day {{day}})",
+      "done": "Done for the day-{{day}} conference",
+      "doneTitle": "Already completed",
+      "notYetTitle": "Not due yet",
+      "early": "Do it early (demo)",
+      "prompt": "Over the last 2 weeks, how often have you been bothered by the following problems?",
+      "private": "Confidential: only behavioral health will see it. Mission control will only know you completed it.",
+      "items": {
+        "phq1": "Little interest or pleasure in doing things",
+        "phq2": "Feeling down, depressed, or hopeless",
+        "gad1": "Feeling nervous, anxious, or on edge",
+        "gad2": "Not being able to stop or control worrying"
+      },
+      "options": { "0": "Not at all", "1": "Several days", "2": "More than half the days", "3": "Nearly every day" },
+      "submit": "Send confidentially",
+      "thanks": "Thanks for answering",
+      "positiveBody": "Your answers suggest it might help to talk to someone. Behavioral health will receive a confidential alert; your crew will not see it.",
+      "negativeBody": "Saved confidentially for your next conference.",
+      "source": "PHQ-2 and GAD-2 (Pfizer, free to use). PHQ-9 is not used because it requires a crisis protocol.",
+      "bhTitle": "Biweekly questionnaire · {{name}}",
+      "bhTitlePositive": "POSITIVE questionnaire · {{name}}",
+      "bhBody": "PHQ-2 = {{phq}} · GAD-2 = {{gad}} (cutoff ≥ 3) · mission day {{day}}.",
+      "complianceTitle": "Compliance: biweekly questionnaire",
+      "complianceBody": "{{name}} completed the biweekly questionnaire."
+    },
+    "talk": {
+      "title": "I want to talk to someone",
+      "subtitle": "Behavioral health on Earth · confidential",
+      "cardBody": "Message or session, with the real link delay",
+      "cta": "I want to talk to someone",
+      "invisible": "Invisible to the crew: it creates no onboard alerts and does not appear in shared alerts.",
+      "delay": "Minimum round trip with the current link: {{rtt}} (plus signal outages).",
+      "empty": "No messages yet.",
+      "message": "Message",
+      "session": "Session",
+      "placeholder": "Type or dictate whatever you want to share…",
+      "sessionPlaceholder": "When works for you? (optional)",
+      "send": "Send",
+      "requestSession": "Request session",
+      "sessionDefault": "I'm requesting a private session with behavioral health.",
+      "messageTitle": "Confidential message · {{name}}",
+      "sessionTitle": "Session request · {{name}}",
+      "bh": "Behavioral health",
+      "replyTitle": "Behavioral health",
+      "replyMessage": "We received your message. Thanks for writing. We'll reply personally in the next communication window.",
+      "replySession": "We received your request. We propose a private session in the next available link window.",
+      "crisis": "If you feel you are in immediate danger, tell the onboard medical officer and use the mission emergency channel: this chat is delayed."
+    },
+    "privacy": {
+      "title": "Wellbeing privacy",
+      "subtitle": "Who sees what",
+      "sharedOff": "Not shared with the crew (recommended default)",
+      "sharedOn": "Sharing your status with commander and medical officer",
+      "shareTitle": "Share with commander and medical officer",
+      "shareBody": "Off by default. If enabled, they see your summary status and fitness, never the detail.",
+      "emergencyOn": "An emergency triage is active: commander and medical officer temporarily see your status.",
+      "whoSees": "What each role sees of YOUR data",
+      "viewers": {
+        "behavioral_health": "Behavioral health (Earth)",
+        "flight_surgeon": "Flight surgeon (Earth)",
+        "admin": "Mission control",
+        "commander": "Commander (on board)",
+        "medical_officer": "Medical officer (on board)",
+        "crew": "Rest of the crew"
+      },
+      "data": {
+        "wellbeingDetail": "Wellbeing detail",
+        "wellbeingStatus": "Status & alerts",
+        "fitness": "Fitness",
+        "compliance": "Compliance",
+        "medical": "Vital signs"
+      },
+      "reason": { "shared": "shared", "emergency": "emergency", "onboardCare": "onboard care", "self": "you" },
+      "footer": "Computed with the same rule the server applies (domain/access/visibility.ts). You always see everything of yours."
+    }
+  }
+}

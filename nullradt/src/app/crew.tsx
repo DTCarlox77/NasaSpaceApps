@@ -9,6 +9,12 @@ import { timeAgo } from '@/presentation/features/health/healthUi';
 import { useCrew } from '@/presentation/hooks/useCrew';
 import { useHealthLogStore } from '@/presentation/store/healthLogStore';
 import { worstStatus } from '@/domain/entities/BodySystem';
+import { canView } from '@/domain/access/visibility';
+import { sustainedChanges } from '@/domain/wellbeing/trends';
+import { useAuthStore } from '@/presentation/store/authStore';
+import { useCheckInStore } from '@/presentation/store/checkInStore';
+import { useTriageStore } from '@/presentation/store/triageStore';
+import { fitnessToday, useWellbeingStore } from '@/presentation/store/wellbeingStore';
 
 /** Tripulación: datos de cada tripulante y alertas compartidas (sintético en la demo). */
 export default function CrewScreen() {
@@ -68,6 +74,18 @@ function MemberCard({ member, isMe }: { member: CrewMember; isMe: boolean }) {
   const { colors, spacing, radius } = useAppTheme();
   const readings = useHealthLogStore((s) => s.readings[member.id]);
   const status = readings?.length ? worstStatus(readings.slice(-5).map((r) => r.status)) : 'normal';
+  // Filtro de confidencialidad: la misma regla que en el servidor (domain/access/visibility).
+  const session = useAuthStore((s) => s.session);
+  const shared = useWellbeingStore((s) => !!s.shareWithCrew[member.id]);
+  const fit = useWellbeingStore((s) => fitnessToday(s.fitness[member.id]));
+  const checkIns = useCheckInStore((s) => s.entries[member.id]);
+  const emergency = useTriageStore((s) => !!s.active);
+  const viewer = { userId: session?.userId ?? '', role: session?.role ?? 'astronaut', crewRole: session?.crewRole } as const;
+  const ctx = { sharedWithCrew: shared, emergency };
+  const seeMedical = canView(viewer, member.id, 'medical', ctx).allowed;
+  const seeWellbeing = canView(viewer, member.id, 'wellbeingStatus', ctx);
+  const seeFitness = canView(viewer, member.id, 'fitness', ctx).allowed;
+  const changes = seeWellbeing.allowed ? sustainedChanges(Object.values(checkIns ?? {})) : [];
 
   return (
     <Card style={{ gap: spacing.md, borderWidth: isMe ? 2 : 1, borderColor: isMe ? colors.primary : colors.border }}>
@@ -80,7 +98,16 @@ function MemberCard({ member, isMe }: { member: CrewMember; isMe: boolean }) {
             {isMe ? ` · ${t('crew.you')}` : ''}
           </AppText>
         </View>
-        <StatusBadge status={status} size="sm" />
+        {seeMedical ? <StatusBadge status={status} size="sm" /> : <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} accessibilityLabel={t('crewPrivacy.confidential')} />}
+      </View>
+      <View style={[styles.row, { gap: spacing.sm, padding: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border }]}>
+        <Ionicons name={seeWellbeing.allowed ? 'heart-outline' : 'lock-closed-outline'} size={16} color={seeWellbeing.allowed ? colors.primaryText : colors.textMuted} />
+        <AppText variant="caption" color={seeWellbeing.allowed ? 'textSecondary' : 'textMuted'} style={styles.flex}>
+          {seeWellbeing.allowed
+            ? `${changes.length ? t('crewPrivacy.sustained') : t('crewPrivacy.noAlerts')}${seeWellbeing.reason === 'emergency' ? ` · ${t('crewPrivacy.byEmergency')}` : seeWellbeing.reason === 'shared' ? ` · ${t('crewPrivacy.byShare')}` : ''}`
+            : t('crewPrivacy.confidentialWellbeing')}
+        </AppText>
+        {seeFitness && <AppText variant="caption" color={fit?.fit === 'yes' ? 'primaryText' : 'textMuted'}>{fit ? t(`crewPrivacy.fit.${fit.fit}`) : t('crewPrivacy.fit.none')}</AppText>}
       </View>
       <View style={[styles.row, { gap: spacing.sm }]}>
         <Fact label={t('crew.age')} value={t('crew.years', { count: member.age })} />

@@ -4,7 +4,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Animated, { Easing, cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '@/core/theme';
-import { InvalidCredentialsError } from '@/domain/entities/Session';
+import { AccountLockedError, InvalidCredentialsError } from '@/domain/entities/Session';
+import { PinPad } from './PinPad';
 import {
   AppText,
   Button,
@@ -15,7 +16,7 @@ import {
   type TextFieldHandle,
 } from '@/presentation/components/ui';
 import { useBiometrics } from '@/presentation/hooks/useBiometrics';
-import { useAuthStore } from '@/presentation/store/authStore';
+import { OfflineUnlockExpiredError, useAuthStore } from '@/presentation/store/authStore';
 import { showToast } from '@/presentation/store/toastStore';
 
 const ASTRONAUT_ID = /^NR-A-\d{4}$/;
@@ -23,7 +24,7 @@ const ASTRONAUT_ID = /^NR-A-\d{4}$/;
 const ID_PREFIX = 'NR-A-';
 /** El campo solo guarda los 4 dígitos; el prefijo "NR-A-" es fijo (evita que el teclado duplique texto al reformatear). */
 export const idDigits = (input: string) => input.toUpperCase().replace(/^NR-?A-?/, '').replace(/\D/g, '').slice(0, 4);
-type Method = 'biometric' | 'password';
+type Method = 'biometric' | 'password' | 'pin';
 type ScanState = 'idle' | 'scanning' | 'verified';
 
 const initials = (name: string) =>
@@ -39,17 +40,21 @@ const initials = (name: string) =>
 export function IdentifyStep({ onVerified }: { onVerified: (method: Method) => void }) {
   const { t } = useTranslation();
   const { colors, spacing, radius, shadows } = useAppTheme();
-  const { session, status, verifyPassword } = useAuthStore();
+  const { session, status, verifyPassword, biometricEnabled, hasPin } = useAuthStore();
   const biometrics = useBiometrics();
-  const canUseBiometric = status === 'locked' && !!session;
+  const locked = status === 'locked' && !!session;
+  const [openedAt] = useState(() => Date.now());
+  const canUseBiometric = locked && biometricEnabled;
+  // PIN sin conexión: solo si existe y no caducó offline_unlock_until.
+  const canUsePin = locked && hasPin() && !!session?.offlineUnlockUntil && new Date(session.offlineUnlockUntil).getTime() > openedAt;
 
-  // Preferencia del usuario; si la biometría deja de estar disponible, se usa contraseña.
-  const [preferred, setMethod] = useState<Method>('biometric');
-  const method: Method = canUseBiometric ? preferred : 'password';
+  // Preferencia del usuario; si el método deja de estar disponible, se usa contraseña.
+  const [preferred, setMethod] = useState<Method>(canUseBiometric ? 'biometric' : 'pin');
+  const method: Method = preferred === 'biometric' && canUseBiometric ? 'biometric' : preferred === 'pin' && canUsePin ? 'pin' : 'password';
 
   return (
     <View style={{ gap: spacing.xl }}>
-      {canUseBiometric && session && (
+      {locked && session && (
         <View style={[styles.row, shadows.md, { gap: spacing.md, padding: spacing.lg, borderRadius: radius.button, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }]}>
           <View style={[styles.avatar, { backgroundColor: colors.primarySoft }]}>
             <AppText variant="title" color="primaryText">{initials(session.displayName)}</AppText>
@@ -65,19 +70,22 @@ export function IdentifyStep({ onVerified }: { onVerified: (method: Method) => v
         </View>
       )}
 
-      {canUseBiometric && (
+      {(canUseBiometric || canUsePin) && (
         <SegmentedControl<Method>
           value={method}
           onChange={setMethod}
           options={[
-            { value: 'biometric', label: biometrics.methodLabelTitle, icon: biometrics.icon },
-            { value: 'password', label: t('auth.idAndPassword'), icon: 'key-outline' },
+            ...(canUseBiometric ? [{ value: 'biometric' as const, label: biometrics.methodLabelTitle, icon: biometrics.icon }] : []),
+            ...(canUsePin ? [{ value: 'pin' as const, label: t('access.pin'), icon: 'keypad-outline' as const }] : []),
+            { value: 'password' as const, label: t('auth.idAndPassword'), icon: 'key-outline' as const },
           ]}
         />
       )}
 
       {method === 'biometric' && canUseBiometric ? (
         <BiometricCard onVerified={() => onVerified('biometric')} />
+      ) : method === 'pin' ? (
+        <PinCard onVerified={() => onVerified('pin')} />
       ) : (
         <PasswordForm verifyPassword={verifyPassword} onVerified={() => onVerified('password')} />
       )}
@@ -165,6 +173,46 @@ function BiometricCard({ onVerified }: { onVerified: () => void }) {
   );
 }
 
+function PinCard({ onVerified }: { onVerified: () => void }) {
+  const { t } = useTranslation();
+  const { spacing } = useAppTheme();
+  const unlockWithPin = useAuthStore((s) => s.unlockWithPin);
+  const until = useAuthStore((s) => s.session?.offlineUnlockUntil);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  return (
+    <Card style={{ gap: spacing.lg, alignItems: 'center' }}>
+      <AppText variant="bodySmall" color="textSecondary" align="center">
+        {t('access.pinOfflineUntil', { date: until ? new Date(until).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : '—' })}
+      </AppText>
+      <PinPad
+        disabled={busy}
+        error={error}
+        onComplete={async (pin) => {
+          setBusy(true);
+          setError(null);
+          try {
+            await unlockWithPin(pin);
+            onVerified();
+            return true;
+          } catch (e) {
+            setError(
+              e instanceof AccountLockedError
+                ? t('access.lockedUntil', { time: new Date(e.until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })
+                : e instanceof OfflineUnlockExpiredError
+                  ? t('access.pinExpired')
+                  : t('access.pinWrong'),
+            );
+            return false;
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+    </Card>
+  );
+}
+
 function PasswordForm({
   verifyPassword,
   onVerified,
@@ -208,7 +256,13 @@ function PasswordForm({
       setVerified(true);
       setTimeout(onVerified, 500);
     } catch (e) {
-      setError(e instanceof InvalidCredentialsError ? t('auth.errors.invalid') : t('auth.errors.network'));
+      setError(
+        e instanceof AccountLockedError
+          ? t('access.lockedUntil', { time: new Date(e.until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })
+          : e instanceof InvalidCredentialsError
+            ? t('auth.errors.invalid')
+            : t('auth.errors.network'),
+      );
     } finally {
       setLoading(false);
     }

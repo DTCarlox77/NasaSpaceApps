@@ -6,7 +6,7 @@ import { useAppTheme } from '@/core/theme';
 import { AppText, FadeInView, PressableScale, Screen } from '@/presentation/components/ui';
 import { showToast } from '@/presentation/store/toastStore';
 
-type TileKey = 'tests' | 'crew' | 'connectivity' | 'measure' | 'history' | 'triage' | 'achievements' | 'profile' | 'settings' | 'sync' | 'voiceLab' | 'notificationsLab';
+type TileKey = 'tests' | 'crew' | 'connectivity' | 'measure' | 'register' | 'triage' | 'achievements' | 'profile' | 'settings' | 'comms' | 'earth' | 'access' | 'voiceLab' | 'voiceCommands' | 'notificationsLab';
 
 interface Tile {
   key: TileKey;
@@ -19,14 +19,17 @@ interface Tile {
 const TILES: Tile[] = [
   { key: 'tests', icon: 'flash-outline', href: '/tests' as Href },
   { key: 'crew', icon: 'people-outline', href: '/crew' },
-  { key: 'measure', icon: 'pulse-outline', href: { pathname: '/measure', params: { indicator: 'bloodPressure' } } },
+  { key: 'measure', icon: 'pulse-outline', href: '/measure-session' },
   { key: 'connectivity', icon: 'wifi-outline', href: '/connectivity' },
-  { key: 'history', icon: 'time-outline' },
-  { key: 'triage', icon: 'medkit-outline', href: { pathname: '/alert', params: { trigger: 'manual' } }, danger: true },
-  { key: 'achievements', icon: 'trophy-outline' },
+  { key: 'register', icon: 'camera-outline', href: '/register' },
+  { key: 'triage', icon: 'medkit-outline', href: '/triage', danger: true },
+  { key: 'achievements', icon: 'trophy-outline', href: '/achievements' },
   { key: 'profile', icon: 'person-circle-outline', href: '/profile' },
   { key: 'settings', icon: 'settings-outline', href: '/settings' },
-  { key: 'sync', icon: 'sync-outline' },
+  { key: 'comms', icon: 'radio-outline', href: '/comms' },
+  { key: 'earth', icon: 'planet-outline', href: '/earth' },
+  { key: 'access', icon: 'shield-checkmark-outline', href: '/access' },
+  { key: 'voiceCommands', icon: 'mic-circle-outline', href: '/voice-commands' },
   { key: 'voiceLab', icon: 'mic-outline', href: '/voice-lab' },
   { key: 'notificationsLab', icon: 'notifications-outline', href: '/notifications-lab' },
 ];

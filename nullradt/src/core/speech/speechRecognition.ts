@@ -60,3 +60,24 @@ export async function downloadOfflineModel(language: string) {
   if (!rec || Platform.OS !== 'android') return null;
   return rec.androidTriggerOfflineModelDownload({ locale: SPEECH_LOCALES[language] ?? 'en-US' });
 }
+
+// ---------- Dueño del micrófono ----------
+/**
+ * El módulo nativo de reconocimiento es uno solo y sus eventos llegan a todos los oyentes.
+ * `owner` dice quién lo está usando: el asistente de voz ("NullRadt…") o un dictado (notas, triaje).
+ * Cada oyente ignora los eventos que no son suyos, y el asistente cede el micrófono mientras se dicta.
+ */
+export type RecognizerOwner = 'assistant' | 'dictation' | null;
+let owner: RecognizerOwner = null;
+const ownerListeners = new Set<(o: RecognizerOwner) => void>();
+
+export const getRecognizerOwner = () => owner;
+export function setRecognizerOwner(next: RecognizerOwner) {
+  if (owner === next) return;
+  owner = next;
+  ownerListeners.forEach((f) => f(next));
+}
+export function onRecognizerOwnerChange(f: (o: RecognizerOwner) => void) {
+  ownerListeners.add(f);
+  return () => ownerListeners.delete(f);
+}

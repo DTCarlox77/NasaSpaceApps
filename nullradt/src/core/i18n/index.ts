@@ -3,13 +3,15 @@ import { initReactI18next } from 'react-i18next';
 import { getLocales } from 'expo-localization';
 import en from './locales/en.json';
 import es from './locales/es.json';
+import { featuresEn, featuresEs } from './locales/features';
 
 export const supportedLanguages = ['es', 'en'] as const;
 export type SupportedLanguage = (typeof supportedLanguages)[number];
 
 export const resources = {
-  es: { translation: es },
-  en: { translation: en },
+  // Las funcionalidades nuevas viven en archivos propios (locales/features) y se fusionan aquí.
+  es: { translation: { ...es, ...featuresEs } },
+  en: { translation: { ...en, ...featuresEn } },
 } as const;
 
 /** Idioma del dispositivo si está soportado; si no, inglés. */

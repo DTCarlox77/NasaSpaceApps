@@ -1,0 +1,277 @@
+{
+  "assistant": {
+    "failed": "Algo falló al ejecutar la orden. Inténtalo de nuevo.",
+    "notUnderstood": "No entendí. Di «NullRadt, ayuda» para escuchar lo que puedo hacer.",
+    "dialogTimeout": "No escuché respuesta. Lo dejamos para luego.",
+    "noData": "No hay lecturas de {{name}}.",
+    "over": "{{a}} sobre {{b}}",
+    "indicatorLine": "{{name}}: {{value}} {{unit}}, {{status}}.",
+    "sayNext_one": "Queda {{count}}. Di «NullRadt, siguiente» para continuar.",
+    "sayNext_other": "Quedan {{count}}. Di «NullRadt, siguiente» para continuar.",
+    "sessionComplete": "Sesión de mediciones completa.",
+    "units": {
+      "heartRate": "latidos por minuto",
+      "bloodPressure": "milímetros de mercurio",
+      "spo2": "por ciento",
+      "respRate": "respiraciones por minuto",
+      "reactionTime": "milisegundos",
+      "eyePressure": "milímetros de mercurio",
+      "urinaryCalcium": "miligramos al día",
+      "gripStrength": "kilogramos",
+      "bodyTemperature": "grados"
+    },
+    "checkIn": {
+      "intro": "Vamos con tu check-in. Responde con un número del cero al diez.",
+      "q": {
+        "mood": "¿Cómo está tu ánimo? Cero muy bajo, diez muy bueno.",
+        "fatigue": "¿Cuánta fatiga sientes? Cero nada, diez agotado.",
+        "stress": "¿Cuánto estrés sientes? Cero nada, diez muchísimo.",
+        "friction": "¿Cuántos roces has tenido con la tripulación? Cero ninguno, diez muchos."
+      },
+      "repeat": "No entendí el número.",
+      "cancelled": "Check-in cancelado.",
+      "saved": "Check-in guardado. Según la pulsera dormiste {{hours}} horas. Gracias."
+    },
+    "reply": {
+      "help": "Puedes decir, por ejemplo: análisis diario, check-in diario, salud de mis ojos, mi presión, medir oxígeno, signos vitales, qué sigue, emergencia o quiero hablar con alguien. Te muestro la lista completa.",
+      "emergency": "Triaje de emergencia activado. Evalúa a cada tripulante.",
+      "talk": "Abro el canal confidencial con salud conductual. Tu tripulación no lo verá.",
+      "allNormal_one": "Tu indicador está dentro del rango.",
+      "allNormal_other": "Tus {{count}} indicadores están dentro del rango.",
+      "attention_one": "Hay {{count}} indicador que requiere atención.",
+      "attention_other": "Hay {{count}} indicadores que requieren atención.",
+      "checkInDone": "Ya hiciste el check-in de hoy.",
+      "checkInPending": "Te falta el check-in de hoy.",
+      "measurementsPending_one": "Queda {{count}} medición pendiente.",
+      "measurementsPending_other": "Quedan {{count}} mediciones pendientes.",
+      "nextTask": "A las {{time}}: {{task}}.",
+      "noPending": "No tienes mediciones pendientes hoy.",
+      "sessionStart_one": "Tienes {{count}} medición pendiente. Empezamos con {{first}}.",
+      "sessionStart_other": "Tienes {{count}} mediciones pendientes. Empezamos con {{first}}.",
+      "nextMeasure": "Siguiente: {{name}}.",
+      "routineDone": "Completaste toda la rutina de hoy.",
+      "reactionTest": "Abro la prueba de reacción.",
+      "visionTest": "Abro el test de claridad visual.",
+      "tests": "Abro los tests diarios.",
+      "screening": "Abro el cuestionario quincenal confidencial.",
+      "measureStart": "Midiendo {{name}}. Quédate quieto.",
+      "measureManual": "{{name}} se registra a mano o con la cámara. Abro el registro.",
+      "systemStatus": "Sistema {{system}}: {{status}}.",
+      "criticalNeedsFit": "La siguiente es una tarea crítica: primero necesitas la prueba de reacción con resultado apto.",
+      "marked": "Marqué como hecha: {{task}}.",
+      "achievements": "Vas en el nivel {{level}}, con una racha de {{streak}} días de check-in.",
+      "linkDown": "Sin enlace con Tierra ahora. Hay {{pending}} mensajes en cola.",
+      "linkUp": "Enlace con Tierra activo. Retraso de {{delay}} segundos. {{pending}} mensajes en camino.",
+      "crew": "Abro la tripulación.",
+      "opening": "Abro {{page}}."
+    },
+    "pages": {
+      "body3d": "el cuerpo en 3D",
+      "monitor": "el monitor",
+      "wellbeing": "bienestar",
+      "profile": "tu perfil",
+      "settings": "los ajustes",
+      "access": "seguridad y acceso",
+      "earth": "la bandeja de Tierra",
+      "more": "más opciones",
+      "home": "el inicio"
+    },
+    "overlay": {
+      "listening": "Te escucho…",
+      "thinking": "Procesando…",
+      "error": "Sin permiso de micrófono",
+      "idle": "Di «NullRadt»",
+      "a11y": "Asistente de voz. Toca para hablar; mantén para ver los comandos."
+    },
+    "screen": {
+      "title": "Comandos de voz",
+      "subtitle": "Usa la app sin tocar el teléfono",
+      "wake": "Di «NullRadt» y luego tu orden",
+      "wakeBody": "El micrófono escucha en el dispositivo (sin internet) solo mientras la app está abierta. Puedes decirlo todo junto: «NullRadt, análisis diario». También puedes tocar el indicador de micrófono.",
+      "needsApk": "La escucha de «NullRadt» necesita el APK (en Expo Go no hay reconocimiento de voz). Aquí puedes escribir los comandos y la app responde en voz alta.",
+      "status": "Estado: {{status}}",
+      "talkNow": "Hablar ahora",
+      "toggle": "Escuchar «NullRadt»",
+      "toggleBody": "Si lo apagas, el micrófono no se usa salvo en los dictados.",
+      "tryTitle": "Probar un comando",
+      "tryLabel": "Escribe lo que dirías",
+      "tryPlaceholder": "análisis diario",
+      "run": "Ejecutar",
+      "footer": "Toca un ejemplo para probarlo. Los comandos funcionan sin conexión y no usan servicios externos."
+    },
+    "status": {
+      "off": "apagado",
+      "unsupported": "no disponible",
+      "starting": "iniciando",
+      "listening": "esperando «NullRadt»",
+      "awake": "escuchando tu orden",
+      "thinking": "procesando",
+      "speaking": "hablando",
+      "dialog": "esperando tu respuesta",
+      "paused": "en pausa",
+      "error": "error"
+    },
+    "groups": {
+      "health": "Salud",
+      "measure": "Mediciones",
+      "wellbeing": "Bienestar",
+      "routine": "Rutina",
+      "emergency": "Emergencia",
+      "navigation": "Navegación",
+      "system": "Sistema"
+    },
+    "cmd": {
+      "dailyAnalysis": {
+        "title": "Análisis diario de salud",
+        "examples": [
+          "análisis diario",
+          "cómo estoy",
+          "resumen de salud"
+        ]
+      },
+      "systemHealth": {
+        "title": "Salud de un sistema",
+        "examples": [
+          "salud de mis ojos",
+          "estado de mi corazón",
+          "cómo están mis pulmones",
+          "salud de mis huesos"
+        ]
+      },
+      "indicatorValue": {
+        "title": "Valor de un indicador",
+        "examples": [
+          "mi presión",
+          "mi oxígeno",
+          "mi temperatura",
+          "mi pulso"
+        ]
+      },
+      "measureAll": {
+        "title": "Medir todo lo pendiente (paso a paso)",
+        "examples": [
+          "signos vitales",
+          "registrar mediciones"
+        ]
+      },
+      "measureOne": {
+        "title": "Medir algo concreto",
+        "examples": [
+          "medir presión",
+          "medir oxígeno",
+          "tomar temperatura"
+        ]
+      },
+      "next": {
+        "title": "Siguiente medición o tarea",
+        "examples": [
+          "siguiente"
+        ]
+      },
+      "checkIn": {
+        "title": "Check-in diario por voz",
+        "examples": [
+          "check-in diario",
+          "checking diario",
+          "cómo me siento"
+        ]
+      },
+      "talk": {
+        "title": "Hablar con salud conductual",
+        "examples": [
+          "quiero hablar con alguien"
+        ]
+      },
+      "reactionTest": {
+        "title": "Prueba de reacción (aptitud)",
+        "examples": [
+          "prueba de reacción",
+          "prueba de aptitud"
+        ]
+      },
+      "visionTest": {
+        "title": "Test de visión",
+        "examples": [
+          "test de visión"
+        ]
+      },
+      "tests": {
+        "title": "Tests diarios",
+        "examples": [
+          "tests diarios"
+        ]
+      },
+      "screening": {
+        "title": "Cuestionario quincenal",
+        "examples": [
+          "cuestionario"
+        ]
+      },
+      "routineNext": {
+        "title": "Qué me toca",
+        "examples": [
+          "qué sigue",
+          "próxima tarea"
+        ]
+      },
+      "routineDone": {
+        "title": "Marcar tarea como hecha",
+        "examples": [
+          "tarea hecha",
+          "márcala como hecha"
+        ]
+      },
+      "emergency": {
+        "title": "Emergencia y triaje",
+        "examples": [
+          "emergencia",
+          "triaje",
+          "SOS"
+        ]
+      },
+      "navigate": {
+        "title": "Abrir una pantalla",
+        "examples": [
+          "abre bienestar",
+          "ir al monitor",
+          "abre mi perfil",
+          "cuerpo 3D"
+        ]
+      },
+      "crew": {
+        "title": "Tripulación",
+        "examples": [
+          "tripulación"
+        ]
+      },
+      "achievements": {
+        "title": "Puntos y racha",
+        "examples": [
+          "mis logros",
+          "mis puntos"
+        ]
+      },
+      "comms": {
+        "title": "Estado del enlace con Tierra",
+        "examples": [
+          "estado del enlace",
+          "comunicaciones"
+        ]
+      },
+      "help": {
+        "title": "Ayuda",
+        "examples": [
+          "ayuda",
+          "qué puedo decir"
+        ]
+      },
+      "stop": {
+        "title": "Callar / cancelar",
+        "examples": [
+          "silencio",
+          "cancela"
+        ]
+      }
+    }
+  }
+}

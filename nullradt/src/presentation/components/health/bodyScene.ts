@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { BodySystemId } from '@/domain/entities/HealthIndicator';
 import type { BodyModel } from '@/presentation/store/settingsStore';
 import { BODY_LANDMARKS, BODY_MESH, type BodyMeshData, type Vec3 } from './bodyMeshData';
+import { poseLandmarks, poseMesh } from './bodyPose';
 import {
   airwayGeometry,
   brainGeometry,
@@ -70,6 +71,8 @@ function skinGeometry(model: BodyModel): THREE.BufferGeometry {
   }
   const nor = new Float32Array(n.length);
   for (let i = 0; i < n.length; i++) nor[i] = n[i]! / 127;
+  // Pose relajada (la malla original viene en pose A, rígida).
+  poseMesh(pos, nor, BODY_LANDMARKS[model]);
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
@@ -131,7 +134,7 @@ const lerp3 = (a: Vec3, b: Vec3, t: number, off: Vec3 = [0, 0, 0]): Vec3 => [
 
 /** Construye el cuerpo completo para el modelo dado. Todo se ubica con los puntos medidos en la malla. */
 export function buildBody(model: BodyModel, dark: boolean) {
-  const L = BODY_LANDMARKS[model];
+  const L = poseLandmarks(BODY_LANDMARKS[model]);
   const root = new THREE.Group();
   if (model === 'female') root.scale.setScalar(0.95);
   const organs: OrganMesh[] = [];
@@ -149,7 +152,7 @@ export function buildBody(model: BodyModel, dark: boolean) {
     return m;
   };
 
-  /** Ubica una pieza alargada a lo largo del segmento a→b (brazos en pose A). */
+  /** Ubica una pieza alargada a lo largo del segmento a→b. */
   const along = (m: THREE.Mesh, a: Vec3, b: Vec3, t = 0.5) => {
     const va = v3(a);
     const dir = v3(b).sub(va);
@@ -255,7 +258,7 @@ export function buildBody(model: BodyModel, dark: boolean) {
     part('skeletal', new THREE.SphereGeometry(0.06, 14, 10), [s * L.hip[0] * 0.85, L.hip[1] + 0.08, pelvis[2] - 0.005], { scale: [1, 0.85, 0.3], rot: [0, s * 0.5, s * -0.25] });
   }
 
-  // ----- Extremidades (brazos en pose A, medidos en la malla) -----
+  // ----- Extremidades (pose relajada: ver bodyPose.ts) -----
   for (const s of [1, -1]) {
     const sh = mirrorX(L.shoulder, s), el = mirrorX(L.elbow, s), wr = mirrorX(L.wrist, s);
     const hip = mirrorX(L.hip, s), kn = mirrorX(L.knee, s), an = mirrorX(L.ankle, s), toe = mirrorX(L.toe, s);

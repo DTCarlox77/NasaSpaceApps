@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNetworkState } from 'expo-network';
 import { router } from 'expo-router';
+import { useTriageStore } from '@/presentation/store/triageStore';
 import { StatusBar } from 'expo-status-bar';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '@/core/theme';
@@ -34,7 +35,7 @@ export function AppHeader() {
 
         <PressableScale
           accessibilityLabel={t('alert.open')}
-          onPress={() => router.push({ pathname: '/alert', params: { trigger: 'manual' } })}
+          onPress={() => (useTriageStore.getState().active ? router.push('/triage') : router.push({ pathname: '/alert', params: { trigger: 'manual' } }))}
           style={[styles.row, styles.sos, { backgroundColor: colors.dangerStrong, borderRadius: radius.pill, paddingHorizontal: spacing.md, gap: spacing.xs }]}
         >
           <MaterialCommunityIcons name="alarm-light-outline" size={18} color="#FFFFFF" />

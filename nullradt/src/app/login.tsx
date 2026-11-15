@@ -7,6 +7,7 @@ import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '@/core/theme';
 import { Button } from '@/presentation/components/ui';
+import { ChangePasswordStep } from '@/presentation/features/auth/ChangePasswordStep';
 import { IdentifyStep } from '@/presentation/features/auth/IdentifyStep';
 import { LOGIN_SHEET_OVERLAP, LoginHero } from '@/presentation/features/auth/LoginHero';
 import { MissionStep } from '@/presentation/features/auth/MissionStep';
@@ -24,7 +25,8 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const enterApp = useAuthStore((s) => s.enterApp);
   const hasMission = useSettingsStore((s) => !!s.selectedMissionId);
-  const [step, setStep] = useState<0 | 1>(0);
+  const [step, setStep] = useState<0 | 1 | 'change'>(0);
+  const mustChange = () => !!useAuthStore.getState().session?.mustChangePassword;
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
 
   // Con el teclado abierto, sube el formulario para que el campo y el botón queden a la vista.
@@ -39,25 +41,29 @@ export default function LoginScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior="padding">
         <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}>
           <View style={{ paddingTop: insets.top, backgroundColor: colors.night }}>
-            {/* Emergencia siempre accesible, incluso sin sesión */}
+            {/* Emergencia sin sesión: triaje en tabletas registradas (si no, SOS básico) */}
             <View style={[styles.sosRow, { paddingHorizontal: spacing.lg, paddingTop: spacing.sm }]}>
               <Button
                 label={t('nav.sos')}
                 leftIcon="megaphone"
                 variant="danger"
                 size="sm"
-                onPress={() => router.push({ pathname: '/alert', params: { trigger: 'manual' } })}
+                onPress={() => router.push('/triage')}
               />
             </View>
             <LoginHero />
           </View>
 
           <View style={[styles.sheet, { backgroundColor: colors.background, borderTopLeftRadius: radius.sheet, borderTopRightRadius: radius.sheet, padding: spacing.xl, gap: spacing.xl }]}>
-            <Stepper steps={[t('auth.steps.identify'), t('auth.steps.mission')]} current={step} label={t('auth.steps.label')} />
+            <Stepper steps={[t('auth.steps.identify'), t('auth.steps.mission')]} current={step === 1 ? 1 : 0} label={t('auth.steps.label')} />
 
             {step === 0 ? (
               <Animated.View key="identify" entering={FadeInRight.duration(260)} exiting={FadeOutLeft.duration(180)}>
-                <IdentifyStep onVerified={(method) => (method === 'biometric' && hasMission ? enterApp() : setStep(1))} />
+                <IdentifyStep onVerified={(method) => (mustChange() ? setStep('change') : method !== 'password' && hasMission ? enterApp() : setStep(1))} />
+              </Animated.View>
+            ) : step === 'change' ? (
+              <Animated.View key="change" entering={FadeInRight.duration(260)} exiting={FadeOutLeft.duration(180)}>
+                <ChangePasswordStep onDone={() => setStep(1)} />
               </Animated.View>
             ) : (
               <Animated.View key="mission" entering={FadeInRight.duration(260)} exiting={FadeOutLeft.duration(180)}>

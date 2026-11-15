@@ -1,6 +1,7 @@
 import { env } from '@/core/config/env';
 import { InvalidCredentialsError, type Credentials, type CrewRole, type Session } from '@/domain/entities/Session';
-import { crewMockDataSource } from '../mock/crewMockDataSource';
+import { onboardServer } from '@/data/onboard/onboardServer';
+import { useDeviceStore } from '@/presentation/store/deviceStore';
 import { HttpError, postJson } from './httpClient';
 
 interface LoginResponse {
@@ -19,17 +20,9 @@ interface LoginResponse {
 export const authRemoteDataSource = {
   async login(credentials: Credentials): Promise<Session> {
     if (!env.apiUrl) {
-      // Demo: ID y contraseña de prueba de la tripulación sintética.
-      const member = crewMockDataSource.verify(credentials.identifier, credentials.password);
-      if (!member) throw new InvalidCredentialsError();
-      return {
-        userId: member.id,
-        displayName: member.displayName,
-        role: member.role,
-        token: `demo-token-${Date.now().toString(36)}`,
-        issuedAt: new Date().toISOString(),
-        demo: true,
-      };
+      // Demo: servidor a bordo simulado (bcrypt + bloqueo + JWT/refresh rotativo).
+      await useDeviceStore.getState().ensure();
+      return onboardServer.login(credentials.identifier, credentials.password, useDeviceStore.getState().deviceId);
     }
     try {
       const res = await postJson<LoginResponse>('/api/v1/auth/login', credentials);
@@ -41,6 +34,7 @@ export const authRemoteDataSource = {
         token: res.token,
         issuedAt: new Date().toISOString(),
         demo: false,
+        authMode: 'remote',
       };
     } catch (e) {
       if (e instanceof HttpError && (e.status === 401 || e.status === 403)) throw new InvalidCredentialsError();

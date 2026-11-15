@@ -42,6 +42,9 @@ export interface Reading {
   source: MeasurementSource;
   /** false = guardado solo en el dispositivo, pendiente de sincronizar. */
   synced: boolean;
+  /** Foto del equipo de medición (entrada por cámara), guardada en el dispositivo. */
+  photoUri?: string;
+  note?: string;
 }
 
 /**

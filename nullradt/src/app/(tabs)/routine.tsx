@@ -8,6 +8,10 @@ import { useAppTheme } from '@/core/theme';
 import { cancelReminder, requestPermission, scheduleDailyReminder } from '@/core/notifications/notificationService';
 import { AppText, Card, FadeInView, PressableScale, ProgressBar, Screen } from '@/presentation/components/ui';
 import { showToast } from '@/presentation/store/toastStore';
+import { useAuthStore } from '@/presentation/store/authStore';
+import { fitnessToday, useWellbeingStore } from '@/presentation/store/wellbeingStore';
+import { nextDueAt } from '@/domain/usecases/IndicatorHistory';
+import { useHealthOverview } from '@/presentation/hooks/useHealthOverview';
 import { ROUTINE, todayKey, useRoutineStore, type RoutineItem } from '@/presentation/store/routineStore';
 
 const toMinutes = (hhmm: string) => {
@@ -18,9 +22,10 @@ const toMinutes = (hhmm: string) => {
 /** Ítems que abren una pantalla de la app al tocarlos. */
 const ACTION: Partial<Record<string, () => void>> = {
   dailyCheck: () => router.navigate('/wellbeing'),
-  vitals: () => router.push({ pathname: '/measure', params: { indicator: 'bloodPressure' } }),
+  vitals: () => router.push('/measure-session'),
   brainTests: () => router.push('/tests' as Href),
   eyes: () => router.push('/tests/vision'),
+  fitCheck: () => router.push('/tests/reaction'),
 };
 
 /** Rutina diaria con recordatorios locales (funciona sin conexión). */
@@ -28,6 +33,7 @@ export default function RoutineScreen() {
   const { t } = useTranslation();
   const { colors, spacing, radius } = useAppTheme();
   const { done, reminders, toggleDone, setReminder } = useRoutineStore();
+  const userId = useAuthStore((s) => s.session?.userId ?? '');
   const today = done[todayKey()] ?? [];
   const [now, setNow] = useState(() => new Date());
 
@@ -36,6 +42,12 @@ export default function RoutineScreen() {
     return () => clearInterval(id);
   }, []);
   const nowMin = now.getHours() * 60 + now.getMinutes();
+  // Mediciones vencidas según la frecuencia del protocolo de cada indicador.
+  const { overview } = useHealthOverview();
+  const due = (overview?.indicators ?? []).filter((ind) => {
+    const at = nextDueAt(ind);
+    return at !== null && at < now.getTime();
+  });
   const nextItem = ROUTINE.find((i) => toMinutes(i.time) >= nowMin && !today.includes(i.id));
   const progress = today.filter((id) => ROUTINE.some((i) => i.id === id)).length / ROUTINE.length;
 
@@ -89,6 +101,31 @@ export default function RoutineScreen() {
         </Card>
       </FadeInView>
 
+      {due.length > 0 && (
+        <FadeInView index={2}>
+          <Card style={{ gap: spacing.sm, borderWidth: 1, borderColor: colors.status.caution.ring }}>
+            <View style={[styles.row, { gap: spacing.sm }]}>
+              <Ionicons name="alarm-outline" size={20} color={colors.status.caution.text} />
+              <AppText variant="h3" style={styles.flex}>{t('routine.dueTitle')}</AppText>
+            </View>
+            <AppText variant="caption" color="textSecondary">{t('routine.dueBody')}</AppText>
+            {due.map((ind) => (
+              <PressableScale
+                key={ind.id}
+                onPress={() => router.push({ pathname: '/indicator/[id]', params: { id: ind.id } })}
+                accessibilityLabel={t(`indicators.${ind.id}.name`)}
+                style={[styles.row, { gap: spacing.sm, paddingVertical: spacing.xs }]}
+              >
+                <Ionicons name="ellipse" size={8} color={colors.status.caution.solid} />
+                <AppText variant="label" style={styles.flex}>{t(`indicators.${ind.id}.short`)}</AppText>
+                <AppText variant="caption" color="textMuted">{t('routine.everyHours', { hours: ind.frequencyHours })}</AppText>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </PressableScale>
+            ))}
+          </Card>
+        </FadeInView>
+      )}
+
       <View style={{ gap: spacing.sm }}>
         {ROUTINE.map((item, i) => {
           const isDone = today.includes(item.id);
@@ -109,6 +146,12 @@ export default function RoutineScreen() {
                   accessibilityLabel={t(`routine.items.${item.id}.title` as never)}
                   onPress={() => {
                     Haptics.selectionAsync().catch(() => {});
+                    // Tarea crítica: obligatoria la prueba de reacción con resultado "apto" hoy.
+                    if (item.critical && !isDone && fitnessToday(useWellbeingStore.getState().fitness[userId])?.fit !== 'yes') {
+                      showToast({ level: 'caution', title: t('wellbeingPlus.fit.requiredTitle'), body: t('wellbeingPlus.fit.requiredBody') });
+                      router.push('/tests/reaction');
+                      return;
+                    }
                     toggleDone(item.id);
                   }}
                   style={[styles.check, { borderRadius: radius.md, backgroundColor: isDone ? colors.primary : colors.surfaceAlt, borderColor: isDone ? colors.primary : colors.border }]}
@@ -121,6 +164,9 @@ export default function RoutineScreen() {
                     <AppText variant="caption" color="textMuted">· {t(`routine.categories.${item.category}`)}</AppText>
                   </View>
                   <AppText variant="title" style={isDone ? styles.strike : undefined}>{t(`routine.items.${item.id}.title` as never)}</AppText>
+                  {item.critical && (
+                    <AppText variant="caption" color="accentText">{t('wellbeingPlus.fit.criticalTag')}</AppText>
+                  )}
                   <AppText variant="caption" color="textSecondary" numberOfLines={2}>{t(`routine.items.${item.id}.body` as never)}</AppText>
                   {action && <AppText variant="caption" color="primaryText">{t('routine.tapToOpen')}</AppText>}
                 </PressableScale>

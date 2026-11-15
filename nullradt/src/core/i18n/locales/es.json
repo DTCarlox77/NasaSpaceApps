@@ -279,7 +279,10 @@
     "roles": {
       "astronaut": "Astronauta",
       "crew": "Tripulación",
-      "flightSurgeon": "Flight surgeon"
+      "flightSurgeon": "Flight surgeon",
+      "admin": "Control de misión",
+      "flight_surgeon": "Flight surgeon",
+      "behavioral_health": "Salud conductual"
     },
     "scan": {
       "idle": "Verifica tu identidad con tu {{method}}",
@@ -434,9 +437,20 @@
       "brainTests": {
         "title": "Tests diarios",
         "body": "Reflejos, visión, agilidad mental y memoria (6 min)."
+      },
+      "fitCheck": {
+        "title": "Prueba de reacción (aptitud)",
+        "body": "3 minutos antes de la tarea crítica. A Tierra solo llega apto / no confirmado."
+      },
+      "criticalTask": {
+        "title": "Operación del brazo robótico",
+        "body": "Tarea crítica: requiere resultado «apto» en la prueba de reacción de hoy."
       }
     },
-    "source": "Rutina de ejemplo inspirada en el día típico en la EEI (≈ 2 h de ejercicio diario, NASA). Datos sintéticos."
+    "source": "Rutina de ejemplo inspirada en el día típico en la EEI (≈ 2 h de ejercicio diario, NASA). Datos sintéticos.",
+    "dueTitle": "Mediciones pendientes",
+    "dueBody": "Según la frecuencia del protocolo, ya toca medir:",
+    "everyHours": "cada {{hours}} h"
   },
   "wellbeing": {
     "title": "Bienestar",
@@ -501,7 +515,12 @@
       "crew": "Tripulación",
       "connectivity": "Conectividad",
       "measure": "Medir signos vitales",
-      "tests": "Tests diarios"
+      "tests": "Tests diarios",
+      "comms": "Comunicaciones con Tierra",
+      "access": "Seguridad y acceso",
+      "earth": "Bandeja de Tierra",
+      "register": "Registrar con cámara",
+      "voiceCommands": "Comandos de voz"
     }
   },
   "systems": {

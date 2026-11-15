@@ -85,7 +85,13 @@
           "cameraPermission": "NullRadt uses the camera to take your profile picture and read medical device displays."
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      [
+        "./plugins/withShortCmakePaths",
+        {
+          "max": 240
+        }
+      ]
     ],
     "scheme": "nullradt",
     "backgroundColor": "#1F1F1F",

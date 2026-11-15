@@ -5,7 +5,8 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { palette, useAppTheme, type StatusKey } from '@/core/theme';
 import type { HazardId } from '@/domain/entities/Hazard';
-import type { BodySystemId, HealthStatus } from '@/domain/entities/HealthIndicator';
+import type { BodySystemId, HealthStatus, IndicatorId } from '@/domain/entities/HealthIndicator';
+import { PointsCard } from '@/presentation/features/gamification/PointsCard';
 import { BodyFigure } from '@/presentation/components/health/BodyFigure';
 import { Disclaimer } from '@/presentation/components/feedback/Disclaimer';
 import { AppText, Avatar, Button, Card, FadeInView, ProgressBar, Screen, StatusBadge } from '@/presentation/components/ui';
@@ -60,6 +61,7 @@ export default function HomeScreen() {
     setSelectedSystem(id);
     router.navigate('/body');
   };
+  const openIndicator = (id: IndicatorId) => router.push({ pathname: '/indicator/[id]', params: { id } });
 
   return (
     <Screen topInset={false}>
@@ -81,13 +83,14 @@ export default function HomeScreen() {
           <Button
             label={t('home.registerMeasurement')}
             leftIcon="add"
-            onPress={() => router.push({ pathname: '/measure', params: { indicator: 'bloodPressure' } })}
+            onPress={() => router.push('/measure-session')}
           />
         </View>
       </FadeInView>
 
       {/* Check diario + tripulación */}
       <FadeInView index={1} style={{ gap: spacing.md }}>
+        <PointsCard />
         <Card onPress={() => router.navigate('/wellbeing')} accessibilityLabel={t('home.dailyCheckInBtn')} style={[styles.row, { gap: spacing.md, borderWidth: 1, borderColor: checkedToday ? colors.status.normal.ring : colors.status.caution.ring }]}>
           <View style={[styles.iconTile, { backgroundColor: checkedToday ? colors.status.normal.background : colors.status.caution.background, borderRadius: radius.md }]}>
             <Ionicons name={checkedToday ? 'checkmark-done' : 'heart-outline'} size={22} color={checkedToday ? colors.status.normal.text : colors.status.caution.text} />
@@ -142,7 +145,7 @@ export default function HomeScreen() {
                 </View>
                 <AppText variant="bodySmall" color="textSecondary" numberOfLines={3}>{t(`systems.${system.id}.role`)}</AppText>
                 {system.indicators.map((ind) => (
-                  <IndicatorRow key={ind.id} indicator={ind} onPress={() => openSystem(system.id)} />
+                  <IndicatorRow key={ind.id} indicator={ind} onPress={() => openIndicator(ind.id)} />
                 ))}
                 <Button label={t('home.exploreSystem')} variant="secondary" fullWidth onPress={() => openSystem(system.id)} />
               </View>
@@ -158,7 +161,7 @@ export default function HomeScreen() {
           <View style={[styles.wrap, { gap: spacing.md }]}>
             {overview.indicators.map((ind) => (
               <View key={ind.id} style={styles.gridItem}>
-                <IndicatorTile indicator={ind} onPress={() => openSystem(ind.systemId)} />
+                <IndicatorTile indicator={ind} onPress={() => openIndicator(ind.id)} />
               </View>
             ))}
           </View>
@@ -190,7 +193,7 @@ export default function HomeScreen() {
               <View style={{ gap: spacing.sm }}>
                 <AppText variant="label">{t('home.needsAttentionTitle')}</AppText>
                 {overview.needsAttention.map((ind) => (
-                  <IndicatorRow key={ind.id} indicator={ind} onPress={() => openSystem(ind.systemId)} />
+                  <IndicatorRow key={ind.id} indicator={ind} onPress={() => openIndicator(ind.id)} />
                 ))}
               </View>
             )}

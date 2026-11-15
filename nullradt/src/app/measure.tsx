@@ -23,9 +23,10 @@ import type { IndicatorId } from '@/domain/entities/HealthIndicator';
 import { DEVICE, isMeasurable, simulateMeasurement, type MeasurableId, type SimulatedReading } from '@/domain/usecases/SimulateMeasurement';
 import { AppText, Button, Card, IconButton, StatusBadge } from '@/presentation/components/ui';
 import { Disclaimer } from '@/presentation/components/feedback/Disclaimer';
-import { alertCrew } from '@/presentation/features/crew/crewAlerts';
-import { useAuthStore } from '@/presentation/store/authStore';
-import { useHealthLogStore } from '@/presentation/store/healthLogStore';
+import { recordReading } from '@/presentation/features/health/recordReading';
+import { assistantSay } from '@/presentation/features/voice/voiceAssistant';
+import { SessionNext } from '@/presentation/features/health/SessionNext';
+import { useMeasureSessionStore } from '@/presentation/store/measureSessionStore';
 
 type Phase = 'searching' | 'connected' | 'measuring' | 'result';
 
@@ -56,13 +57,14 @@ function liveValue(id: MeasurableId, p: number): string {
 }
 
 export default function MeasureScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors, spacing, radius } = useAppTheme();
-  const params = useLocalSearchParams<{ indicator?: string }>();
+  const params = useLocalSearchParams<{ indicator?: string; session?: string; auto?: string }>();
+  const inSession = params.session === '1';
+  // Abierta por voz: mide sola y dice el resultado (manos libres).
+  const auto = params.auto === '1';
   const id: MeasurableId = params.indicator && isMeasurable(params.indicator as IndicatorId) ? (params.indicator as MeasurableId) : 'bloodPressure';
   const device = DEVICE[id];
-  const userId = useAuthStore((s) => s.session?.userId ?? '');
-  const addReading = useHealthLogStore((s) => s.addReading);
 
   const [phase, setPhase] = useState<Phase>('searching');
   const [live, setLive] = useState('—');
@@ -109,24 +111,38 @@ export default function MeasureScreen() {
 
   const finish = () => {
     const r = simulateMeasurement(id);
-    const takenAt = new Date().toISOString();
-    addReading(userId, {
-      indicatorId: id,
-      status: r.status,
-      reading: { value: r.value, secondaryValue: r.secondaryValue, takenAt, source: 'wearable', synced: false },
-    });
-    setResult(r);
+    // Motor de reglas + escalamiento (tripulación / flight surgeon con retraso a Tierra).
+    const evaluation = recordReading({ indicatorId: id, value: r.value, secondaryValue: r.secondaryValue, source: 'wearable' });
+    if (inSession) useMeasureSessionStore.getState().markDone(id);
+    setResult({ ...r, status: evaluation.status === 'unevaluated' ? r.status : evaluation.status });
     setPhase('result');
-    if (r.status === 'critical') {
-      // Valor grave: se avisa automáticamente al resto de la tripulación.
-      alertCrew({ kind: 'measurement', severity: 'critical', indicatorId: id, value: `${fmt(r)} ${t(`measure.units.${id}`)}` });
-      setAlerted(true);
-    } else {
+    if (auto) {
+      const value = r.secondaryValue !== undefined ? t('assistant.over', { a: r.value, b: r.secondaryValue }) : String(r.value).replace('.', i18n.language === 'es' ? ',' : '.');
+      const session = useMeasureSessionStore.getState().session;
+      const left = session ? session.items.filter((x) => !session.done.includes(x)).length : 0;
+      assistantSay(
+        `${t('assistant.indicatorLine', { name: t(`indicators.${id}.name`), value, unit: t(`assistant.units.${id}`), status: t(`status.${evaluation.status}`) })} ${
+          inSession ? (left ? t('assistant.sayNext', { count: left }) : t('assistant.sessionComplete')) : ''
+        }`,
+      );
+    }
+    if (evaluation.status === 'critical' || evaluation.escalation === 'crew') setAlerted(true);
+    else {
       Haptics.notificationAsync(
         r.status === 'normal' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning,
       ).catch(() => {});
     }
   };
+
+  // Abierta por voz: en cuanto conecta el equipo, mide sola (una vez).
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!auto || phase !== 'connected' || autoStarted.current) return;
+    autoStarted.current = true;
+    const timer = setTimeout(measure, 900);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auto, phase]);
 
   const fmt = (r: SimulatedReading) => (r.secondaryValue !== undefined ? `${r.value}/${r.secondaryValue}` : String(r.value));
   const ringProps = useAnimatedProps(() => ({ strokeDashoffset: CIRC * (1 - progress.value) }));
@@ -249,11 +265,14 @@ export default function MeasureScreen() {
         )}
         {phase === 'result' && (
           <View style={{ gap: spacing.sm }}>
-            {result?.status !== 'normal' && (
+            {result?.status === 'critical' && (
+              <Button label={t('triage.openAuto')} variant="danger" leftIcon="medkit" fullWidth onPress={() => router.push({ pathname: '/triage', params: { trigger: 'criticalReading' } })} />
+            )}
+            {result?.status === 'caution' && (
               <Button label={t('measure.openAlert')} variant="danger" leftIcon="megaphone" fullWidth onPress={() => router.push({ pathname: '/alert', params: { trigger: 'manual' } })} />
             )}
-            <Button label={t('measure.done')} leftIcon="checkmark" size="lg" fullWidth onPress={close} />
-            <Button label={t('measure.again')} variant="ghost" leftIcon="refresh" fullWidth onPress={measure} />
+            {inSession ? <SessionNext /> : <Button label={t('measure.done')} leftIcon="checkmark" size="lg" fullWidth onPress={close} />}
+            {!inSession && <Button label={t('measure.again')} variant="ghost" leftIcon="refresh" fullWidth onPress={measure} />}
           </View>
         )}
         {phase === 'searching' && <Button label={t('alert.cancel')} variant="ghost" fullWidth onPress={close} />}

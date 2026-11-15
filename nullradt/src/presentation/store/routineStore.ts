@@ -12,6 +12,8 @@ export interface RoutineItem {
   icon: string;
   /** Minutos de duración (informativo). */
   minutes: number;
+  /** Tarea crítica: exige 'apto' en la prueba de reacción del día. */
+  critical?: boolean;
 }
 
 /**
@@ -27,6 +29,8 @@ export const ROUTINE: RoutineItem[] = [
   { id: 'hydration1', time: '09:30', category: 'nutrition', icon: 'water-outline', minutes: 2 },
   { id: 'aerobic', time: '10:00', category: 'exercise', icon: 'bicycle-outline', minutes: 60 },
   { id: 'lunch', time: '12:30', category: 'nutrition', icon: 'restaurant-outline', minutes: 45 },
+  { id: 'fitCheck', time: '13:15', category: 'health', icon: 'speedometer-outline', minutes: 3 },
+  { id: 'criticalTask', time: '13:30', category: 'work', icon: 'construct-outline', minutes: 90, critical: true },
   { id: 'hydration2', time: '14:30', category: 'nutrition', icon: 'water-outline', minutes: 2 },
   { id: 'resistance', time: '16:00', category: 'exercise', icon: 'barbell-outline', minutes: 60 },
   { id: 'eyes', time: '18:00', category: 'health', icon: 'eye-outline', minutes: 5 },

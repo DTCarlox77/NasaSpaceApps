@@ -1,0 +1,141 @@
+{
+  "id": "nullradt-start-microgravity",
+  "version": "1.0.0",
+  "updated": "2026-11-15",
+  "status": "demo — requires validation by the mission's flight surgeons before operational use",
+  "description": {
+    "es": "START (Simple Triage and Rapid Treatment) adaptado a microgravedad + módulo de radiación. Solo signos observables si el tripulante no responde. No diagnostica ni prescribe.",
+    "en": "START (Simple Triage and Rapid Treatment) adapted to microgravity + radiation module. Observable signs only if the crewmember does not respond. Does not diagnose or prescribe."
+  },
+  "sources": [
+    {
+      "id": "start",
+      "title": "Benson M, Koenig KL, Schultz CH. Disaster triage: START, then SAVE. Prehosp Disaster Med. 1996;11(2):117-124",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/?term=Disaster+triage%3A+START%2C+then+SAVE"
+    },
+    {
+      "id": "chemm",
+      "title": "START Adult Triage Algorithm — CHEMM, U.S. Department of Health and Human Services",
+      "url": "https://chemm.hhs.gov/startadult.htm"
+    },
+    {
+      "id": "remm",
+      "title": "Radiation Emergency Medical Management (REMM) — Acute Radiation Syndrome, time to emesis — U.S. HHS",
+      "url": "https://remm.hhs.gov/"
+    }
+  ],
+  "adaptations": {
+    "es": [
+      "'¿Camina?' se sustituye por '¿Se desplaza solo usando los pasamanos?' (no hay suelo en microgravedad).",
+      "La apertura de la vía aérea se hace con el tripulante sujeto a una superficie o con los pies en anclajes.",
+      "Módulo de radiación: el vómito temprano tras una exposición sube un nivel la prioridad y escala al flight surgeon."
+    ],
+    "en": [
+      "'Can walk?' is replaced by 'Moves unaided using the handrails?' (there is no floor in microgravity).",
+      "Airway opening is done with the crewmember restrained against a surface or with feet in restraints.",
+      "Radiation module: early vomiting after exposure raises priority one level and escalates to the flight surgeon."
+    ]
+  },
+  "start": "responsive",
+  "categories": {
+    "immediate": { "priority": 1, "tone": "critical", "label": { "es": "Inmediato (rojo)", "en": "Immediate (red)" } },
+    "delayed": { "priority": 2, "tone": "caution", "label": { "es": "Diferido (amarillo)", "en": "Delayed (yellow)" } },
+    "minor": { "priority": 3, "tone": "normal", "label": { "es": "Leve (verde)", "en": "Minor (green)" } },
+    "expectant": { "priority": 4, "tone": "black", "label": { "es": "Sin respiración tras abrir vía aérea (negro)", "en": "Not breathing after airway opened (black)" } }
+  },
+  "nodes": {
+    "responsive": {
+      "observable": true,
+      "q": { "es": "¿Responde cuando le hablas o le tocas el hombro?", "en": "Does the crewmember respond when you speak or touch their shoulder?" },
+      "yes": "mobile",
+      "no": "breathing",
+      "sets": { "no": { "responsive": false } }
+    },
+    "mobile": {
+      "observable": true,
+      "q": { "es": "¿Se desplaza solo por el módulo usando los pasamanos?", "en": "Do they move through the module unaided using the handrails?" },
+      "yes": "cat:minor",
+      "no": "breathing"
+    },
+    "breathing": {
+      "observable": true,
+      "q": { "es": "¿Respira? Mira el pecho, escucha y siente el aire durante 10 s.", "en": "Are they breathing? Look at the chest, listen and feel for air for 10 s." },
+      "yes": "respRate",
+      "no": "airway"
+    },
+    "airway": {
+      "observable": true,
+      "q": { "es": "Sujeta al tripulante a una superficie y abre la vía aérea (frente-mentón). ¿Respira ahora?", "en": "Restrain the crewmember against a surface and open the airway (head tilt–chin lift). Breathing now?" },
+      "yes": "cat:immediate",
+      "no": "cat:expectant"
+    },
+    "respRate": {
+      "observable": true,
+      "q": { "es": "¿Más de 30 respiraciones por minuto?", "en": "More than 30 breaths per minute?" },
+      "yes": "cat:immediate",
+      "no": "perfusion"
+    },
+    "perfusion": {
+      "observable": true,
+      "q": { "es": "¿Pulso radial ausente o relleno capilar mayor de 2 s (presiona la uña)?", "en": "Radial pulse absent or capillary refill longer than 2 s (press the nail)?" },
+      "yes": "cat:immediate",
+      "no": "mental"
+    },
+    "mental": {
+      "observable": true,
+      "q": { "es": "¿Obedece órdenes simples, como 'aprieta mi mano'?", "en": "Do they follow simple commands, like 'squeeze my hand'?" },
+      "yes": "cat:delayed",
+      "no": "cat:immediate",
+      "autoIfUnresponsive": false
+    }
+  },
+  "radiation": {
+    "start": "radExposure",
+    "nodes": {
+      "radExposure": {
+        "observable": true,
+        "q": { "es": "¿Hubo exposición a radiación (evento solar, alarma del dosímetro)?", "en": "Was there radiation exposure (solar event, dosimeter alarm)?" },
+        "yes": "radVomit",
+        "no": "end"
+      },
+      "radVomit": {
+        "observable": true,
+        "q": { "es": "¿Ha vomitado desde la exposición?", "en": "Have they vomited since the exposure?" },
+        "yes": "radVomitEarly",
+        "no": "end:exposed"
+      },
+      "radVomitEarly": {
+        "observable": true,
+        "q": { "es": "¿El primer vómito fue en las 2 primeras horas tras la exposición?", "en": "Was the first vomiting within 2 hours of the exposure?" },
+        "yes": "end:high",
+        "no": "end:exposed"
+      }
+    }
+  },
+  "actions": {
+    "immediate": {
+      "es": ["Atiéndelo primero.", "Controla hemorragias con presión directa.", "Mantén la vía aérea abierta y al tripulante sujeto.", "Reevalúa cada 5 minutos."],
+      "en": ["Treat first.", "Control bleeding with direct pressure.", "Keep the airway open and the crewmember restrained.", "Reassess every 5 minutes."]
+    },
+    "delayed": {
+      "es": ["Atiende después de los inmediatos.", "Sujétalo en un lugar seguro.", "Reevalúa cada 15 minutos."],
+      "en": ["Treat after the immediate ones.", "Restrain them in a safe place.", "Reassess every 15 minutes."]
+    },
+    "minor": {
+      "es": ["Puede esperar.", "Pídele que ayude si puede.", "Reevalúa si cambia algo."],
+      "en": ["Can wait.", "Ask them to help if able.", "Reassess if anything changes."]
+    },
+    "expectant": {
+      "es": ["Sigue el procedimiento de a bordo y la indicación del flight surgeon cuando llegue.", "Atiende a los demás tripulantes."],
+      "en": ["Follow the onboard procedure and the flight surgeon's instruction when it arrives.", "Care for the other crewmembers."]
+    },
+    "radiationHigh": {
+      "es": ["Vómito temprano tras exposición: prioridad subida un nivel.", "Registra la hora de la exposición y del primer vómito.", "Se escala al flight surgeon."],
+      "en": ["Early vomiting after exposure: priority raised one level.", "Record the time of exposure and first vomiting.", "Escalated to the flight surgeon."]
+    }
+  },
+  "outOfProtocol": {
+    "es": "Cualquier situación fuera de este protocolo se describe y se envía a Tierra. La app no diagnostica ni receta.",
+    "en": "Anything outside this protocol is described and sent to Earth. The app does not diagnose or prescribe."
+  }
+}

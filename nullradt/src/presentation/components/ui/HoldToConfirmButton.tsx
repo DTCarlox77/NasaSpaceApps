@@ -126,8 +126,15 @@ export function HoldToConfirmButton({
             { margin: stroke + 8, borderRadius: size, backgroundColor: disabled ? colors.progressTrack : color },
           ]}
         >
-          <Ionicons name={icon} size={44} color={ON_COLOR} />
-          <AppText variant="button" align="center" style={{ color: ON_COLOR, marginTop: 4 }}>
+          <Ionicons name={icon} size={Math.round(size * 0.22)} color={ON_COLOR} />
+          <AppText
+            variant="button"
+            align="center"
+            numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+            style={{ color: ON_COLOR, marginTop: 2, fontSize: Math.min(16, Math.max(12, size * 0.09)), lineHeight: Math.round(Math.min(16, Math.max(12, size * 0.09)) * 1.25) }}
+          >
             {label}
           </AppText>
         </View>
@@ -137,5 +144,5 @@ export function HoldToConfirmButton({
 }
 
 const styles = StyleSheet.create({
-  core: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
+  core: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
 });

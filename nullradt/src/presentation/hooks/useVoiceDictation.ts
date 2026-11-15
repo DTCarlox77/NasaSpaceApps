@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { stopSpeaking } from '@/core/speech/speech';
-import { getOfflineSupport, getSpeechRecognition } from '@/core/speech/speechRecognition';
+import { getOfflineSupport, getRecognizerOwner, getSpeechRecognition, setRecognizerOwner } from '@/core/speech/speechRecognition';
 
 export type DictationError = 'permission' | 'unavailable' | 'offlineUnavailable' | 'failed';
 /** Cómo se está reconociendo la voz. */
@@ -30,15 +30,24 @@ export function useVoiceDictation(language: string, options: DictationOptions = 
 
   useEffect(() => {
     if (!recognizer) return;
+    // Solo atiende los eventos de SU dictado (el asistente de voz comparte el mismo módulo nativo).
+    const mine = () => session.current !== null && getRecognizerOwner() === 'dictation';
     const subs = [
-      recognizer.addListener('start', () => setListening(true)),
-      recognizer.addListener('end', () => setListening(false)),
+      recognizer.addListener('start', () => mine() && setListening(true)),
+      recognizer.addListener('end', () => {
+        if (!mine()) return;
+        setListening(false);
+        session.current = null;
+        setRecognizerOwner(null);
+      }),
       recognizer.addListener('result', (e) => {
+        if (!mine()) return;
         const text = e.results[0]?.transcript ?? '';
         setTranscript(text);
         if (e.isFinal && text) onFinalRef.current?.(text);
       }),
       recognizer.addListener('error', (e) => {
+        if (!mine()) return;
         const s = session.current;
         // El modelo offline falló/no existe: reintentar en línea una sola vez (si se permite).
         if (e.error === 'language-not-supported' && s && !s.triedOnline && s.allowNetwork) {
@@ -48,6 +57,8 @@ export function useVoiceDictation(language: string, options: DictationOptions = 
           return;
         }
         setListening(false);
+        session.current = null;
+        setRecognizerOwner(null);
         if (e.error === 'not-allowed') setError('permission');
         else if (e.error === 'language-not-supported' || e.error === 'network') setError('offlineUnavailable');
         else if (e.error !== 'aborted' && e.error !== 'no-speech') setError('failed');
@@ -55,7 +66,11 @@ export function useVoiceDictation(language: string, options: DictationOptions = 
     ];
     return () => {
       subs.forEach((s) => s.remove());
-      recognizer.abort();
+      if (mine()) {
+        recognizer.abort();
+        session.current = null;
+        setRecognizerOwner(null);
+      }
     };
   }, [recognizer]);
 
@@ -71,6 +86,14 @@ export function useVoiceDictation(language: string, options: DictationOptions = 
     const canOffline = support.onDeviceSupported && support.installed !== false;
     if (!canOffline && !allowNetworkFallback) return setError('offlineUnavailable');
 
+    // Toma el micrófono: si el asistente estaba escuchando, lo cede (se reanuda solo al terminar).
+    if (getRecognizerOwner() === 'assistant') {
+      setRecognizerOwner(null);
+      recognizer.abort();
+      // Deja llegar el 'end' de la sesión del asistente antes de abrir la del dictado.
+      await new Promise((r) => setTimeout(r, 350));
+    }
+    setRecognizerOwner('dictation');
     session.current = { locale: support.locale, triedOnline: !canOffline, allowNetwork: allowNetworkFallback };
     setMode(canOffline ? 'offline' : 'online');
     recognizer.start({

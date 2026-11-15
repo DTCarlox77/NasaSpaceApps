@@ -1,4 +1,5 @@
 import type { SourceRef } from '../entities/Hazard';
+import { AHA_BP, NEWS2, classify as ruleClassify } from '../rules/ruleEngine';
 import type { HealthStatus, IndicatorId } from '../entities/HealthIndicator';
 
 /**
@@ -8,14 +9,7 @@ import type { HealthStatus, IndicatorId } from '../entities/HealthIndicator';
  * Es una herramienta de apoyo a la decisión, no un diagnóstico.
  */
 
-export const NEWS2: SourceRef = {
-  title: 'National Early Warning Score (NEWS) 2 — Royal College of Physicians, 2017',
-  url: 'https://www.rcp.ac.uk/improving-care/resources/national-early-warning-score-news-2/',
-};
-export const AHA_BP: SourceRef = {
-  title: 'Understanding Blood Pressure Readings — American Heart Association',
-  url: 'https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings',
-};
+export { NEWS2, AHA_BP } from '../rules/ruleEngine';
 
 export type MeasurableId = Extract<IndicatorId, 'bloodPressure' | 'heartRate' | 'spo2' | 'bodyTemperature' | 'respRate'>;
 export const MEASURABLE: MeasurableId[] = ['bloodPressure', 'heartRate', 'spo2', 'bodyTemperature', 'respRate'];
@@ -41,28 +35,9 @@ const rand = (min: number, max: number) => min + Math.random() * (max - min);
 const int = (min: number, max: number) => Math.round(rand(min, max));
 const pick = <T,>(...xs: T[]) => xs[Math.floor(Math.random() * xs.length)]!;
 
-/** NEWS2: puntuación 0 → normal · 1–2 → precaución · 3 → crítico. */
-const fromScore = (score: number): SimulatedReading['status'] => (score >= 3 ? 'critical' : score >= 1 ? 'caution' : 'normal');
-
+/** Clasificación con el motor de reglas (NEWS2 / AHA). */
 export function classify(id: MeasurableId, value: number, secondary?: number): SimulatedReading['status'] {
-  switch (id) {
-    case 'heartRate':
-      return fromScore(value <= 40 || value >= 131 ? 3 : value >= 111 ? 2 : value <= 50 || value >= 91 ? 1 : 0);
-    case 'spo2':
-      return fromScore(value <= 91 ? 3 : value <= 93 ? 2 : value <= 95 ? 1 : 0);
-    case 'respRate':
-      return fromScore(value <= 8 || value >= 25 ? 3 : value >= 21 ? 2 : value <= 11 ? 1 : 0);
-    case 'bodyTemperature':
-      return fromScore(value <= 35 ? 3 : value >= 39.1 ? 2 : value <= 36 || value >= 38.1 ? 1 : 0);
-    case 'bloodPressure': {
-      const dia = secondary ?? 0;
-      // Crisis hipertensiva (AHA) o sistólica ≤ 90 (NEWS2 = 3) → crítico.
-      if (value > 180 || dia > 120 || value <= 90) return 'critical';
-      // Elevada / hipertensión (AHA) o sistólica 91–110 (NEWS2 1–2) → precaución.
-      if (value >= 120 || dia >= 80 || value <= 110) return 'caution';
-      return 'normal';
-    }
-  }
+  return ruleClassify(id, value, secondary).status as SimulatedReading['status'];
 }
 
 /** Genera una lectura aleatoria: ~75 % normal, ~17 % precaución, ~8 % crítica. */

@@ -15,3 +15,4 @@ export { TextField, type TextFieldHandle } from './TextField';
 export { ToggleRow } from './ToggleRow';
 export { VoiceNoteInput } from './VoiceNoteInput';
 export { Avatar, initialsOf } from './Avatar';
+export { VasSlider } from './VasSlider';

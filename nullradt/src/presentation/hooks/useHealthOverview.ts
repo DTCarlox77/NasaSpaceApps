@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { buildOverview, type HealthOverview } from '@/domain/usecases/GetHealthOverview';
 import { container } from '@/di/container';
+import { classify } from '@/domain/rules/ruleEngine';
+import { SEX_DEPENDENT_RULES } from '@/domain/rules/sexReference';
+import { biometricsOf } from '@/presentation/hooks/useMyBiometrics';
 import { useAuthStore } from '@/presentation/store/authStore';
 import { applyLocalReadings, useHealthLogStore } from '@/presentation/store/healthLogStore';
 
@@ -26,9 +29,22 @@ export function useHealthOverview() {
 
   useEffect(load, [load]);
 
-  const overview = useMemo(
-    () => (base ? buildOverview({ ...base.snapshot, indicators: applyLocalReadings(base.snapshot.indicators, local) }) : null),
-    [base, local],
+  const me = biometricsOf(userId);
+  const sex = me?.sex;
+  // Reglas que dependen del sexo (calcio urinario, fuerza de agarre): se reevalúa la última lectura de la maqueta.
+  const sexAware = useMemo(
+    () =>
+      base?.snapshot.indicators.map((ind) =>
+        SEX_DEPENDENT_RULES.includes(ind.id) && ind.latest
+          ? { ...ind, status: classify(ind.id, ind.latest.value, ind.latest.secondaryValue, ind.trend.slice(0, -1), sex).status }
+          : ind,
+      ) ?? [],
+    [base, sex],
   );
-  return { overview, error, reload: load };
+  const overview = useMemo(
+    () => (base ? buildOverview({ ...base.snapshot, indicators: applyLocalReadings(sexAware, local) }) : null),
+    [base, sexAware, local],
+  );
+  // `baseIndicators` = datos sin las mediciones locales (para construir el historial sin duplicar puntos).
+  return { overview, baseIndicators: sexAware, localReadings: local ?? [], sex, error, reload: load };
 }

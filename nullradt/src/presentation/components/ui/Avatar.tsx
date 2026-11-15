@@ -31,7 +31,12 @@ export function Avatar({ name, size = 44, tone = 'brand' }: { name: string; size
       accessibilityLabel={name}
       style={[style, styles.center, { backgroundColor: tone === 'night' ? colors.night : colors.primarySoft }]}
     >
-      <AppText variant="title" style={{ color: tone === 'night' ? colors.primary : colors.primaryText, fontSize: size * 0.36 }}>
+      {/* La altura de línea debe crecer con la letra; si no, Lexend se corta arriba y abajo. */}
+      <AppText
+        variant="title"
+        numberOfLines={1}
+        style={{ color: tone === 'night' ? colors.primary : colors.primaryText, fontSize: size * 0.36, lineHeight: Math.round(size * 0.36 * 1.3), includeFontPadding: false, textAlignVertical: 'center' }}
+      >
         {initialsOf(name)}
       </AppText>
     </View>
