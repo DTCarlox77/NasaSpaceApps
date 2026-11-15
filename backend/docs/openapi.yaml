@@ -3161,9 +3161,22 @@ paths:
               $ref: '#/components/schemas/ReadingCreate'
             examples:
               bloodPressure:
-                summary: Presión arterial de ORION
+                summary: Presión arterial de ORION (manual)
                 value:
                   client_uuid: 'c1000000-0000-4000-8000-000000000101'
+                  indicator_code: BLOOD_PRESSURE
+                  measured_at: '2026-11-14T07:30:00Z'
+                  values: { systolic: 145, diastolic: 88, symptoms: [] }
+                  input_method: manual
+                  device_id: ipad-crew-01
+              bloodPressureWithPhoto:
+                summary: Presión arterial con foto del tensiómetro
+                description: |
+                  Primero se sube la foto con `POST /attachments` y se usa el `attachment_id` que
+                  devuelve; un `attachment_id` que no existe o no es del autor responde 400. El id de
+                  este ejemplo es ilustrativo: no existe en el seed.
+                value:
+                  client_uuid: 'c1000000-0000-4000-8000-000000000102'
                   indicator_code: BLOOD_PRESSURE
                   measured_at: '2026-11-14T07:30:00Z'
                   values: { systolic: 145, diastolic: 88, symptoms: [] }
@@ -6363,9 +6376,9 @@ components:
           astronaut_id: '10000000-0000-4000-8000-000000000011'
           indicator_code: BLOOD_PRESSURE
           values: { systolic: 145, diastolic: 88, symptoms: [] }
-          input_method: camera
+          input_method: manual
           device_id: ipad-crew-01
-          attachment_id: '90000000-0000-4000-8000-000000000001'
+          attachment_id: null
           measured_at: '2026-11-14T07:30:00Z'
           received_at: '2026-11-14T07:30:04Z'
           superseded_by: null
