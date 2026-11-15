@@ -7,6 +7,7 @@ const meRoutes = require('./me.routes');
 const adminUsersRoutes = require('./admin.users.routes');
 const adminAstronautsRoutes = require('./admin.astronauts.routes');
 const adminDevicesRoutes = require('./admin.devices.routes');
+const crewRoutes = require('./crew.routes');
 const catalogRoutes = require('./catalog.routes');
 const readingsRoutes = require('./readings.routes');
 const habitatRoutes = require('./habitat.routes');
@@ -44,6 +45,8 @@ router.use('/sync', syncRoutes);
 router.use(emergencyRoutes);
 // Antes de /admin: /admin/behavioral/* es de behavioral_health (tarea 10).
 router.use(behavioralRoutes);
+// Permisos delegados del comandante y su auditoría (tarea 11).
+router.use(crewRoutes);
 // Antes de /admin: su router exige admin a todo /admin/* y el simulador apagado debe dar 404.
 router.use('/admin/simulator', adminSimulatorRoutes);
 router.use('/admin', adminMissionRoutes);
