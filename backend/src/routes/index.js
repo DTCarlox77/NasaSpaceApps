@@ -13,6 +13,7 @@ const groundRoutes = require('./ground.routes');
 const missionsRoutes = require('./missions.routes');
 const syncRoutes = require('./sync.routes');
 const emergencyRoutes = require('./emergency.routes');
+const wellbeingRoutes = require('./wellbeing.routes');
 const adminMissionRoutes = require('./admin.mission.routes');
 const adminSimulatorRoutes = require('./admin.simulator.routes');
 const { restrictServiceAccounts } = require('../middlewares/auth');
@@ -25,6 +26,8 @@ router.use(restrictServiceAccounts);
 
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
+// Antes de /me: /me/wellbeing (bienestar del propio astronauta, tarea 10).
+router.use(wellbeingRoutes);
 router.use('/me', meRoutes);
 router.use('/admin/users', adminUsersRoutes);
 router.use('/admin/astronauts', adminAstronautsRoutes);
