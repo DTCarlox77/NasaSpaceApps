@@ -40,3 +40,6 @@ services:
       # Datos de demo SINTÉTICOS (usuarios con Demo2026!). Nunca con datos reales.
       - key: DEMO_SEED
         value: 'true'
+      # Simulador de la demo (POST /admin/simulator/*): el plan gratuito no tiene consola.
+      - key: SIMULATOR_ENABLED
+        value: 'true'

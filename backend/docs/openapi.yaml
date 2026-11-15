@@ -91,6 +91,10 @@ tags:
     description: Bandeja y detalle confidencial para behavioral_health.
   - name: Auditoría
     description: Acciones delegadas y accesos a datos confidenciales.
+  - name: Simulador
+    description: |
+      **Solo demo.** Datos sintéticos de ARES-1 (historia y escenarios). Solo existen con
+      `SIMULATOR_ENABLED=true`; si no, responden 404.
 paths:
   # ===================================================================== Sistema
   /api/v1/health:
@@ -1636,6 +1640,150 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  # ===================================================================== Simulador (solo demo)
+  /api/v1/admin/simulator/history:
+    post:
+      tags: [Simulador]
+      summary: Carga la historia sintética de ARES-1 (solo demo)
+      description: |
+        **Solo demo**: responde 404 si el servidor no tiene `SIMULATOR_ENABLED=true`.
+
+        Genera los últimos `days` días (terminan ahora, en UTC) de la tripulación vigente y del
+        hábitat, con datos **sintéticos** dentro de los rangos normales del catálogo:
+        - signos vitales diarios, sueño, ejercicio, glucosa en ayunas cada 2–3 días, masa semanal
+          y dosis de radiación diaria y acumulada;
+        - hábitat cada hora por módulo (CO₂, temperatura, humedad y ruido);
+        - bienestar: check-in diario, PVT semanal (con 3 corridas de línea base al inicio de la
+          misión) y PHQ-2/GAD-2 cada 2 semanas.
+
+        Cada lectura entra por el mismo camino que la API (validación, reglas activas, derivados y
+        escalamientos), como el astronauta o la cuenta de servicio que la registraría. La historia
+        normal no genera críticos ni escalamientos (solo alguna precaución de autocuidado).
+
+        **Idempotente**: la misma `seed` da los mismos valores y los mismos `client_uuid`; correrla
+        otra vez responde con todo en `duplicate`. Tarda unos segundos (en Render, hasta ~1 min).
+      operationId: loadSimulatorHistory
+      x-status: extra
+      x-roles: [admin]
+      x-hazards:
+        [
+          space_radiation,
+          isolation_confinement,
+          distance_from_earth,
+          gravity_fields,
+          hostile_closed_env,
+        ]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulatorHistoryRequest'
+            examples:
+              default:
+                summary: 14 días con la semilla 42
+                value: { days: 14, seed: 42 }
+      responses:
+        '200':
+          description: Historia cargada (o ya existente)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulatorSummary'
+              examples:
+                history:
+                  $ref: '#/components/examples/SimulatorHistorySummary'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: El simulador está apagado (`SIMULATOR_ENABLED` no es `true`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/admin/simulator/scenarios/{name}:
+    post:
+      tags: [Simulador]
+      summary: Dispara un escenario de la demo ahora (solo demo)
+      description: |
+        **Solo demo**: responde 404 si el servidor no tiene `SIMULATOR_ENABLED=true` o si el
+        escenario no existe. Crea las lecturas del escenario en el momento actual, encima de la
+        historia (cárgala antes), por el mismo camino que la API:
+        - `solar_event`: evento solar en el dosímetro de toda la tripulación (`event_active`).
+          `low` llega a precaución (dosis del evento ≥ 125 mSv → flight surgeon) y `high` a crítico
+          (≥ 250 mSv). Con `astronaut`, ese tripulante reporta náusea: crítico por síntomas.
+        - `crew_illness`: fiebre (38.4 °C; 39.6 °C crítico en `high`), tos y FC elevada en
+          `astronaut` (por defecto LYRA). Con `contagion: true` empezó ayer y un segundo
+          tripulante enferma hoy.
+        - `co2_spike`: el CO₂ de `module_id` (por defecto HAB-1) pasa de 3 y luego de 4.5 mmHg en
+          50 min (precaución a la tripulación); en `high` llega a ~10.8 mmHg (crítico).
+        - `wellbeing_decline`: 5 check-ins seguidos claramente peores en `astronaut` (por defecto
+          ATLAS) → escalamiento **confidencial** a `behavioral_health`. En `high`, además PHQ-2 y
+          GAD-2 ≥ 3. Corrige los check-ins de esos días (`supersedes_uuid`). Necesita la historia
+          de 14 días para la línea base.
+
+        Un reintento en el mismo minuto no duplica; dispararlo más tarde crea un episodio nuevo.
+        Las alertas a `flight_surgeon` llegan a `GET /admin/inbox` tras el retraso de la misión
+        (ARES-1: 90 s). El resumen nunca incluye niveles ni escalamientos de bienestar.
+      operationId: runSimulatorScenario
+      x-status: extra
+      x-roles: [admin]
+      x-hazards: [space_radiation, isolation_confinement, hostile_closed_env]
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [solar_event, crew_illness, co2_spike, wellbeing_decline]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulatorScenarioRequest'
+            examples:
+              solarHigh:
+                summary: Evento solar fuerte, VEGA con náusea
+                value: { intensity: high, astronaut: VEGA }
+              illness:
+                summary: Enfermedad con contagio
+                value: { astronaut: LYRA, contagion: true }
+              co2:
+                summary: CO₂ en HAB-2
+                value: { module_id: HAB-2, intensity: low }
+      responses:
+        '200':
+          description: Escenario creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulatorSummary'
+              examples:
+                co2Spike:
+                  $ref: '#/components/examples/SimulatorCo2Summary'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: El simulador está apagado o el escenario no existe.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '409':
           $ref: '#/components/responses/Conflict'
 
@@ -6548,6 +6696,47 @@ components:
         received_at: '2026-11-14T06:45:03Z'
         message: Gracias por tu check-in.
         offer_support: false
+    SimulatorHistorySummary:
+      summary: Historia de 14 días (primera vez)
+      value:
+        kind: history
+        mission_code: ARES-1
+        params: { days: 14, seed: 42 }
+        from: '2026-11-02T00:00:00.000Z'
+        to: '2026-11-15T03:27:36.640Z'
+        readings: { created: 3293, duplicate: 0, rejected: 0 }
+        wellbeing:
+          checkins: { created: 52, duplicate: 0 }
+          checkin_corrections: 0
+          pvt_runs: { created: 19, duplicate: 0 }
+          instruments: { created: 8, duplicate: 0 }
+        levels:
+          BLOOD_PRESSURE: { normal: 47, caution: 5 }
+          HAB_CO2: { normal: 631 }
+          SLEEP_HOURS: { normal: 39, caution: 13 }
+        escalations: { created: 0, by_level: {} }
+        confidential_note: 'Los niveles y escalamientos de bienestar son confidenciales: solo los ve behavioral_health.'
+        errors: []
+    SimulatorCo2Summary:
+      summary: Subida de CO₂ en HAB-1 (low)
+      value:
+        kind: scenario
+        scenario: co2_spike
+        mission_code: ARES-1
+        params: { intensity: low, module_id: HAB-1 }
+        at: '2026-11-15T03:28:00.000Z'
+        notes: []
+        readings: { created: 6, duplicate: 0, rejected: 0 }
+        wellbeing:
+          checkins: { created: 0, duplicate: 0 }
+          checkin_corrections: 0
+          pvt_runs: { created: 0, duplicate: 0 }
+          instruments: { created: 0, duplicate: 0 }
+        levels:
+          HAB_CO2: { normal: 2, caution: 4 }
+        escalations: { created: 4, by_level: { crew: 4 } }
+        confidential_note: 'Los niveles y escalamientos de bienestar son confidenciales: solo los ve behavioral_health.'
+        errors: []
     SupportRequestOrion:
       summary: Solicitud de apoyo de ORION
       value:
@@ -7090,6 +7279,89 @@ components:
       properties:
         ends_at: { type: string, format: date-time, nullable: true }
         reason: { type: string, minLength: 1, maxLength: 200 }
+    SimulatorHistoryRequest:
+      type: object
+      properties:
+        days: { type: integer, minimum: 1, maximum: 60, default: 14 }
+        seed:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          default: 42
+          description: Misma semilla → mismos valores y mismos client_uuid.
+    SimulatorScenarioRequest:
+      type: object
+      properties:
+        intensity: { type: string, enum: [low, high], default: low }
+        astronaut:
+          type: string
+          description: Call sign de la tripulación vigente (ORION, VEGA, LYRA, ATLAS).
+          example: VEGA
+        module_id:
+          type: string
+          enum: [HAB-1, HAB-2]
+          description: Solo `co2_spike`.
+        contagion:
+          type: boolean
+          default: false
+          description: Solo `crew_illness`.
+    SimulatorCount:
+      type: object
+      required: [created, duplicate]
+      properties:
+        created: { type: integer }
+        duplicate: { type: integer }
+    SimulatorSummary:
+      type: object
+      required: [kind, mission_code, params, readings, wellbeing, levels, escalations, errors]
+      properties:
+        kind: { type: string, enum: [history, scenario] }
+        scenario:
+          type: string
+          enum: [solar_event, crew_illness, co2_spike, wellbeing_decline]
+        mission_code: { type: string, example: ARES-1 }
+        params: { type: object, additionalProperties: true }
+        from: { type: string, format: date-time, description: Solo la historia. }
+        to: { type: string, format: date-time, description: Solo la historia. }
+        at: { type: string, format: date-time, description: Minuto del escenario. }
+        readings:
+          type: object
+          required: [created, duplicate, rejected]
+          properties:
+            created: { type: integer }
+            duplicate: { type: integer }
+            rejected: { type: integer }
+        wellbeing:
+          type: object
+          description: Solo cuántos registros (como el cumplimiento); nunca valores ni niveles.
+          properties:
+            checkins: { $ref: '#/components/schemas/SimulatorCount' }
+            checkin_corrections: { type: integer }
+            pvt_runs: { $ref: '#/components/schemas/SimulatorCount' }
+            instruments: { $ref: '#/components/schemas/SimulatorCount' }
+        levels:
+          type: object
+          description: Lecturas creadas por indicador ESTÁNDAR y nivel. Sin bienestar.
+          additionalProperties:
+            type: object
+            additionalProperties: { type: integer }
+        escalations:
+          type: object
+          description: Escalamientos no confidenciales creados, por destino.
+          required: [created, by_level]
+          properties:
+            created: { type: integer }
+            by_level:
+              type: object
+              additionalProperties: { type: integer }
+        confidential_note: { type: string }
+        notes:
+          type: array
+          items: { type: string }
+        errors:
+          type: array
+          description: Primeras lecturas rechazadas (debería estar vacío).
+          items: { type: object, additionalProperties: true }
     CommOutagePage:
       type: object
       required: [items, next_cursor]

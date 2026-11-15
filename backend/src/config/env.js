@@ -136,6 +136,8 @@ const env = Object.freeze({
   trustProxy: trustProxy(),
   // Seed de demo (datos sintéticos) permitido en producción solo con DEMO_SEED=true.
   demoSeed: toBoolean('DEMO_SEED', false),
+  // Simulador de demo (POST /admin/simulator/*): sin SIMULATOR_ENABLED=true las rutas dan 404.
+  simulatorEnabled: toBoolean('SIMULATOR_ENABLED', false),
   db: dbConfig(),
   auth: Object.freeze({
     jwtSecret: jwtSecret(),
