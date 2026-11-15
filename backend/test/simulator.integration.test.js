@@ -36,6 +36,7 @@ before(async () => {
     admin: 'mission.control',
     reyes: 'dr.reyes',
     orion: 'a.ortega',
+    bh: 'bh.salas',
   })) {
     const res = await request(app)
       .post('/api/v1/auth/login')
@@ -322,6 +323,39 @@ test('wellbeing_decline: escalamiento confidencial a behavioral_health, invisibl
     [A.atlas],
   );
   assert.equal(crewSide[0].n, 0);
+
+  // Termina con "Quiero hablar con alguien" (urgencia now). El resumen que ve admin no lo dice.
+  assert.ok(!/support|urgency|hablar/i.test(text), 'ni siquiera como conteo');
+  const [request_] = await q(
+    `SELECT id, urgency, channel, deliver_at, received_at FROM support_requests
+     WHERE astronaut_id = $1 ORDER BY received_at DESC LIMIT 1`,
+    [A.atlas],
+  );
+  assert.equal(request_.urgency, 'now');
+  assert.equal(request_.deliver_at - request_.received_at, 90 * 1000, 'con el retraso de ARES-1');
+
+  // Solo behavioral_health lo ve, cuando llega a Tierra (se adelanta el reloj de la demo).
+  await q(
+    `UPDATE escalations SET created_at = created_at - interval '2 minutes',
+                            deliver_at = deliver_at - interval '2 minutes'
+     WHERE astronaut_id = $1 AND deliver_at > now()`,
+    [A.atlas],
+  );
+  await q(
+    `UPDATE support_requests SET received_at = received_at - interval '2 minutes',
+                                 deliver_at = deliver_at - interval '2 minutes' WHERE id = $1`,
+    [request_.id],
+  );
+  const bh = await get('bh', '/admin/behavioral/inbox?limit=200');
+  assert.equal(bh.status, 200, JSON.stringify(bh.body));
+  const atlas = bh.body.items.filter((i) => i.astronaut_id === A.atlas);
+  assert.equal(atlas[0].id, request_.id, 'la solicitud "ahora" va primero');
+  assert.equal(atlas[0].kind, 'support_request');
+  assert.ok(atlas.some((i) => i.kind === 'wellbeing_alert' && i.indicator_code.startsWith('WB_')));
+  assert.ok(atlas.some((i) => i.kind === 'screening_alert'));
+  for (const who of ['admin', 'reyes']) {
+    assert.equal((await get(who, '/admin/behavioral/inbox')).status, 403, who);
+  }
 });
 
 test('dashboard: tras la historia muestra las series físicas y la aptitud', async (t) => {
@@ -336,6 +370,13 @@ test('dashboard: tras la historia muestra las series físicas y la aptitud', asy
   const bp = orion.indicators.find((i) => i.code === 'BLOOD_PRESSURE');
   assert.equal(bp.series.length, 10);
   assert.notEqual(bp.trend, 'insufficient_data');
-  assert.equal(orion.fitness, 'fit');
+  // Aptitud para tarea crítica (tarea 10): la de una PVT de las últimas 12 h; la historia hace
+  // la PVT semanal, así que sin una reciente es not_confirmed.
+  const [recent] = await q(
+    `SELECT fitness FROM pvt_runs WHERE astronaut_id = $1 AND measured_at >= now() - interval '12 hours'
+     ORDER BY measured_at DESC LIMIT 1`,
+    [A.orion],
+  );
+  assert.equal(orion.fitness, recent ? recent.fitness : 'not_confirmed');
   assert.equal(orion.compliance, null);
 });

@@ -22,6 +22,7 @@ const crypto = require('node:crypto');
 const env = require('../config/env');
 const { HttpError, badRequest } = require('../utils/httpError');
 const { isUuid } = require('../utils/validate');
+const { describeError } = require('../utils/safeLog');
 const { evaluateIndicator } = require('../engine/conditions');
 const sync = require('../models/sync.model');
 const readings = require('../models/readings.model');
@@ -69,7 +70,7 @@ const errorBody = (err) => ({ code: err.code, message: err.message, details: err
 /** HttpError del servicio → conflict (409) o rejected (el resto). */
 function toFailure(err) {
   if (!(err instanceof HttpError)) {
-    console.error('[sync] item con error inesperado', err);
+    console.error(`[sync] item con error inesperado: ${describeError(err)}`);
     return {
       status: 'rejected',
       error: {

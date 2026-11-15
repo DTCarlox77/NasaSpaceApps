@@ -15,6 +15,7 @@ const authEvents = require('../models/authEvents.model');
 const contextModel = require('../models/userContext.model');
 const passwords = require('./passwords.service');
 const tokens = require('./tokens.service');
+const offlinePin = require('./offlinePin.service');
 
 const GROUND_ROLES = ['flight_surgeon', 'behavioral_health', 'admin'];
 
@@ -127,7 +128,8 @@ async function loginResponse(user, deviceId, context) {
   return {
     ...session,
     must_change_password: false,
-    offline_unlock_until: toIso(await contextModel.offlineUnlockUntil(user.id, deviceId)),
+    // Login en línea: renueva la ventana del PIN offline de ese dispositivo (tarea 11).
+    offline_unlock_until: toIso(await offlinePin.renewOnLogin({ userId: user.id, deviceId })),
     user: userSummary(user),
     context,
   };
@@ -143,10 +145,14 @@ async function login({ username, password, deviceId, ip }) {
     await record(user, 'login_failed');
     throw invalidCredentials();
   }
+  // Bloqueado: 423 aunque la contraseña sea correcta (no revela si acertó).
   if (user.is_locked) {
     await record(user, 'login_failed');
     throw accountLocked(user.locked_until);
   }
+  // El bloqueo venció solo (LOCKOUT_MINUTES): queda el desbloqueo en la bitácora, una vez (el
+  // intento que sigue limpia o reinicia locked_until).
+  if (user.locked_until) await record(user, 'account_unlocked');
   if (!(await passwords.compare(password, user.password_hash))) {
     const state = await users.registerFailedLogin(
       user.id,

@@ -95,8 +95,9 @@ async function insertSession(row, db) {
   const { rows } = await db.query(
     `INSERT INTO emergency_sessions (client_uuid, mission_id, protocol_id, trigger_type, started_by,
                                      status, context, started_at, closed_at, responder_safe,
-                                     activated_at, merged_into)
-     VALUES ($1, $2, $3, $4::emergency_trigger, $5, $6::emergency_status, $7, $8, $9, $10, $11, $12)
+                                     activated_at, merged_into, device_id)
+     VALUES ($1, $2, $3, $4::emergency_trigger, $5, $6::emergency_status, $7, $8, $9, $10, $11, $12,
+             $13)
      ON CONFLICT (client_uuid) DO NOTHING
      RETURNING id`,
     [
@@ -112,6 +113,7 @@ async function insertSession(row, db) {
       row.responderSafe ?? null,
       row.activatedAt || null,
       row.mergedInto || null,
+      row.deviceId || null,
     ],
   );
   if (rows[0]) return { id: rows[0].id, created: true };

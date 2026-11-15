@@ -1,5 +1,6 @@
 'use strict';
 
+const offlinePin = require('../services/offlinePin.service');
 const authService = require('../services/auth.service');
 const { validate } = require('../utils/validate');
 
@@ -69,4 +70,8 @@ async function me(req, res) {
   res.json(await authService.me(req.auth.userId));
 }
 
-module.exports = { login, changePassword, refresh, logout, me };
+async function setOfflinePin(req, res) {
+  res.json(await offlinePin.setPin({ auth: req.auth, body: req.body, ip: req.ip }));
+}
+
+module.exports = { login, changePassword, refresh, logout, me, setOfflinePin };

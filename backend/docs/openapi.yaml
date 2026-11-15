@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Astro Health API
-  version: 1.3.0
+  version: 1.6.0
   description: |
     API de apoyo a la decisión para el monitoreo de salud de astronautas.
 
@@ -59,6 +59,82 @@ info:
     `Prefer: code=423` o `Prefer: example=duplicate`.
 
     ## Cambios
+    **1.6.0** (tarea 12, despliegue y demo). Cambios al contrato (aditivos):
+    - Nuevo `POST /admin/demo/reset` (`x-status: extra`, solo `admin`): reinicio de la demo de
+      ARES-1 sin borrar nada. Mismo gate que el simulador: 404 fuera del modo demo
+      (`SIMULATOR_ENABLED=true` y, en producción, `DEMO_SEED=true`). Confirmación obligatoria
+      en el body: `{ "confirm": "ARES-1" }` (si no, 400). Lo conductual se cierra pero no se
+      cuenta en la respuesta.
+    - `OfflinePinResponse.offline_verifier.iterations` sale de `OFFLINE_PIN_PBKDF2_ITERATIONS`
+      (600 000 por defecto, mínimo 10 000): la app usa el valor que recibe, no uno fijo.
+    - CORS: el navegador solo puede llamar a la API desde los orígenes de `CORS_ORIGIN` (en
+      producción nunca `*`). Las apps nativas no mandan `Origin` y no les afecta.
+
+    **1.5.0** (tarea 11, acceso). Cambios al contrato (aditivos salvo los marcados ⚠):
+    - Implementadas: `GET`/`POST /admin/devices`, `POST /admin/devices/{id}/revoke`,
+      `POST /crew/users/{id}/unlock`, `POST /crew/users/{id}/reset-pin`, `POST /crew/devices`,
+      `PUT /me/offline-pin`, `GET /admin/audit/delegated-actions` y `GET /missions/current`.
+    - Nuevo `GET /admin/devices` (el contrato solo tenía el alta y la revocación).
+    - **Emergencia sin sesión**: `X-Device-Credential` ya autentica las rutas del triaje (la
+      tableta es el actor; `actor_device` en la línea de tiempo). Se agrega a
+      `POST /emergency/sessions/{id}/confirm` (con `astronaut_id` en el body: quién confirma
+      desde la tableta compartida) y a `/questions`. Credencial desconocida, revocada, de una
+      misión que no está activa o usada sobre otra misión → **401** `INVALID_DEVICE_CREDENTIAL`;
+      demasiados fallos desde la misma IP → **429** `RATE_LIMITED`
+      (`RATE_LIMIT_DEVICE_CREDENTIAL_PER_MINUTE`). En cualquier otra ruta la credencial no
+      autentica (401).
+    - `Device` agrega `status` (`active` | `revoked`). Registrar una etiqueta repetida en la
+      misión → 409 `DEVICE_LABEL_TAKEN`. Revocar es idempotente e invalida los PIN offline
+      definidos en esa tableta.
+    - ⚠ `DelegatedAudit.reported_to_earth` = el aviso ya tiene hora de llegada (`false` = en cola
+      por un corte). `deliver_at` se calcula al leer (`compute_deliver_at(misión, recepción)`):
+      `delegated_actions` es append-only. `GET /admin/audit/delegated-actions` solo muestra lo
+      que ya llegó a Tierra.
+    - `PUT /me/offline-pin`: `device_id` debe ser el de la sesión (si no, 403 `DEVICE_NOT_OWNED`;
+      tableta revocada, 403 `DEVICE_REVOKED`). `OfflinePinResponse` agrega `offline_verifier`
+      (parámetros del verificador local de la app). `offline_unlock_until` = ahora +
+      `OFFLINE_UNLOCK_DAYS` (7) y cada login en línea en ese dispositivo lo renueva.
+    - `GET /missions/current` agrega 403 (astronauta sin asignación o personal de Tierra fuera
+      del equipo de la misión).
+    - ⚠ `GET /admin/audit/confidential-access`: `x-roles` pasa de `[admin, behavioral_health]` a
+      **`[behavioral_health]`** (saber de quién consultó salud conductual ya revela algo
+      conductual) y agrega `mission_id`. Nuevo `GET /me/confidential-access`: el astronauta ve
+      quién consultó SUS datos y cuándo. Admin y el flight surgeon → 403.
+
+    **1.4.0** (tarea 10, bienestar). Cambios al contrato (aditivos salvo los marcados ⚠):
+    - Rutas de bienestar implementadas: `/wellbeing/*`, `GET /me/wellbeing`,
+      `GET /admin/compliance` y `/admin/behavioral/*`.
+    - ⚠ `CheckinCreate.sleep_hours` deja de ser obligatorio (viene de la pulsera; puede faltar).
+    - Un check-in por día de misión (día UTC de `measured_at`): otro el mismo día es una
+      **corrección** (append-only; `WellbeingAck.supersedes_id` = el check-in que corrige). Gana
+      el último que llega.
+    - `WellbeingAck` agrega `supersedes_id`, `streak` (racha: cuenta check-ins completados,
+      nunca el resultado) y `screening_due` (toca PHQ-2/GAD-2). `message` es el mensaje neutro
+      de la regla del catálogo; `offer_support` siempre es true (el botón no depende del
+      resultado). Nunca un nivel, un color ni un puntaje.
+    - `SupportRequest` agrega `suggestions` (con urgencia `now`: respiración guiada y hablar con
+      el oficial médico de a bordo; solo sugerencias, no se avisa a nadie). Las urgencias son
+      `later | today | now` (`later` = "puede esperar").
+    - Nuevos para behavioral_health: `POST /admin/behavioral/support-requests/{id}/ack` y
+      `/close`, `POST /admin/behavioral/escalations/{id}/ack` y `/close` (el contrato no tenía
+      acuse ni cierre). Un escalamiento conductual queda abierto por astronauta e indicador
+      hasta que behavioral_health lo cierra: mientras tanto, un cambio que sigue sostenido no
+      vuelve a escalar (regla de diseño, `WELLBEING_ONE_OPEN_ESCALATION`).
+    - `GET /admin/behavioral/inbox` agrega `include_closed`, y cada item `channel`, `priority`
+      y `measured_at`. `BehavioralAstronautDetail` agrega `checkins` (sin la nota privada),
+      `escalations` e `indicators[].trend`.
+    - `Compliance` agrega `generated_at` y por astronauta `checkin_today` y `streak_days`.
+    - ⚠ Aptitud (`fitness` en `GET /admin/dashboard/crew` y `GET /admin/compliance`): la de una
+      PVT de las últimas `WELLBEING_FITNESS_MAX_AGE_H` (12) horas; sin PVT reciente,
+      `not_confirmed` (antes: la PVT más reciente, de cuando fuera).
+    - `PVT_LAPSES` crítico: además del detalle a behavioral_health, el flight surgeon recibe en
+      `GET /admin/inbox` una alerta `wellbeing` con solo el estado ("aptitud no confirmada"),
+      sin métricas. Admin no la ve.
+    - Sync: `support_request` ya tiene servicio (antes `ENTITY_NOT_SUPPORTED`); el mismo
+      `client_uuid` con otro contenido es `conflict` `PAYLOAD_MISMATCH`.
+    - `POST /wellbeing/screenings` y `/wellbeing/pvt-runs` responden 200 con el registro
+      existente si el `client_uuid` ya llegó (como el resto).
+
     **1.3.0** (tarea 9, triaje). Cambios al contrato (aditivos salvo los marcados ⚠):
     - Rutas de emergencia implementadas: `/emergency/*` y `GET /admin/emergencies(/{id})`.
     - ⚠ `POST /emergency/sessions` con una sesión ya abierta en la misión ya no responde 409
@@ -163,8 +239,8 @@ tags:
     description: Acciones delegadas y accesos a datos confidenciales.
   - name: Simulador
     description: |
-      **Solo demo.** Datos sintéticos de ARES-1 (historia y escenarios). Solo existen con
-      `SIMULATOR_ENABLED=true`; si no, responden 404.
+      **Solo demo.** Datos sintéticos de ARES-1 (historia, escenarios y reinicio de la demo).
+      Solo existen con `SIMULATOR_ENABLED=true`; si no, responden 404.
 paths:
   # ===================================================================== Sistema
   /api/v1/health:
@@ -546,11 +622,17 @@ paths:
       tags: [Auth]
       summary: Define el PIN de desbloqueo offline del dispositivo
       description: |
-        Permite desbloquear la app sin conexión hasta `offline_unlock_until` (7 días desde el
-        último login en línea). El PIN se guarda con hash; nunca viaja de vuelta.
+        Define o cambia el PIN de desbloqueo sin conexión del **dispositivo de la sesión**
+        (`device_id` = el del login; si no, 403 `DEVICE_NOT_OWNED`). El servidor guarda solo el
+        hash bcrypt y nunca devuelve el PIN ni su hash. Permite desbloquear la app sin conexión
+        hasta `offline_unlock_until` (`OFFLINE_UNLOCK_DAYS`, 7 días; cada login en línea en ese
+        dispositivo lo renueva). La verificación sin conexión la hace la app con su propio
+        verificador local (`offline_verifier`). El PIN **nunca** autentica contra el servidor:
+        para sincronizar hace falta un login o un refresh. Un PIN nuevo reemplaza al anterior; el
+        comandante (`/crew/users/{id}/reset-pin`) o la revocación de la tableta lo borran
+        (`offline_unlock_until: null` en el próximo login = pedir otro).
       operationId: setOfflinePin
       x-status: extra
-      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -573,7 +655,16 @@ paths:
               examples:
                 saved:
                   summary: PIN válido por 7 días
-                  value: { device_id: ipad-crew-01, offline_unlock_until: '2026-11-21T16:00:00Z' }
+                  value:
+                    device_id: ipad-crew-01
+                    offline_unlock_until: '2026-11-21T16:00:00Z'
+                    offline_verifier:
+                      {
+                        kdf: PBKDF2-HMAC-SHA256,
+                        iterations: 600000,
+                        salt_bytes: 16,
+                        max_attempts: 5,
+                      }
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -808,15 +899,60 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   /api/v1/admin/devices:
+    get:
+      tags: [Admin-Cuentas]
+      summary: Tabletas registradas (sin credenciales)
+      description: |
+        Nunca devuelve la credencial ni su hash. Sin `mission_id`, las de todas las misiones;
+        `include_revoked=true` incluye las revocadas.
+      operationId: listDevices
+      x-status: mvp
+      x-roles: [admin]
+      x-hazards: [distance_from_earth]
+      parameters:
+        - $ref: '#/components/parameters/MissionIdQuery'
+        - name: include_revoked
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Tabletas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceList'
+              examples:
+                ares1:
+                  summary: Tabletas de ARES-1
+                  value:
+                    items:
+                      - id: '80000000-0000-4000-8000-000000000001'
+                        label: TAB-1
+                        kind: tablet
+                        mission_id: '20000000-0000-4000-8000-000000000001'
+                        module_id: HAB-1
+                        registered_by: '00000000-0000-4000-8000-000000000001'
+                        registered_via: admin
+                        status: active
+                        created_at: '2026-09-30T08:00:00Z'
+                        last_seen_at: '2026-11-14T08:05:00Z'
+                        revoked_at: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
     post:
       tags: [Admin-Cuentas]
       summary: Registra una tableta de la misión
       description: |
-        Devuelve la credencial del dispositivo **una sola vez** (solo se guarda su hash). La
-        tableta la envía en `X-Device-Credential` para usar los endpoints de emergencia sin sesión.
+        Devuelve la credencial del dispositivo **una sola vez**: `dc_` + 32 bytes aleatorios en
+        base64url. Solo se guarda su SHA-256. La tableta la envía en `X-Device-Credential` para
+        usar los endpoints de emergencia sin sesión (solo los de su misión). Etiqueta repetida en
+        la misión → 409 `DEVICE_LABEL_TAKEN`; misión inexistente → 404.
       operationId: registerDevice
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -853,16 +989,19 @@ paths:
                       module_id: 'HAB-1'
                       registered_by: '00000000-0000-4000-8000-000000000001'
                       registered_via: 'admin'
+                      status: 'active'
                       created_at: '2026-09-30T08:00:00Z'
                       last_seen_at: null
                       revoked_at: null
-                    credential: dc_live_5f0b9c2e7a1d4e83b6c4
+                    credential: dc_q3Vh0bJm9xW2uR8aT5kL1yNc7pE4sD6fG0iH3jK9mZQ
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
 
@@ -870,9 +1009,11 @@ paths:
     post:
       tags: [Admin-Cuentas]
       summary: Revoca la credencial de un dispositivo
+      description: |
+        La credencial deja de servir de inmediato (401) y se invalidan los PIN offline definidos
+        en esa tableta. Idempotente: revocar otra vez devuelve la misma `revoked_at`.
       operationId: revokeDevice
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: []
       parameters:
@@ -895,6 +1036,7 @@ paths:
                     module_id: HAB-1
                     registered_by: '00000000-0000-4000-8000-000000000001'
                     registered_via: admin
+                    status: revoked
                     created_at: '2026-09-30T08:00:00Z'
                     last_seen_at: '2026-11-14T08:05:00Z'
                     revoked_at: '2026-11-14T15:00:00Z'
@@ -909,10 +1051,13 @@ paths:
     post:
       tags: [Admin-Cuentas]
       summary: El comandante desbloquea la cuenta de un tripulante
-      description: Permiso delegado para cuando Tierra no responde a tiempo. Queda auditado y se reporta a Tierra con el retraso del enlace.
+      description: |
+        Permiso delegado para cuando Tierra no responde a tiempo. Solo el comandante vigente y
+        solo sobre los tripulantes de su misión (`{id}` = id del usuario; otro → 404). Queda en
+        `delegated_actions` (append-only) y en `auth_events` (`delegated_unlock`), y se reporta a
+        Tierra con el retraso del enlace. **No** da acceso a datos médicos ni de bienestar.
       operationId: crewUnlockUser
       x-status: extra
-      x-status-impl: pending
       x-roles: [astronaut]
       x-crew-role: [commander]
       x-hazards: [distance_from_earth, isolation_confinement]
@@ -936,6 +1081,8 @@ paths:
                       audit_id: 'b1000000-0000-4000-8000-000000000001'
                       reported_to_earth: true
                       deliver_at: '2026-11-14T09:01:30Z'
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -947,9 +1094,11 @@ paths:
     post:
       tags: [Admin-Cuentas]
       summary: El comandante restablece el PIN offline de un tripulante
+      description: |
+        Borra el PIN de todos los dispositivos del tripulante (el anterior deja de servir); lo
+        define otra vez en su próximo login en línea. Mismas reglas que el desbloqueo.
       operationId: crewResetPin
       x-status: extra
-      x-status-impl: pending
       x-roles: [astronaut]
       x-crew-role: [commander]
       x-hazards: [distance_from_earth, isolation_confinement]
@@ -973,6 +1122,8 @@ paths:
                       audit_id: 'b1000000-0000-4000-8000-000000000002'
                       reported_to_earth: true
                       deliver_at: '2026-11-14T09:06:30Z'
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -984,9 +1135,11 @@ paths:
     post:
       tags: [Admin-Cuentas]
       summary: El comandante registra una tableta de reemplazo
+      description: |
+        En la misión del comandante; la credencial se muestra **una sola vez**. Auditada y
+        reportada a Tierra como las otras acciones delegadas.
       operationId: crewRegisterDevice
       x-status: extra
-      x-status-impl: pending
       x-roles: [astronaut]
       x-crew-role: [commander]
       x-hazards: [distance_from_earth]
@@ -1044,7 +1197,6 @@ paths:
         `mission_id` o la primera activa de su equipo. `comm.link: down` si hay un corte en curso.
       operationId: getCurrentMission
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut, flight_surgeon, behavioral_health, admin]
       x-hazards: [distance_from_earth, gravity_fields]
       parameters:
@@ -1091,6 +1243,8 @@ paths:
                           created_at: '2026-11-14T10:00:00Z'
         '401':
           $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -1920,6 +2074,74 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           description: El simulador está apagado o el escenario no existe.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/admin/demo/reset:
+    post:
+      tags: [Simulador]
+      summary: Reinicia la demo de ARES-1 (solo demo)
+      description: |
+        **Solo demo**: responde 404 fuera del modo demo (`SIMULATOR_ENABLED=true` y, en
+        producción, además `DEMO_SEED=true`), igual que el simulador. Solo `admin`.
+        Confirmación obligatoria: `{ "confirm": "ARES-1" }` (si falta o es otra, 400).
+
+        Deja la demo lista con datos **sintéticos**, sin borrar nada (las tablas de lecturas y
+        bitácoras son append-only: lo que se puede, se cierra):
+        1. El check-in perdido cuenta desde ahora (antes de tocar nada), así el barrido no abre
+           emergencias a mitad del reinicio ni justo después.
+        2. Usuarios del seed: activos, desbloqueados y con la contraseña del seed (`Demo2026!`);
+           ATLAS (`m.silva`) sigue con cambio de contraseña obligatorio. Si una contraseña
+           cambió, se restaura y sus sesiones se cierran.
+        3. Recarga la historia de `days` días (14) hasta ahora (idempotente, como
+           `POST /admin/simulator/history`).
+        4. Cierra (`cancelled`) las emergencias abiertas, con evento `closed` y reporte, sin
+           avisar a Tierra.
+        5. Cierra los cortes de enlace en curso (los programados a futuro no se tocan).
+        6. Cierra los escalamientos y las solicitudes de apoyo abiertos de ARES-1 (también los
+           de escenarios y pruebas de humo). Lo conductual se cierra pero **no se cuenta**.
+        7. Aptitud: una PVT en descanso de ahora, dentro de su línea base, para 3 de los 4
+           astronautas → 3 `fit` y 1 `not_confirmed` (ATLAS, o el siguiente si ATLAS ya tenía
+           una PVT apta reciente: lo dice `not_confirmed`).
+
+        `panel_flags` = lo que el panel seguirá marcando (última lectura física vigente en
+        caution o critical): una lectura critical de un escenario anterior no se puede quitar
+        sin borrar. Tarda unos segundos (en Render, hasta ~1 min). Un reinicio a la vez (409).
+      operationId: resetDemo
+      x-status: extra
+      x-roles: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemoResetRequest'
+            examples:
+              default:
+                summary: Reinicio con la historia de 14 días
+                value: { confirm: ARES-1 }
+      responses:
+        '200':
+          description: Demo reiniciada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemoResetSummary'
+              examples:
+                reset:
+                  $ref: '#/components/examples/DemoResetSummaryExample'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Fuera del modo demo (la ruta no existe).
           content:
             application/json:
               schema:
@@ -4707,6 +4929,9 @@ paths:
       x-status: mvp
       x-roles: [astronaut]
       x-hazards: [distance_from_earth, isolation_confinement]
+      security:
+        - bearerAuth: []
+        - deviceCredential: []
       parameters:
         - $ref: '#/components/parameters/Id'
       requestBody:
@@ -4717,10 +4942,23 @@ paths:
               type: object
               properties:
                 confirmed_at: { $ref: '#/components/schemas/Timestamp' }
+                astronaut_id:
+                  allOf:
+                    - $ref: '#/components/schemas/Uuid'
+                  description: |
+                    Solo con `X-Device-Credential` (tableta compartida, sin sesión): quién confirma.
+                    Debe tener un plazo pendiente en la sesión (si no, 409).
             examples:
               ok:
                 summary: LYRA está bien
                 value: { confirmed_at: '2026-11-14T08:00:20Z' }
+              tablet:
+                summary: Desde la tableta TAB-1 (sin sesión)
+                value:
+                  {
+                    confirmed_at: '2026-11-14T08:00:20Z',
+                    astronaut_id: '10000000-0000-4000-8000-000000000013',
+                  }
       responses:
         '200':
           description: Sesión (cancelled si todos confirmaron)
@@ -4766,6 +5004,9 @@ paths:
       x-status: mvp
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
+      security:
+        - bearerAuth: []
+        - deviceCredential: []
       parameters:
         - $ref: '#/components/parameters/Id'
       requestBody:
@@ -5247,12 +5488,20 @@ paths:
       summary: Check-in diario de bienestar
       description: |
         Cuatro deslizadores 0–100 (ánimo, fatiga, estrés, conflicto con la tripulación), horas de
-        sueño y una nota privada opcional que solo ve el astronauta. La respuesta es un **mensaje
-        neutro**: nunca un color ni un puntaje. `offer_support: true` = mostrar el botón
-        "Quiero hablar con alguien".
+        sueño de la pulsera (opcional) y una nota privada opcional que **solo ve el astronauta**
+        (behavioral_health ve valores y tendencias, nunca la nota). La respuesta es el **mensaje
+        neutro** de la regla del catálogo: nunca un color, un nivel ni un puntaje.
+        `offer_support` siempre es true (mostrar "Quiero hablar con alguien").
+
+        Un check-in por día de misión (día UTC de `measured_at`): otro el mismo día **corrige**
+        al anterior (append-only, `supersedes_id`). Idempotente por `client_uuid` (también por
+        `/sync/push`, entity `wellbeing_checkin`, con el mismo body sin `client_uuid`).
+        `streak` cuenta check-ins completados, nunca el resultado. El servidor compara contra el
+        rango habitual (`baseline_ready`, `adverse_z_3d`, `adverse_sustained_days`) y, si el
+        cambio se sostiene, avisa de forma confidencial solo a behavioral_health, con el retraso
+        del enlace.
       operationId: createWellbeingCheckin
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -5312,7 +5561,6 @@ paths:
         (0–6), corte en 3.
       operationId: listWellbeingInstruments
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut, behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -5494,10 +5742,13 @@ paths:
     post:
       tags: [Bienestar]
       summary: Envía un cuestionario PHQ-2 o GAD-2
-      description: El puntaje lo calcula el servidor y solo lo ve behavioral_health. Al astronauta se le responde un mensaje neutro.
+      description: |
+        El puntaje (item_1 + item_2) lo calcula el servidor y solo lo ve behavioral_health; corte
+        en 3 → escalamiento confidencial a behavioral_health. Al astronauta se le responde el
+        mensaje neutro de la regla, nunca el puntaje. Cada 14 días, un día antes de la
+        conferencia psicológica (`WellbeingAck.screening_due` del check-in). No hay PHQ-9.
       operationId: createWellbeingScreening
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -5532,8 +5783,14 @@ paths:
                     id: 'a4000000-0000-4000-8000-000000000001'
                     client_uuid: 'cb000000-0000-4000-8000-000000000001'
                     received_at: '2026-11-14T21:05:02Z'
-                    message: Gracias por responder. Tus respuestas son confidenciales.
+                    message: Gracias por responder.
                     offer_support: true
+        '200':
+          description: Duplicado (mismo client_uuid)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WellbeingAck'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -5546,12 +5803,13 @@ paths:
       tags: [Bienestar]
       summary: Envía una corrida de la prueba de reacción (PVT)
       description: |
-        Métricas del minijuego, `device_id` (la línea base es por dispositivo) y
-        `before_critical_task`. Devuelve solo la aptitud: `fit` si los tres indicadores PVT
-        quedan en `normal`, si no `not_confirmed` (`fitnessFromPvt`). Es lo único que llega a admin.
+        Métricas del minijuego (lapso = respuesta ≥ 355 ms), `device_id` (la línea base es por
+        dispositivo: 3 corridas previas en descanso) y `before_critical_task`. Devuelve solo la
+        aptitud: `fit` si los tres indicadores PVT quedan en `normal`, si no `not_confirmed`
+        (`fitnessFromPvt`). Es lo único que llega a admin. `PVT_LAPSES` crítico: el detalle va a
+        behavioral_health y el flight surgeon recibe solo "aptitud no confirmada".
       operationId: createPvtRun
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -5598,6 +5856,12 @@ paths:
                     received_at: '2026-11-14T09:40:02Z'
                     fitness: not_confirmed
                     message: Tu resultado no confirma la aptitud para la tarea. Descansa y repite la prueba más tarde.
+        '200':
+          description: Duplicado (mismo client_uuid)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PvtRunResult'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -5610,11 +5874,16 @@ paths:
       tags: [Bienestar]
       summary: Quiero hablar con alguien
       description: |
-        Crea una solicitud confidencial para behavioral_health (nunca llega a la tripulación ni
-        a admin). Viaja a Tierra con el retraso del enlace (`deliver_at`).
+        Crea una solicitud confidencial para behavioral_health (nunca llega a la tripulación, al
+        comandante, al oficial médico ni a admin, ni siquiera en conteos). Viaja a Tierra con el
+        retraso del enlace (`deliver_at`; null = en cola durante un corte). Urgencia `later`
+        (puede esperar), `today` o `now`; canal `message` o `session`. Con `now`, `suggestions`
+        trae lo que la app puede ofrecer mientras tanto (respiración guiada y hablar con el
+        oficial médico de a bordo): son sugerencias, el servidor no avisa a nadie a bordo. Las
+        respuestas llegan por `GET /sync/pull` (`messages`, `channel: support`) cuando su
+        `deliver_at` ya pasó. También por `/sync/push` (entity `support_request`).
       operationId: createSupportRequest
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -5643,6 +5912,26 @@ paths:
               examples:
                 created:
                   $ref: '#/components/examples/SupportRequestOrion'
+                now:
+                  summary: Urgencia now (con sugerencias)
+                  value:
+                    id: 'a1000000-0000-4000-8000-000000000002'
+                    client_uuid: 'cd000000-0000-4000-8000-000000000002'
+                    astronaut_id: '10000000-0000-4000-8000-000000000014'
+                    status: open
+                    urgency: now
+                    channel: message
+                    content: Necesito hablar con alguien.
+                    created_at: '2026-11-14T22:10:00Z'
+                    received_at: '2026-11-14T22:10:01Z'
+                    deliver_at: '2026-11-14T22:11:31Z'
+                    suggestions:
+                      - code: guided_breathing
+                        title: Respiración guiada
+                        description: Un ejercicio de respiración guiada en la app mientras llega la respuesta.
+                      - code: talk_to_cmo
+                        title: Hablar con el oficial médico de a bordo
+                        description: 'Si lo necesitas ahora, puedes buscar al oficial médico. Es tu decisión: nadie a bordo recibe un aviso automático.'
         '200':
           description: Duplicado (mismo client_uuid)
           content:
@@ -5666,7 +5955,6 @@ paths:
       description: Solo mensajes ya entregados (`deliver_at <= now()`).
       operationId: listSupportMessages
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -5708,7 +5996,6 @@ paths:
       description: Lo que el propio astronauta registró. Sin colores, niveles ni puntajes.
       operationId: listMyWellbeing
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -5767,7 +6054,8 @@ paths:
         valor, serie (hasta 10 puntos; valor principal = `value` o la sistólica) y tendencia
         (último valor frente a la media de los anteriores, ±5 %; menos de 2 puntos =
         `insufficient_data`). Más aptitud (`flight_surgeon` y `admin`) y cumplimiento (solo `admin`).
-        **Sin estado conductual**: las lecturas salen de `v_readings_standard`.
+        **Sin estado conductual**: las lecturas salen de `v_readings_standard`. `fitness` = apto
+        para tarea crítica con una PVT de las últimas 12 h (si no, `not_confirmed`).
         `behavioral_health` → 403.
       operationId: getCrewDashboard
       x-status: mvp
@@ -6277,9 +6565,16 @@ paths:
     get:
       tags: [Tierra]
       summary: Cumplimiento y aptitud (lo único de bienestar que ve admin)
+      description: |
+        Por astronauta de la tripulación vigente: si hizo el check-in hoy, último check-in,
+        racha, check-ins hechos y esperados en el rango (un check-in por día UTC desde la
+        asignación), cuestionarios y PVT hechos, y "apto para tarea crítica" (`fitness`): `fit`
+        solo con una PVT de las últimas `WELLBEING_FITNESS_MAX_AGE_H` (12) horas con los 3
+        indicadores en normal; sin PVT reciente, `not_confirmed`. Sin valores, tendencias,
+        niveles ni solicitudes de apoyo. Rango por defecto: los últimos 7 días UTC (hoy
+        incluido).
       operationId: getCompliance
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -6301,10 +6596,13 @@ paths:
                     mission_id: '20000000-0000-4000-8000-000000000001'
                     from: '2026-11-07T00:00:00Z'
                     to: '2026-11-14T00:00:00Z'
+                    generated_at: '2026-11-14T00:00:00Z'
                     astronauts:
                       - {
                           astronaut_id: '10000000-0000-4000-8000-000000000011',
                           call_sign: ORION,
+                          checkin_today: true,
+                          streak_days: 12,
                           checkins_completed: 6,
                           checkins_expected: 7,
                           screenings_completed: 1,
@@ -6342,6 +6640,8 @@ paths:
                           fitness: not_confirmed,
                           last_checkin_at: '2026-11-11T21:00:00Z',
                         }
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -6450,15 +6750,23 @@ paths:
     get:
       tags: [Salud conductual]
       summary: Bandeja confidencial de behavioral_health
-      description: Alertas de bienestar, cuestionarios en precaución y solicitudes "Quiero hablar con alguien". Solo lo ya entregado en Tierra.
+      description: |
+        Escalamientos conductuales (`wellbeing_alert`, `screening_alert`) y solicitudes "Quiero
+        hablar con alguien" (`support_request`) de la misión, solo lo ya entregado en Tierra
+        (`deliver_at <= now()`). Orden (regla de diseño): apoyo `now`, alertas urgentes, apoyo
+        `today`, alertas de rutina, apoyo `later`; dentro, lo que llegó antes. Sin lo cerrado,
+        salvo `include_closed=true`. Cada astronauta que aparece queda en la bitácora de accesos.
       operationId: getBehavioralInbox
       x-status: mvp
-      x-status-impl: pending
       x-roles: [behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
       parameters:
         - $ref: '#/components/parameters/MissionIdQuery'
+        - name: include_closed
+          in: query
+          description: true = incluye lo cerrado.
+          schema: { type: boolean, default: false }
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
@@ -6480,9 +6788,12 @@ paths:
                           kind: support_request,
                           indicator_code: null,
                           urgency: today,
+                          channel: message,
+                          priority: null,
                           status: open,
                           summary: Solicitud de apoyo por mensaje,
                           created_at: '2026-11-14T21:10:00Z',
+                          measured_at: '2026-11-14T21:10:00Z',
                           deliver_at: '2026-11-14T21:11:30Z',
                         }
                       - {
@@ -6492,12 +6803,17 @@ paths:
                           kind: wellbeing_alert,
                           indicator_code: WB_STRESS,
                           urgency: null,
+                          channel: null,
+                          priority: routine,
                           status: delivered,
-                          summary: Estrés distinto de lo habitual durante 5 días,
+                          summary: Estrés distinto de lo habitual durante 5 check-ins seguidos,
                           created_at: '2026-11-14T06:00:00Z',
+                          measured_at: '2026-11-14T05:58:00Z',
                           deliver_at: '2026-11-14T06:01:30Z',
                         }
                     next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -6507,10 +6823,13 @@ paths:
     get:
       tags: [Salud conductual]
       summary: Detalle confidencial de un astronauta
-      description: Cada consulta queda registrada en `GET /admin/audit/confidential-access`.
+      description: |
+        Check-ins (valores, sin la nota privada: esa solo la ve el astronauta), tendencias, z
+        contra el rango habitual, cuestionarios con puntaje, PVT, solicitudes de apoyo ya
+        entregadas y escalamientos abiertos ya entregados. `{id}` = id del astronauta. Cada
+        consulta queda registrada en `GET /admin/audit/confidential-access`.
       operationId: getBehavioralAstronaut
       x-status: mvp
-      x-status-impl: pending
       x-roles: [behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
@@ -6537,6 +6856,7 @@ paths:
                         last_value: 90
                         adverse_z_3d: 2.1
                         adverse_sustained_days: 5
+                        trend: rising
                         series:
                           - { measured_at: '2026-11-12T21:00:00Z', value: 78 }
                           - { measured_at: '2026-11-13T21:00:00Z', value: 85 }
@@ -6547,8 +6867,21 @@ paths:
                         last_value: 60
                         adverse_z_3d: 0.2
                         adverse_sustained_days: 0
+                        trend: insufficient_data
                         series:
                           - { measured_at: '2026-11-14T21:00:00Z', value: 60 }
+                    checkins:
+                      - {
+                          id: 'a0000000-0000-4000-8000-000000000021',
+                          measured_at: '2026-11-14T21:00:00Z',
+                          received_at: '2026-11-14T21:00:02Z',
+                          mood: 60,
+                          fatigue: 55,
+                          stress: 90,
+                          crew_conflict: 20,
+                          sleep_hours: 6.2,
+                          supersedes_id: null,
+                        }
                     screenings:
                       - {
                           id: 'a4000000-0000-4000-8000-000000000002',
@@ -6570,6 +6903,16 @@ paths:
                           fitness: fit,
                         }
                     support_requests: []
+                    escalations:
+                      - {
+                          id: '60000000-0000-4000-8000-000000000221',
+                          indicator_code: WB_STRESS,
+                          status: delivered,
+                          priority: routine,
+                          created_at: '2026-11-14T06:00:00Z',
+                          deliver_at: '2026-11-14T06:01:30Z',
+                          measured_at: '2026-11-14T05:58:00Z',
+                        }
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -6583,7 +6926,6 @@ paths:
       summary: Responde una solicitud de apoyo (viaja con retraso)
       operationId: replySupportRequest
       x-status: mvp
-      x-status-impl: pending
       x-roles: [behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement, distance_from_earth]
@@ -6619,14 +6961,166 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/v1/admin/behavioral/support-requests/{id}/ack:
+    post:
+      tags: [Salud conductual]
+      summary: Acuse de una solicitud de apoyo
+      description: |
+        Solo sobre lo que ya llegó a Tierra (`deliver_at <= now()`); antes, **404**. Idempotente
+        (`open` → `acknowledged`); responder también cuenta como acuse. **409** si está cerrada.
+      operationId: ackSupportRequest
+      x-status: mvp
+      x-roles: [behavioral_health]
+      x-sensitivity: confidential
+      x-hazards: [isolation_confinement, distance_from_earth]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Solicitud reconocida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupportRequestAck'
+              examples:
+                ack:
+                  summary: bh.salas reconoce la solicitud de ORION
+                  value:
+                    id: 'a1000000-0000-4000-8000-000000000001'
+                    status: acknowledged
+                    acknowledged_at: '2026-11-14T21:15:00Z'
+                    acknowledged_by: '00000000-0000-4000-8000-000000000003'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/admin/behavioral/support-requests/{id}/close:
+    post:
+      tags: [Salud conductual]
+      summary: Cierra una solicitud de apoyo
+      description: |
+        Solo sobre lo que ya llegó a Tierra (antes, **404**). Idempotente: cerrar otra vez devuelve
+        el primer cierre. Cerrada, ya no admite respuestas (**409**) ni sale en la bandeja (salvo
+        `include_closed=true`).
+      operationId: closeSupportRequest
+      x-status: mvp
+      x-roles: [behavioral_health]
+      x-sensitivity: confidential
+      x-hazards: [isolation_confinement, distance_from_earth]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Solicitud cerrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClosedItem'
+              examples:
+                closed:
+                  summary: Cierre de la solicitud de ORION
+                  value:
+                    id: 'a1000000-0000-4000-8000-000000000001'
+                    status: closed
+                    closed_at: '2026-11-15T15:40:00Z'
+                    closed_by: '00000000-0000-4000-8000-000000000003'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/admin/behavioral/escalations/{id}/ack:
+    post:
+      tags: [Salud conductual]
+      summary: Acuse de un escalamiento conductual
+      description: |
+        Escalamiento `behavioral_health` ya entregado (antes, **404**). Idempotente; **409** si
+        está cerrado.
+      operationId: ackBehavioralEscalation
+      x-status: mvp
+      x-roles: [behavioral_health]
+      x-sensitivity: confidential
+      x-hazards: [isolation_confinement, distance_from_earth]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Escalamiento reconocido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EscalationAck'
+              examples:
+                ack:
+                  summary: bh.salas reconoce la alerta de VEGA
+                  value:
+                    id: '60000000-0000-4000-8000-000000000221'
+                    status: acknowledged
+                    acknowledged_at: '2026-11-14T06:05:00Z'
+                    acknowledged_by: '00000000-0000-4000-8000-000000000003'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/admin/behavioral/escalations/{id}/close:
+    post:
+      tags: [Salud conductual]
+      summary: Cierra un escalamiento conductual
+      description: |
+        Escalamiento `behavioral_health` ya entregado (antes, **404**). Idempotente. Mientras está
+        abierto, un cambio que sigue sostenido en el mismo indicador no vuelve a escalar (regla de
+        diseño, `WELLBEING_ONE_OPEN_ESCALATION`); después de cerrarlo, sí.
+      operationId: closeBehavioralEscalation
+      x-status: mvp
+      x-roles: [behavioral_health]
+      x-sensitivity: confidential
+      x-hazards: [isolation_confinement, distance_from_earth]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Escalamiento cerrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClosedItem'
+              examples:
+                closed:
+                  summary: Cierre de la alerta de VEGA
+                  value:
+                    id: '60000000-0000-4000-8000-000000000221'
+                    status: closed
+                    closed_at: '2026-11-15T16:00:00Z'
+                    closed_by: '00000000-0000-4000-8000-000000000003'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   # ===================================================================== Auditoría
   /api/v1/admin/audit/delegated-actions:
     get:
       tags: [Auditoría]
       summary: Acciones delegadas del comandante
+      description: |
+        Solo lo que ya llegó a Tierra: `deliver_at` = compute_deliver_at(misión, recepción),
+        calculado al leer (cortes incluidos). Más reciente primero.
       operationId: listDelegatedActions
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -6661,6 +7155,8 @@ paths:
                           deliver_at: '2026-11-14T09:01:30Z',
                         }
                     next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -6669,15 +7165,19 @@ paths:
   /api/v1/admin/audit/confidential-access:
     get:
       tags: [Auditoría]
-      summary: Accesos a datos confidenciales
-      description: Quién vio datos de bienestar, de quién y cuándo. Sin el contenido.
+      summary: Accesos a datos confidenciales (salud conductual)
+      description: |
+        Quién vio datos de bienestar, de quién y cuándo, sobre los astronautas de la misión
+        (`mission_id` o la del equipo de behavioral_health). Sin el contenido ni la IP. Solo
+        behavioral_health: saber de quién se consultó ya revela algo conductual, así que admin y
+        el flight surgeon → 403. Cada astronauta ve lo suyo en `GET /me/confidential-access`.
       operationId: listConfidentialAccess
       x-status: mvp
-      x-status-impl: pending
-      x-roles: [admin, behavioral_health]
+      x-roles: [behavioral_health]
       x-sensitivity: confidential
       x-hazards: [isolation_confinement]
       parameters:
+        - $ref: '#/components/parameters/MissionIdQuery'
         - name: astronaut_id
           in: query
           schema: { $ref: '#/components/schemas/Uuid' }
@@ -6708,6 +7208,56 @@ paths:
                           accessed_at: '2026-11-14T22:00:00Z',
                         }
                     next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/me/confidential-access:
+    get:
+      tags: [Auditoría]
+      summary: Quién consultó mis datos confidenciales
+      description: |
+        Para el astronauta: cada lectura de SUS datos de bienestar por otra persona (p. ej. la
+        bandeja o el detalle de behavioral_health), con quién, su rol, qué recurso y cuándo. Sin
+        el contenido ni la IP. Sus propias lecturas no se registran.
+      operationId: listMyConfidentialAccess
+      x-status: mvp
+      x-roles: [astronaut]
+      x-sensitivity: confidential
+      x-hazards: [isolation_confinement]
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Página de accesos a mis datos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfidentialAccessPage'
+              examples:
+                vega:
+                  summary: VEGA ve quién consultó lo suyo
+                  value:
+                    items:
+                      - {
+                          id: 'b2000000-0000-4000-8000-000000000001',
+                          actor_user_id: '00000000-0000-4000-8000-000000000003',
+                          actor_username: bh.salas,
+                          actor_role: behavioral_health,
+                          astronaut_id: '10000000-0000-4000-8000-000000000012',
+                          call_sign: VEGA,
+                          resource: 'GET /api/v1/admin/behavioral/astronauts/{id}',
+                          accessed_at: '2026-11-14T22:00:00Z',
+                        }
+                    next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -6724,7 +7274,13 @@ components:
       type: apiKey
       in: header
       name: X-Device-Credential
-      description: Credencial de una tableta registrada (`POST /admin/devices`). Solo para los endpoints de emergencia.
+      description: |
+        Credencial de una tableta registrada (`POST /admin/devices` o `POST /crew/devices`): `dc_`
+        + 32 bytes aleatorios en base64url; el servidor solo guarda su SHA-256. Solo para los
+        endpoints del triaje de SU misión (protocolo, abrir o unirse, sesión, evaluar, "estoy
+        bien", latido, preguntas a Tierra y cerrar). Inválida, revocada, de una misión no activa
+        o sobre otra misión → 401 `INVALID_DEVICE_CREDENTIAL`; demasiados fallos desde una IP →
+        429.
 
   parameters:
     Id:
@@ -7148,7 +7704,10 @@ components:
         client_uuid: 'ca000000-0000-4000-8000-000000000001'
         received_at: '2026-11-14T06:45:03Z'
         message: Gracias por tu check-in.
-        offer_support: false
+        offer_support: true
+        supersedes_id: null
+        streak: { streak_days: 12, checkins_this_week: 7, checkins_goal_week: 7 }
+        screening_due: false
     SimulatorHistorySummary:
       summary: Historia de 14 días (primera vez)
       value:
@@ -7170,6 +7729,51 @@ components:
         escalations: { created: 0, by_level: {} }
         confidential_note: 'Los niveles y escalamientos de bienestar son confidenciales: solo los ve behavioral_health.'
         errors: []
+    DemoResetSummaryExample:
+      summary: Reinicio después de un ensayo
+      value:
+        mission_code: ARES-1
+        started_at: '2026-11-15T09:48:06.164Z'
+        finished_at: '2026-11-15T09:48:14.020Z'
+        history:
+          days: 14
+          seed: 42
+          from: '2026-11-02T00:00:00.000Z'
+          to: '2026-11-15T09:48:06.300Z'
+          readings: { created: 98, duplicate: 3293, rejected: 0 }
+          errors: []
+        emergencies: { closed: 1 }
+        comm_outages: { closed: 1, scheduled_left: 0 }
+        escalations: { closed: 11 }
+        users:
+          - username: mission.control
+            unlocked: false
+            reactivated: false
+            password_restored: false
+            must_change_password: false
+          - username: dr.reyes
+            unlocked: true
+            reactivated: false
+            password_restored: false
+            must_change_password: false
+          - username: m.silva
+            unlocked: false
+            reactivated: false
+            password_restored: true
+            must_change_password: true
+        fitness: { ATLAS: not_confirmed, LYRA: fit, ORION: fit, VEGA: fit }
+        not_confirmed: ATLAS
+        panel_flags:
+          - call_sign: VEGA
+            indicator_code: SLEEP_HOURS
+            level: caution
+            measured_at: '2026-11-15T07:02:00.000Z'
+        triage:
+          missed_checkin_counts_from: '2026-11-15T09:48:13.950Z'
+          missed_checkin_after_h: 30
+        notes:
+          - 'Lo conductual (escalamientos a behavioral_health y solicitudes de apoyo) también quedó cerrado; no se cuenta porque solo lo ve behavioral_health.'
+          - 'Nada se borró: las lecturas, evaluaciones, líneas de tiempo y bitácoras son append-only, así que lo de los escenarios y las pruebas de humo sigue en el historial.'
     SimulatorCo2Summary:
       summary: Subida de CO₂ en HAB-1 (low)
       value:
@@ -7461,6 +8065,24 @@ components:
       properties:
         device_id: { type: string }
         offline_unlock_until: { $ref: '#/components/schemas/Timestamp' }
+        offline_verifier:
+          type: object
+          description: |
+            Cómo guarda la app su verificador local del PIN (regla de diseño): KDF con una sal
+            aleatoria generada en el dispositivo; tras `max_attempts` fallos (LOCKOUT_MAX_ATTEMPTS)
+            borra el verificador y exige un login en línea.
+          required: [kdf, iterations, salt_bytes, max_attempts]
+          properties:
+            kdf: { type: string, enum: [PBKDF2-HMAC-SHA256] }
+            iterations:
+              type: integer
+              minimum: 10000
+              example: 600000
+              description: |
+                `OFFLINE_PIN_PBKDF2_ITERATIONS` del servidor (600 000 por defecto, OWASP). Usa
+                siempre el valor recibido: puede bajar si la app tarda demasiado en calcularlo.
+            salt_bytes: { type: integer, minimum: 16 }
+            max_attempts: { type: integer, minimum: 1 }
 
     # ---------------------------------------------------------------- cuentas y dispositivos
     UserAdmin:
@@ -7579,9 +8201,17 @@ components:
         module_id: { type: string, nullable: true }
         registered_by: { type: string, format: uuid, nullable: true }
         registered_via: { type: string, enum: [admin, commander] }
+        status: { type: string, enum: [active, revoked] }
         created_at: { $ref: '#/components/schemas/Timestamp' }
         last_seen_at: { type: string, format: date-time, nullable: true }
         revoked_at: { type: string, format: date-time, nullable: true }
+    DeviceList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Device' }
     DeviceCreated:
       type: object
       required: [device, credential]
@@ -7594,14 +8224,16 @@ components:
       required: [audit_id, reported_to_earth]
       properties:
         audit_id: { $ref: '#/components/schemas/Uuid' }
-        reported_to_earth: { type: boolean }
+        reported_to_earth:
+          type: boolean
+          description: true = ya tiene hora de llegada a Tierra; false = en cola por un corte.
         deliver_at:
-          {
-            type: string,
-            format: date-time,
-            nullable: true,
-            description: null = en cola esperando enlace.,
-          }
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            compute_deliver_at(misión, recepción), calculado al leer (la bitácora es append-only).
+            null = en cola esperando enlace.
     DelegatedActionResult:
       type: object
       required: [action, target_user_id, performed_at, audit]
@@ -7867,6 +8499,107 @@ components:
           type: array
           description: Primeras lecturas rechazadas (debería estar vacío).
           items: { type: object, additionalProperties: true }
+    DemoResetRequest:
+      type: object
+      required: [confirm]
+      properties:
+        confirm:
+          type: string
+          enum: [ARES-1]
+          description: Código de la misión que se reinicia (confirmación obligatoria).
+        days: { type: integer, minimum: 1, maximum: 60, default: 14 }
+        seed: { type: integer, minimum: 0, maximum: 2147483647, default: 42 }
+    DemoResetSummary:
+      type: object
+      required:
+        - mission_code
+        - started_at
+        - finished_at
+        - history
+        - emergencies
+        - comm_outages
+        - escalations
+        - users
+        - fitness
+        - not_confirmed
+        - panel_flags
+        - triage
+        - notes
+      properties:
+        mission_code: { type: string, example: ARES-1 }
+        started_at: { $ref: '#/components/schemas/Timestamp' }
+        finished_at: { $ref: '#/components/schemas/Timestamp' }
+        history:
+          type: object
+          properties:
+            days: { type: integer }
+            seed: { type: integer }
+            from: { $ref: '#/components/schemas/Timestamp' }
+            to: { $ref: '#/components/schemas/Timestamp' }
+            readings:
+              type: object
+              properties:
+                created: { type: integer }
+                duplicate: { type: integer }
+                rejected: { type: integer }
+            errors:
+              type: array
+              items: { type: object, additionalProperties: true }
+        emergencies:
+          type: object
+          properties:
+            closed: { type: integer, description: Sesiones pending o active cerradas (cancelled). }
+        comm_outages:
+          type: object
+          properties:
+            closed: { type: integer }
+            scheduled_left:
+              type: integer
+              description: Cortes programados a futuro (no se tocan).
+        escalations:
+          type: object
+          description: Solo físicos y de emergencia. Lo conductual se cierra pero no se cuenta.
+          properties:
+            closed: { type: integer }
+        users:
+          type: array
+          items:
+            type: object
+            properties:
+              username: { type: string }
+              unlocked: { type: boolean }
+              reactivated: { type: boolean }
+              password_restored: { type: boolean }
+              must_change_password: { type: boolean }
+              missing: { type: boolean, description: El usuario del seed no existe. }
+        fitness:
+          type: object
+          description: Aptitud por call sign (lo mismo que ve admin en el dashboard).
+          additionalProperties: { type: string, enum: [fit, not_confirmed] }
+        not_confirmed:
+          type: string
+          nullable: true
+          description: Quién quedó sin PVT reciente (null si los 4 ya tenían una apta).
+        panel_flags:
+          type: array
+          description: |
+            Última lectura física vigente en caution o critical: lo que el panel seguirá
+            marcando.
+          items:
+            type: object
+            properties:
+              call_sign: { type: string }
+              indicator_code: { type: string }
+              level: { type: string, enum: [caution, critical] }
+              measured_at: { $ref: '#/components/schemas/Timestamp' }
+        triage:
+          type: object
+          properties:
+            missed_checkin_counts_from: { $ref: '#/components/schemas/Timestamp' }
+            missed_checkin_after_h: { type: integer }
+        notes:
+          type: array
+          items: { type: string }
     CommOutagePage:
       type: object
       required: [items, next_cursor]
@@ -8399,9 +9132,10 @@ components:
             (CloseRequest + `session_id`). `session_id` / `assessment_id` aceptan el id del
             servidor o el `client_uuid` (sin conexión la app solo conoce los suyos). Una sesión
             creada sin conexión cuando ya había otra abierta se une a ella (`result.joined`,
-            `merged_into`) y sus evaluaciones quedan en la principal. Todavía sin servicio
-            (`rejected` `ENTITY_NOT_SUPPORTED`): `support_request`. Cualquier otro: `rejected`
-            `UNKNOWN_ENTITY` (no tumba el lote).
+            `merged_into`) y sus evaluaciones quedan en la principal. `support_request`
+            (= SupportRequestCreate sin `client_uuid`, tarea 10). Un segundo `wellbeing_checkin`
+            del mismo día corrige al anterior (`result.supersedes_id`). Cualquier otro:
+            `rejected` `UNKNOWN_ENTITY` (no tumba el lote).
           example: reading
         priority:
           type: string
@@ -8448,9 +9182,10 @@ components:
           type: object
           description: |
             Lo mismo que devolvería el endpoint en línea (p. ej. `evaluation` y `escalation_id`
-            de una lectura; de bienestar, solo `message` neutro, `offer_support` y, en `pvt_run`,
-            `fitness`), más `late_sync` (boolean) y `lag_s` (segundos entre la medición y la
-            recepción).
+            de una lectura; de bienestar, solo `message` neutro, `offer_support`, en el check-in
+            `supersedes_id`, `streak` y `screening_due`, en `pvt_run` `fitness`, y en
+            `support_request` `status`, `urgency`, `channel`, `deliver_at` y `suggestions`), más
+            `late_sync` (boolean) y `lag_s` (segundos entre la medición y la recepción).
           additionalProperties: true
         error: { $ref: '#/components/schemas/ErrorBody' }
     SyncPushResponse:
@@ -9046,7 +9781,7 @@ components:
       maximum: 100
     CheckinCreate:
       type: object
-      required: [client_uuid, measured_at, mood, fatigue, stress, crew_conflict, sleep_hours]
+      required: [client_uuid, measured_at, mood, fatigue, stress, crew_conflict]
       properties:
         client_uuid: { $ref: '#/components/schemas/Uuid' }
         measured_at: { $ref: '#/components/schemas/Timestamp' }
@@ -9054,7 +9789,12 @@ components:
         fatigue: { $ref: '#/components/schemas/Slider' }
         stress: { $ref: '#/components/schemas/Slider' }
         crew_conflict: { $ref: '#/components/schemas/Slider' }
-        sleep_hours: { type: number, minimum: 0, maximum: 24 }
+        sleep_hours:
+          type: number
+          minimum: 0
+          maximum: 24
+          nullable: true
+          description: Horas de sueño de la pulsera (opcional).
         private_note:
           { type: string, nullable: true, maxLength: 1000, description: Solo la ve el astronauta. }
     WellbeingAck:
@@ -9065,8 +9805,35 @@ components:
         id: { $ref: '#/components/schemas/Uuid' }
         client_uuid: { $ref: '#/components/schemas/Uuid' }
         received_at: { $ref: '#/components/schemas/Timestamp' }
-        message: { type: string }
-        offer_support: { type: boolean, description: true = mostrar "Quiero hablar con alguien". }
+        message:
+          type: string
+          description: Mensaje neutro de la regla del catálogo (sin números ni colores).
+        offer_support:
+          type: boolean
+          description: true = mostrar "Quiero hablar con alguien" (siempre true).
+        supersedes_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Solo check-in. No null = corrigió el check-in de ese mismo día.
+        streak: { $ref: '#/components/schemas/Streak' }
+        screening_due:
+          type: boolean
+          description: |
+            Solo check-in. true = toca PHQ-2/GAD-2 (cada 14 días, un día antes de la conferencia
+            psicológica; regla de diseño).
+    Streak:
+      type: object
+      description: Racha del check-in. Cuenta check-ins completados, nunca el resultado.
+      required: [streak_days, checkins_this_week, checkins_goal_week]
+      properties:
+        streak_days:
+          type: integer
+          minimum: 0
+          description: Días UTC seguidos con check-in que terminan hoy (o ayer si hoy falta).
+        checkins_this_week:
+          { type: integer, minimum: 0, description: Días con check-in en los últimos 7 días. }
+        checkins_goal_week: { type: integer, minimum: 1 }
     Instrument:
       type: object
       required:
@@ -9197,6 +9964,35 @@ components:
             nullable: true,
             description: Llegada a Tierra; null = en cola.,
           }
+        suggestions:
+          type: array
+          description: |
+            Solo al crearla. Con urgencia `now`: qué ofrecer en la app mientras llega la respuesta.
+            Son sugerencias: el servidor no avisa a nadie a bordo. Vacío en `later` y `today`.
+          items: { $ref: '#/components/schemas/SupportSuggestion' }
+    SupportSuggestion:
+      type: object
+      required: [code, title, description]
+      properties:
+        code: { type: string, enum: [guided_breathing, talk_to_cmo] }
+        title: { type: string }
+        description: { type: string }
+    SupportRequestAck:
+      type: object
+      required: [id, status, acknowledged_at, acknowledged_by]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        status: { type: string, enum: [open, acknowledged, closed] }
+        acknowledged_at: { $ref: '#/components/schemas/Timestamp' }
+        acknowledged_by: { type: string, format: uuid, nullable: true }
+    ClosedItem:
+      type: object
+      required: [id, status, closed_at, closed_by]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        status: { type: string, enum: [closed] }
+        closed_at: { $ref: '#/components/schemas/Timestamp' }
+        closed_by: { type: string, format: uuid, nullable: true }
     SupportMessage:
       type: object
       required: [id, request_id, direction, author_role, body, created_at]
@@ -9304,9 +10100,10 @@ components:
                 enum: [fit, not_confirmed]
                 nullable: true
                 description: |
-                  Aptitud de la PVT más reciente (sin PVT = `not_confirmed`); solo el estado,
-                  nunca las métricas de la PVT. La ven `flight_surgeon` y `admin`; `null` para un
-                  rol que no pueda verla.
+                  Aptitud para tarea crítica: la de la PVT más reciente de las últimas
+                  `WELLBEING_FITNESS_MAX_AGE_H` (12) horas; sin PVT reciente = `not_confirmed`.
+                  Solo el estado, nunca las métricas de la PVT. La ven `flight_surgeon` y `admin`;
+                  `null` para un rol que no pueda verla.
     InboxItem:
       type: object
       required:
@@ -9522,6 +10319,7 @@ components:
         mission_id: { $ref: '#/components/schemas/Uuid' }
         from: { $ref: '#/components/schemas/Timestamp' }
         to: { $ref: '#/components/schemas/Timestamp' }
+        generated_at: { $ref: '#/components/schemas/Timestamp' }
         astronauts:
           type: array
           items:
@@ -9530,11 +10328,16 @@ components:
             properties:
               astronaut_id: { $ref: '#/components/schemas/Uuid' }
               call_sign: { type: string }
+              checkin_today: { type: boolean, description: Hizo el check-in hoy (día UTC). }
+              streak_days: { type: integer, minimum: 0, description: Racha (días seguidos). }
               checkins_completed: { type: integer, minimum: 0 }
               checkins_expected: { type: integer, minimum: 0 }
               screenings_completed: { type: integer, minimum: 0 }
               pvt_runs: { type: integer, minimum: 0 }
-              fitness: { $ref: '#/components/schemas/Fitness' }
+              fitness:
+                allOf:
+                  - $ref: '#/components/schemas/Fitness'
+                description: Apto para tarea crítica (PVT de las últimas 12 h; si no, not_confirmed).
               last_checkin_at: { type: string, format: date-time, nullable: true }
     RulesUpdate:
       type: object
@@ -9568,9 +10371,24 @@ components:
         kind: { type: string, enum: [wellbeing_alert, screening_alert, support_request] }
         indicator_code: { type: string, nullable: true }
         urgency: { type: string, nullable: true, enum: [later, today, now, null] }
-        status: { type: string }
+        channel: { type: string, nullable: true, enum: [message, session, null] }
+        priority:
+          type: string
+          nullable: true
+          enum: [routine, urgent, emergency, null]
+          description: Solo alertas.
+        status:
+          type: string
+          description: |
+            Alertas: delivered | acknowledged | responded | closed. Solicitudes: open |
+            acknowledged | closed.
         summary: { type: string }
         created_at: { $ref: '#/components/schemas/Timestamp' }
+        measured_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Cuándo se midió (alertas) o se pidió en el dispositivo (solicitudes).
         deliver_at: { type: string, format: date-time, nullable: true }
     BehavioralInboxPage:
       type: object
@@ -9613,9 +10431,40 @@ components:
               last_value: { type: number, nullable: true }
               adverse_z_3d: { type: number, nullable: true }
               adverse_sustained_days: { type: integer, minimum: 0 }
+              trend: { type: string, enum: [rising, falling, stable, insufficient_data] }
               series:
                 type: array
                 items: { $ref: '#/components/schemas/SeriesPoint' }
+        checkins:
+          type: array
+          description: Check-ins vigentes de los últimos 30 días (hasta 14). Sin la nota privada.
+          items:
+            type: object
+            required: [id, measured_at, mood, fatigue, stress, crew_conflict]
+            properties:
+              id: { $ref: '#/components/schemas/Uuid' }
+              measured_at: { $ref: '#/components/schemas/Timestamp' }
+              received_at: { $ref: '#/components/schemas/Timestamp' }
+              mood: { type: number, nullable: true }
+              fatigue: { type: number, nullable: true }
+              stress: { type: number, nullable: true }
+              crew_conflict: { type: number, nullable: true }
+              sleep_hours: { type: number, nullable: true }
+              supersedes_id: { type: string, format: uuid, nullable: true }
+        escalations:
+          type: array
+          description: Escalamientos conductuales abiertos y ya entregados (para el acuse y el cierre).
+          items:
+            type: object
+            required: [id, status, created_at, deliver_at]
+            properties:
+              id: { $ref: '#/components/schemas/Uuid' }
+              indicator_code: { type: string, nullable: true }
+              status: { type: string }
+              priority: { type: string }
+              created_at: { $ref: '#/components/schemas/Timestamp' }
+              deliver_at: { $ref: '#/components/schemas/Timestamp' }
+              measured_at: { type: string, format: date-time, nullable: true }
         screenings:
           type: array
           items:

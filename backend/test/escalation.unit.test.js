@@ -34,21 +34,32 @@ test('self_care no escala', () => {
   assert.deepEqual(routeEvaluation(behavioral, { level: 'normal', escalation: 'self_care' }), []);
 });
 
-test('conductual: solo behavioral_health, confidencial, nunca a bordo', () => {
-  for (const evaluation of [
-    { level: 'caution', escalation: 'behavioral_health' },
-    // PVT_LAPSES critical dice flight_surgeon: lo conductual igual va solo a behavioral_health.
-    { level: 'critical', escalation: 'flight_surgeon' },
-  ]) {
-    assert.deepEqual(routeEvaluation(behavioral, evaluation), [
+test('conductual: el detalle solo a behavioral_health (confidencial), nunca a bordo', () => {
+  const toBh = {
+    level: 'behavioral_health',
+    category: 'behavioral',
+    sourceType: 'wellbeing',
+    isConfidential: true,
+  };
+  assert.deepEqual(
+    routeEvaluation(behavioral, { level: 'caution', escalation: 'behavioral_health' }),
+    [toBh],
+  );
+  // PVT_LAPSES critical dice flight_surgeon: el detalle va a behavioral_health y el flight
+  // surgeon recibe solo el estado (alerta no confidencial, sin valores; tarea 10).
+  assert.deepEqual(
+    routeEvaluation(behavioral, { level: 'critical', escalation: 'flight_surgeon' }),
+    [
+      toBh,
       {
-        level: 'behavioral_health',
+        level: 'flight_surgeon',
         category: 'behavioral',
         sourceType: 'wellbeing',
-        isConfidential: true,
+        isConfidential: false,
+        statusOnly: true,
       },
-    ]);
-  }
+    ],
+  );
   assert.deepEqual(routeEvaluation(behavioral, { level: 'caution', escalation: 'crew' }), []);
 });
 

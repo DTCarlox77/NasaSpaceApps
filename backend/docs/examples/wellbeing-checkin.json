@@ -1,0 +1,10 @@
+{
+  "client_uuid": "ca000000-0000-4000-8000-0000000000a1",
+  "measured_at": "2026-11-14T21:00:00Z",
+  "mood": 62,
+  "fatigue": 40,
+  "stress": 35,
+  "crew_conflict": 10,
+  "sleep_hours": 6.5,
+  "private_note": "Dormí poco por el ruido del ventilador."
+}

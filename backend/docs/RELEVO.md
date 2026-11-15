@@ -1,10 +1,10 @@
 # Relevo del backend
 
-Cierre de la **tarea 9** (Triaje Autónomo de Tripulación, MVP; además el protocolo v2 y la entrega de lo que estaba en cola al cerrar un corte), 2026-11-15, rama `backend`. Antes: el tramo 1 cerró las tareas 1–5; el tramo 2, el despliegue y la tarea 6; luego la 7 (simulador) y la 8 (sincronización offline).
+Cierre de la **tarea 12** (API desplegada estable para la demo: configuración endurecida, reinicio de demo, prueba de humo, arranque en frío y plan B), 2026-11-15, rama `backend`. Antes: el tramo 1 cerró las tareas 1–5; el tramo 2, el despliegue y la tarea 6; luego la 7 (simulador), la 8 (sincronización offline), la 9 (triaje), la 10 (bienestar) y la 11 (acceso).
 
 ## Estado
 
-**Endpoints reales** (54 de 78; el resto lleva `x-status-impl: pending` en `docs/openapi.yaml` y sigue en el mock):
+**Endpoints reales** (81 de 85; el resto lleva `x-status-impl: pending` en `docs/openapi.yaml` y sigue en el mock):
 
 | Módulo | Endpoints |
 |---|---|
@@ -18,9 +18,13 @@ Cierre de la **tarea 9** (Triaje Autónomo de Tripulación, MVP; además el prot
 | Tierra (tarea 6) | `GET /admin/dashboard/crew`, `GET /admin/inbox`, `POST /admin/escalations/{id}/ack`, `POST /admin/escalations/{id}/messages`, `GET /escalations/{id}/messages` |
 | Misión (tarea 6) | `GET`/`POST /admin/missions`, `PATCH /admin/missions/{id}`, `GET`/`POST /admin/environments`, `PATCH /admin/environments/{code}`, `GET`/`POST /admin/assignments`, `PATCH /admin/assignments/{id}`, `GET`/`POST /admin/comm-outages`, `PATCH /admin/comm-outages/{id}` |
 | Simulador (tarea 7, solo demo) | `POST /admin/simulator/history`, `POST /admin/simulator/scenarios/{name}` (`x-status: extra`; 404 sin `SIMULATOR_ENABLED=true`) |
+| Demo (tarea 12, solo demo) | `POST /admin/demo/reset` (`x-status: extra`, solo admin; 404 fuera del modo demo; `{ "confirm": "ARES-1" }`) |
 | Sync (tarea 8) | `POST /sync/push`, `GET /sync/pull` |
 | Emergencia (tarea 9) | `GET /emergency/protocol`, `POST /emergency/sessions`, `GET /emergency/sessions/{id}`, `POST /emergency/sessions/{id}/assessments`, `/confirm`, `/heartbeat`, `/questions`, `/close`, `PUT /emergency/assessments/{id}/answers`, `POST /emergency/assessments/{id}/complete` |
 | Emergencias en Tierra (tarea 9) | `GET /admin/emergencies`, `GET /admin/emergencies/{id}` |
+| Bienestar (tarea 10) | `POST /wellbeing/checkins`, `GET /wellbeing/instruments`, `POST /wellbeing/screenings`, `POST /wellbeing/pvt-runs`, `POST /wellbeing/support-requests`, `GET /wellbeing/support-requests/{id}/messages`, `GET /me/wellbeing` |
+| Acceso (tarea 11) | `GET /admin/audit/confidential-access` (solo behavioral_health), `GET /me/confidential-access` (nuevo, el astronauta), `GET`/`POST /admin/devices` (el `GET` es nuevo), `POST /admin/devices/{id}/revoke`, `POST /crew/users/{id}/unlock`, `POST /crew/users/{id}/reset-pin`, `POST /crew/devices`, `PUT /me/offline-pin`, `GET /admin/audit/delegated-actions`, `GET /missions/current`; `X-Device-Credential` en las rutas del triaje |
+| Salud conductual y cumplimiento (tarea 10) | `GET /admin/behavioral/inbox`, `GET /admin/behavioral/astronauts/{id}`, `POST /admin/behavioral/support-requests/{id}/messages`, `/ack`, `/close`, `POST /admin/behavioral/escalations/{id}/ack`, `/close` (nuevas), `GET /admin/compliance` |
 
 **Piezas:**
 - **Catálogo**: 26 indicadores (9 confidenciales), 112 reglas y 43 fuentes (`docs/catalogo-indicadores.json`, generado con `tools/build_catalog.py`).
@@ -29,14 +33,14 @@ Cierre de la **tarea 9** (Triaje Autónomo de Tripulación, MVP; además el prot
   - campos derivados en `src/engine/derived.js` (puro);
   - servicio de evaluación `src/services/evaluation.service.js`;
   - triaje `src/engine/triage.js`.
-- **Contrato**: `docs/openapi.yaml` v1.3 (78 operaciones; los cambios de cada versión, en la sección "Cambios" de `info.description`). Mock con `npm run api:mock`, guía en `docs/api-guia-frontend.md`. `npm run api:lint`: 0 errores.
+- **Contrato**: `docs/openapi.yaml` v1.6 (85 operaciones; los cambios de cada versión, en la sección "Cambios" de `info.description`). Mock con `npm run api:mock`, guía en `docs/api-guia-frontend.md`. `npm run api:lint`: 0 errores (las 4 advertencias de siempre). Las respuestas reales de bienestar se validaron con `prism proxy --errors`: sin violaciones.
 - **Base de datos**:
-  - migraciones 000–012 (48 tablas; la 008 agrega índices de escalamiento, la 009 `astronauts.sex`, la 010 completa `sync_batches` / `sync_items`, la 011 los estados `pending` y `merged` de la emergencia y la 012 el triaje) y seeds 001–004 (la 004 es el protocolo de triaje v2);
+  - migraciones 000–013 (48 tablas; la 008 agrega índices de escalamiento, la 009 `astronauts.sex`, la 010 completa `sync_batches` / `sync_items`, la 011 los estados `pending` y `merged` de la emergencia, la 012 el triaje, la 013 el bienestar: `wellbeing_checkins.supersedes_id`, `closed_by` y un índice de la bandeja conductual, y la 014 el acceso: tipos nuevos de `auth_events` e índice de `delegated_actions`) y seeds 001–004 (la 004 es el protocolo de triaje v2; la tarea 10 no agregó seed);
   - el seed del catálogo se genera con `node tools/build_catalog_seed.js` (`--check` avisa si quedó desactualizado).
 - **Permisos**:
   - `src/middlewares/auth.js`: `authenticate`, `requireRole`, `requireCrewRole` y la lista blanca del rol `service`;
   - `src/services/accessPolicy.js`: `canAccess`, `enforceAccess` y la bitácora confidencial.
-- **Pruebas**: `node --test` → **393 de 393**, sin saltadas, contra la base de pruebas `astro_health_test`. Incluyen la matriz de permisos, los derivados, el catálogo, el enrutamiento de escalamientos (unitarias, 8), el simulador (unitarias 15, apagado 1), `sex` (unitarias 5), sync (unitarias 5), el protocolo v2 (unitarias 7) y las suites de base de datos (humo 4, autenticación 14, semáforo 15, escalamiento y panel 16, simulador 9, `sex` 6, sync 12, triaje 12). Si la base de pruebas no existe, esas suites se saltan con el comando para crearla.
+- **Pruebas**: `node --test` (`npm test`) → **449 de 449**, sin saltadas, contra la base de pruebas `astro_health_test`. Incluyen la matriz de permisos, los derivados, el catálogo, el enrutamiento de escalamientos (unitarias, 8), el simulador (unitarias 15, apagado 1), `sex` (unitarias 5), sync (unitarias 5), el protocolo v2 (unitarias 7), bienestar (unitarias 7), acceso (unitarias 3), configuración y logs (12, tarea 12: JWT y CORS en producción, el servidor que no arranca, iteraciones del PIN, modo demo, CORS en la app, logs sin secretos y las negativas del CLI) y las suites de base de datos (humo 4, autenticación 14, semáforo 15, escalamiento y panel 16, simulador 9, `sex` 6, sync 12, triaje 12, bienestar 14, acceso 15, reinicio de demo 5). Si la base de pruebas no existe, esas suites se saltan con el comando para crearla.
 - **Escalamiento** (tarea 6):
   - `src/services/escalation.service.js`: enrutamiento por categoría y prioridad;
   - `src/services/escalationDelivery.service.js`: queued → delivered y recálculo de `deliver_at` por cortes;
@@ -46,7 +50,10 @@ Cierre de la **tarea 9** (Triaje Autónomo de Tripulación, MVP; además el prot
 - **Simulador** (tarea 7): generador puro en `src/simulator/` (`random.js`, `profiles.js`, `history.js`, `scenarios.js`) y escritura en `src/services/simulator.service.js`, que usa los servicios reales (`readings.service`, `habitat.service` y el nuevo `wellbeingRecorder.js`). CLI `scripts/simulate.js`. Ver "Simulador (demo)".
 - **Sync** (tarea 8): `src/services/syncPush.service.js` (lote, orden, reloj, conflictos e historial), `src/services/syncEntities.js` (registro de tipos → servicios reales; extensible para el triaje), `src/services/syncPull.service.js` (cursor por flujos) y `src/models/sync.model.js`. Ver "Sincronización offline".
 - **Triaje** (tarea 9): `src/services/emergency.service.js` (activación, hombre muerto, latido, preguntas, cierre y reporte), `src/services/triageAssessment.service.js` (evaluación y comparación dispositivo/servidor), `src/services/emergencyGround.service.js` (panel), `src/services/triageView.js` (orden de atención y roster, puro), `src/services/emergencyCommon.js` (actor, escalamientos y formas) y `src/models/emergency.model.js`. Ver "Modo emergencia (triaje)".
+- **Acceso** (tarea 11): `src/services/devices.service.js` (credencial de tableta, alta, lista y revocación, límite de fallos por IP), `src/middlewares/auth.js` (`authenticateUserOrDevice`, `requireRoleOrDevice`), `src/services/delegation.service.js` (mapa de capacidades del comandante y auditoría), `src/services/offlinePin.service.js` (PIN sin conexión), `src/models/{devices,delegated}.model.js` y las rutas `admin.devices.routes.js` y `crew.routes.js`. Ver "Acceso".
+- **Bienestar** (tarea 10): `src/services/wellbeing.service.js` (check-in, cuestionarios, PVT, instrumentos e historial propio; lo usan las rutas y `/sync/push`), `src/services/wellbeingRecorder.js` (grupos de lecturas y check-in por día), `src/services/supportRequest.service.js` ("Quiero hablar con alguien"), `src/services/behavioral.service.js` (bandeja, detalle, acuse, cierre y cumplimiento), `src/models/{wellbeing,support,behavioral}.model.js` y las rutas `wellbeing.routes.js` y `behavioral.routes.js`. Ver "Bienestar".
 - **Despliegue**: `render.yaml` (Blueprint de Render) en la raíz del repo; arranque con `npm run start:deploy` (migra, siembra la demo si `DEMO_SEED=true` y arranca). Ver "Despliegue (Render)".
+- **Demo estable** (tarea 12): `src/config/loadEnv.js` (validación pura de las variables; `env.js` termina el proceso si falla), `src/utils/safeLog.js` y `src/middlewares/requestLog.js` (logs sin secretos ni datos de salud), `src/services/demoReset.service.js` + `src/models/demoReset.model.js` (reinicio de demo, ruta `admin.demo.routes.js` y CLI `scripts/demoReset.js`) y `scripts/smoke.js` (prueba de humo). Ver "Día de la demo".
 
 ## Cómo levantar el proyecto
 
@@ -68,7 +75,7 @@ Requisitos: Node 20+ (`.nvmrc`) y PostgreSQL 16+ (local, p. ej. el 18 en Windows
 4. Arranca:
    ```bash
    npm i
-   npm run db:reset    # migraciones 000–012 + seeds (solo la base de desarrollo)
+   npm run db:reset    # migraciones 000–014 + seeds (solo la base de desarrollo)
    npm run dev         # http://localhost:3000/api/v1/health · Swagger en /api/docs
    ```
 5. Verifica: `node --test`, `npx eslint .`, `npx prettier --check .` y `npm run api:lint`.
@@ -93,29 +100,58 @@ Requisitos: Node 20+ (`.nvmrc`) y PostgreSQL 16+ (local, p. ej. el 18 en Windows
 - Build: `npm ci`. Start: `npm run start:deploy` → `scripts/start.js`: migraciones pendientes, seed de demo solo con `DEMO_SEED=true` y servidor. El plan gratuito no tiene pre-deploy, por eso se migra al arrancar. El seed es idempotente (`ON CONFLICT DO NOTHING`); el del catálogo vuelve a dejar las reglas del JSON.
 - Health check: `/api/v1/health` (503 si la base no responde).
 
-**Variables de entorno**:
+**Variables de entorno** (todas, con su valor por defecto, en `.env.example`; las que no están aquí no hace falta ponerlas en Render):
 
-| Variable | Valor | Notas |
+| Variable | Valor en Render | Notas |
 |---|---|---|
-| `NODE_ENV` | `production` | Activa `trust proxy` y exige `JWT_SECRET`. |
+| `NODE_ENV` | `production` | Activa `trust proxy`, exige `JWT_SECRET` fuerte y `CORS_ORIGIN` sin `*` (si no, el servidor no arranca y el deploy falla: Render sigue sirviendo el anterior). |
 | `DATABASE_URL` | la *Internal Database URL* de Render | Reemplaza a las `DB_*`. |
 | `DB_SSL` | `no-verify` | `false` si la base no acepta SSL; `true` verifica el certificado. |
-| `JWT_SECRET` | aleatorio, ≥ 32 caracteres | El Blueprint lo genera (`generateValue`). A mano: `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`. |
-| `CORS_ORIGIN` | `*` o URLs separadas por coma | Ej.: `https://panel.example.com,http://localhost:5173`. |
+| `JWT_SECRET` | aleatorio, ≥ 32 caracteres | El Blueprint lo genera (`generateValue`). Rechaza el de desarrollo, los de ejemplo ("changeme", "secret"...) y los de pocos caracteres distintos. A mano: `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`. |
+| `CORS_ORIGIN` | orígenes del panel y de Expo web, separados por coma | Nunca `*` en producción. `esquema://host[:puerto]` sin ruta. El Blueprint ya no lo fija (`sync: false`): se pone en el panel. |
 | `TRUST_PROXY` | `1` | Saltos de proxy; el rate limit ve la IP real del cliente. |
 | `DEMO_SEED` | `true` | Solo en el despliegue de demo. Sin la bandera, `seed.js` se niega con `NODE_ENV=production`. |
-| `SIMULATOR_ENABLED` | `true` | Activa `POST /admin/simulator/*` (sin ella, 404). El plan gratuito no tiene consola: el simulador se usa por estos endpoints. |
+| `SIMULATOR_ENABLED` | `true` | Activa `POST /admin/simulator/*` y, con `DEMO_SEED=true`, `POST /admin/demo/reset` (sin ellas, 404). El plan gratuito no tiene consola: se usan por estos endpoints. |
 | `NODE_VERSION` | `20` | |
-| `TRIAGE_*` | (por defecto) | `TRIAGE_AUTO_ENABLED`, `TRIAGE_AUTO_CRITICAL_READING`, `TRIAGE_AUTO_MISSED_CHECKIN` (true), `TRIAGE_AUTO_READING_MAX_AGE_MIN=120`, `TRIAGE_AUTO_MISSED_CHECKIN_H=30`, `TRIAGE_AUTO_SINCE` (opcional), `TRIAGE_DEADMAN_S=60`, `TRIAGE_SWEEP_INTERVAL_S=15`. No hace falta ponerlas en Render. |
-| `SYNC_*` | (por defecto) | `SYNC_MAX_BATCH=500`, `SYNC_MAX_FUTURE_SKEW_S=300`, `SYNC_LATE_AFTER_S=900`, `SYNC_PULL_SETTLE_MS=2000`. No hace falta ponerlas en Render. |
+| `OFFLINE_PIN_PBKDF2_ITERATIONS` | (por defecto 600000) | Iteraciones del verificador local del PIN (mín. 10 000). Bajarla solo si la app tarda demasiado. |
+| `TRIAGE_*`, `SYNC_*`, `WELLBEING_*`, `LOCKOUT_*`, `RATE_LIMIT_*`, `OFFLINE_UNLOCK_DAYS`, `JWT_*_TTL`, `TEMP_PASSWORD_LENGTH`, `EXERCISE_WEEKLY_PRESCRIPTION_MIN` | (por defecto) | Valores pensados para la demo. |
 
-`PORT` lo pone Render. El resto (`JWT_ACCESS_TTL`, `LOCKOUT_*`, etc.) tiene valores por defecto.
+`PORT` lo pone Render.
 
-> **Pendiente en el panel de Render**: agregar `SIMULATOR_ENABLED=true` en *Environment* del servicio `astro-health-api` (si el Blueprint no la sincronizó al hacer push) y guardar; Render redepliega solo. Sin ella, los endpoints del simulador responden 404.
+**Lista para el panel de Render** (tarea 12; nada de esto lo hace el código). **Antes del push**, porque con `NODE_ENV=production` el servidor nuevo no arranca con `CORS_ORIGIN=*`:
+1. Servicio `astro-health-api` → *Environment*: `CORS_ORIGIN` = los orígenes reales del panel y de Expo web (p. ej. `https://panel.example.com,http://localhost:5173,http://localhost:8081`; pendiente que los frontends confirmen los suyos). Guardar.
+2. En la misma pantalla: confirmar `SIMULATOR_ENABLED=true`, `DEMO_SEED=true`, `NODE_ENV=production`, `TRUST_PROXY=1` y que `JWT_SECRET` exista (generado, ≥ 32 caracteres). Si alguna falta, agregarla.
+3. *Settings* → *Health Check Path*: `/api/v1/health` (debe estar así por el Blueprint; confirmarlo).
+4. Push de `backend` → *Events*: el deploy termina en *Live* y `GET /api/v1/health` responde `"status":"ok","db":"up"`. Si falla, *Logs* muestra la línea `[env] ...` con el motivo (nunca el valor de un secreto).
+5. Si el servicio se creó desde el Blueprint y Render ofrece sincronizarlo tras el push: `CORS_ORIGIN` quedó con `sync: false` (no la pisa).
+6. Base `astro-health-db` → anotar la fecha de expiración del plan gratuito (30 días desde que se creó) y hacer el respaldo antes de la demo (README → "Respaldo").
 
 **Límites del plan gratuito**: el servicio se duerme tras ~15 min sin tráfico (la primera petición tarda ~50 s) y la base gratuita expira a los 30 días. El rate limit es en memoria: una sola instancia.
 
-**Railway** (si Render falla): mismo código. Crea un PostgreSQL y un servicio desde el repo con *Root Directory* `backend`, *Start Command* `npm run start:deploy`, y las variables de arriba (`DATABASE_URL=${{Postgres.DATABASE_URL}}`; si no conecta, prueba `DB_SSL=false`).
+**Railway** (si Render falla): mismo código. Crea un PostgreSQL y un servicio desde el repo con *Root Directory* `backend`, *Start Command* `npm run start:deploy`, y las variables de arriba (`DATABASE_URL=${{Postgres.DATABASE_URL}}`; si no conecta, prueba `DB_SSL=false`). El plan B más rápido es la API local con ngrok (README).
+
+## Día de la demo
+
+Comandos completos (Git Bash y PowerShell) en el README, sección "Día de la demo".
+
+1. **Despertar**: abrir `https://astro-health-api-81jd.onrender.com/api/v1/health` unos minutos antes (~50 s la primera vez).
+2. **Prueba de humo**: `npm run smoke -- --base=https://astro-health-api-81jd.onrender.com/api/v1` (~1.5 min; tabla de pasos, código 1 si algo falla).
+3. **Reinicio de demo**: `POST /admin/demo/reset` con `{"confirm":"ARES-1"}` como `mission.control`. Revisar `fitness` (3 `fit`, ATLAS `not_confirmed`) y que `panel_flags` no traiga `critical`.
+4. **Respaldo**: `pg_dump` de la *External Database URL* (README → "Respaldo").
+5. **Plan B**: API local + `ngrok http 3000` (README → "Plan B"); la app cambia `EXPO_PUBLIC_API_URL` y el panel su URL base.
+
+**Reinicio de demo** (`demoReset.service.js`; endpoint y `npm run demo:reset -- --confirm ARES-1`). Orden y por qué:
+1. Marca la historia como cargada **antes** de tocar nada: el check-in perdido cuenta desde ahora. Si la API dormía o la última historia es de hace días, el barrido de 15 s veía > 30 h sin check-in y abría emergencias en cuanto la API despertaba (o a mitad de la recarga).
+2. Usuarios del seed (ids fijos de los seeds 001 y 003): activos, sin intentos ni bloqueo (`account_unlocked` si estaban bloqueados); si la contraseña ya no es `Demo2026!`, se restaura (`password_reset`, refresh tokens revocados, `password_changed_at` nuevo: sus access tokens dejan de servir); `must_change_password` como en el seed (solo ATLAS). Va antes de la historia: un astronauta desactivado no saldría en la tripulación vigente.
+3. Historia de 14 días hasta ahora por `loadHistory` (idempotente; vuelve a marcar la hora al terminar).
+4. Emergencias `pending`/`active` → `cancelled` con `close_notes`, evento `closed` (actor = el admin) y reporte, sin escalar a Tierra. Un plazo de "estoy bien" pendiente de esas sesiones solo agrega luego su evento `deadman_expired` (la sesión ya no se activa).
+5. Cortes en curso → `ends_at = ahora` por `missionAdmin.updateOutage` (recalcula `deliver_at`). Los programados a futuro no se tocan (`scheduled_left`).
+6. Escalamientos y solicitudes de apoyo abiertos de ARES-1 → `closed` (`closed_by` = el admin, null desde la terminal). Después de las emergencias: una activación que el barrido hizo justo antes también deja escalamientos. La respuesta solo cuenta los físicos y de emergencia.
+7. Aptitud: PVT en descanso de ahora en `TAB-1` con el valor del medio de la línea base del perfil para todos menos uno → 3 `fit`. Queda `not_confirmed` el primero de ATLAS, LYRA, VEGA, ORION sin PVT apta reciente (normalmente ATLAS; LYRA si la historia le dio a ATLAS su PVT semanal de las 09:00 dentro de las 12 h). Si los 4 ya tenían una, lo dice en `notes`.
+- Un reinicio a la vez (advisory lock; 409 `DEMO_RESET_RUNNING`). Local: ~3 s con la historia ya cargada, ~8 s la primera vez.
+- **No se puede limpiar sin borrar** (append-only): lecturas y evaluaciones de escenarios y pruebas de humo, la línea de tiempo de las emergencias, `auth_events`, `confidential_access_log`, `delegated_actions`, `sync_batches`/`sync_items`. El dashboard muestra la **última** lectura vigente por indicador: un `SYMPTOM` o una fiebre de un escenario ensayado sigue en rojo/ámbar hasta que llegue una lectura más nueva (los signos vitales se renuevan con la historia del día siguiente; `SYMPTOM` no tiene historia). `panel_flags` lo muestra. Si queda un `critical`: no ensayar escenarios en Render antes de la demo o, si ya pasó, recrear la base (Blueprint + `DEMO_SEED=true`) y reiniciar.
+
+**Prueba de humo** (`scripts/smoke.js`, parte del script de la tarea 10): la base es compartida, así que no abre emergencias (la SpO₂ crítica se mide hace 4 h, más que `TRIAGE_AUTO_READING_MAX_AGE_MIN`, y se corrige enseguida para que el panel no la muestre), usa `client_uuid` nuevos en cada corrida, el lote de `/sync/push` es el ejemplo (idempotente; el `device_id` del sobre es el de la sesión) y cierra su solicitud de apoyo. Deja el escalamiento de la SpO₂ (el reinicio lo cierra), un check-in de hoy de ORION y una FC normal. Nunca imprime tokens (las respuestas que muestra pasan por `redact`). Por eso el orden del día de la demo es humo → reinicio.
 
 ## Simulador (demo)
 
@@ -134,7 +170,7 @@ Datos **sintéticos** de ARES-1 para que la demo tenga historia y escenarios en 
 | `solar_event` | Dosímetro de toda la tripulación con `event_active`, 3 lecturas en 90 min. Con `astronaut`, ese tripulante reporta náusea en el pico. | `RAD_DOSE_DAILY` caution (doble de la mediana → crew; evento ≥ 125 mSv → flight surgeon). `high`: ≥ 250 mSv → critical. Náusea → critical. |
 | `crew_illness` | `astronaut` (LYRA): 38.4 °C, FC 112, tos y sensación de fiebre. `contagion: true`: empezó ayer y un segundo tripulante enferma hoy. | `BODY_TEMP`, `HEART_RATE` y `SYMPTOM` en caution → crew. `high`: 39.6 °C → critical (flight surgeon + crew). |
 | `co2_spike` | `module_id` (HAB-1): 6 lecturas en 50 min, de 2.4 a 5.2 mmHg (`high`: hasta 10.8). | `HAB_CO2` caution → crew. `high`: ≥ 10 → critical → flight surgeon. |
-| `wellbeing_decline` | `astronaut` (ATLAS): 5 check-ins seguidos peores (corrige los de la historia con `supersedes_uuid`). `high`: PHQ-2 = 4 y GAD-2 = 3. | Escalamiento **confidencial** a `behavioral_health` (WB_*, y PHQ-2/GAD-2 en `high`). Nunca a la tripulación ni a admin. |
+| `wellbeing_decline` | `astronaut` (ATLAS): 5 check-ins seguidos peores (corrige los de la historia con `supersedes_uuid`). `high`: PHQ-2 = 4 y GAD-2 = 3. Al final, una solicitud de apoyo con urgencia `now` (tarea 10). | Escalamiento **confidencial** a `behavioral_health` (WB_*, y PHQ-2/GAD-2 en `high`) y la solicitud, visibles en `GET /admin/behavioral/inbox` 90 s después. Nunca a la tripulación ni a admin (el resumen no la cuenta). |
 | `emergency_solar` (tarea 9) | Evento solar en los dosímetros de todos; VEGA y `astronaut` (LYRA) con náusea; el comandante evalúa a VEGA, LYRA (no responde) y ATLAS; corte de enlace con una pregunta y el cierre en cola; luego se cierra el corte. | Activación automática por lectura crítica → hombre muerto vencido (el barrido se adelanta `TRIAGE_DEADMAN_S`) → LYRA rojo y primero en el orden de atención; dispositivo = servidor; el reporte sale al cerrar el corte (llega tras 90 s). Si ya había una sesión abierta, se une a ella. |
 | `offline_batch` (tarea 8) | `astronaut` (ORION): ~24 h sin conexión en `TAB-1`, empujadas por `POST /sync/push` (13 items: vitales, ejercicio, check-in, PVT, un SpO₂ 89 % de hace 6 h, una presión corregida con `supersedes_uuid` y un duplicado). | 12 `accepted` + 1 `duplicate`. El SpO₂ se procesa primero, llega con `late_sync` y escala desde la recepción (flight surgeon + crew). Mismo minuto → todo `duplicate`. |
 
@@ -220,6 +256,45 @@ Sin depender de Tierra: la tripulación abre una emergencia, evalúa a cada trip
 
 **Contra Render**: ver `docs/api-guia-frontend.md` §10 (Git Bash y PowerShell; los dos se probaron contra la API local) y `npm run sim:emergency` / `POST /admin/simulator/scenarios/emergency_solar` para la demo.
 
+## Bienestar
+
+Check-in diario de 20 s, cuestionarios breves, prueba de reacción y "Quiero hablar con alguien". **No diagnostica**: al astronauta solo le llegan los mensajes neutros de las reglas del catálogo. Guía para la app y el panel: `docs/api-guia-frontend.md` §11.
+
+**Flujo del check-in** (`POST /wellbeing/checkins` y `entity: wellbeing_checkin` de sync, mismo servicio):
+1. Valida (deslizadores enteros 0–100, sueño opcional 0–24, nota ≤ 1000) y, bajo un advisory lock por astronauta, busca el check-in vigente de ese día UTC.
+2. Si ya hay uno, el nuevo lo **corrige**: fila nueva con `supersedes_id` y lecturas con `supersedes_uuid` de las vigentes del anterior (append-only; gana el último que llega).
+3. Cada lectura pasa por `recordAndEvaluate`: reglas activas, derivados (`baseline_ready`, `adverse_z_3d` orientado con `direction`, `adverse_sustained_days`), `conditions.js` y escalamiento.
+4. `adverse_sustained_days ≥ 5` → escalamiento **confidencial** a `behavioral_health` con `compute_deliver_at` (uno abierto por astronauta e indicador; ver Decisiones).
+5. Respuesta: el `recommendation` de la regla más relevante de los WB_* (la que escala más lejos y luego la de mayor nivel), `offer_support: true`, racha y `screening_due`.
+
+**"Quiero hablar con alguien"**: `support_requests` con `deliver_at = compute_deliver_at(misión, recepción)` (el recálculo por cortes ya lo cubría desde la tarea 6). Las respuestas de `behavioral_health` (`support_messages`) salen por el flujo `p` de `/sync/pull` cuando su `deliver_at` ya pasó. Con urgencia `now`, la respuesta trae `suggestions` (respiración guiada y oficial médico de a bordo) y el servidor no avisa a nadie.
+
+**Bandeja de `behavioral_health`**: escalamientos `behavioral_health` y solicitudes ya entregados, por rango (apoyo `now`, alertas urgentes, apoyo `today`, alertas de rutina, apoyo `later`) y `deliver_at`. Acuse y cierre (nuevos en el contrato). Bitácora: una fila de `confidential_access_log` por astronauta que aparece en la página de la bandeja y una por consulta del detalle; las escrituras (acuse, respuesta, cierre) no se registran como lecturas.
+
+**Ejemplos**: `docs/examples/wellbeing-checkin.json` y `docs/examples/support-request.json` (bodies de `POST`; una prueba los manda tal cual).
+
+**Contra Render**: `docs/api-guia-frontend.md` §11 (Git Bash y PowerShell; los dos se probaron contra la API local).
+
+## Acceso
+
+Guía para la app y el panel: `docs/api-guia-frontend.md` §12.
+
+**Emergencia sin sesión** (credencial de tableta):
+- Credencial = `dc_` + 32 bytes de `crypto.randomBytes` en base64url (46 caracteres). Se muestra **una sola vez** (`POST /admin/devices` o `POST /crew/devices`); en `devices.credential_hash` queda solo su SHA-256 en hex (es aleatoria y de alta entropía: no necesita bcrypt; mismo esquema que TAB-1 y TAB-2 del seed).
+- `authenticateUserOrDevice` (solo en `emergency.routes.js`): con Bearer manda el usuario; si no, `X-Device-Credential` → `req.device` → `deviceActor`. Rutas: protocolo, abrir o unirse, ver la sesión, evaluaciones (crear, responder, completar), "estoy bien" (con `astronaut_id`), latido, preguntas a Tierra y cerrar. Cualquier otra ruta exige Bearer → 401.
+- 401 `INVALID_DEVICE_CREDENTIAL` (mismo mensaje): desconocida, revocada, misión no activa, o usada sobre una sesión de otra misión (`assertCrew`). Cada fallo deja `device_auth_failed` en `auth_events` (con la IP y, si se conoce, el id de la tableta; nunca la credencial) y cuenta para el límite por IP (`RATE_LIMIT_DEVICE_CREDENTIAL_PER_MINUTE`, en memoria) → 429 con `Retry-After`.
+- La sesión guarda `device_id`, la línea de tiempo `actor_device` (etiqueta) y `auth_events` registra `device_emergency_started`. `last_seen_at` se actualiza en cada uso.
+
+**Bloqueo por intentos** (ya existía): 401 idéntico exista o no el usuario; 423 con `locked_until` aunque la contraseña sea correcta; `account_locked` al bloquear. Nuevo: `account_unlocked` cuando el bloqueo vence solo (en el primer intento después) y `delegated_unlock` cuando desbloquea el comandante (admin ya registraba `account_unlocked`).
+
+**Comandante** (`delegation.service.js`, mapa `COMMANDER_CAPABILITIES`: `unlock_user`, `reset_offline_pin`, `register_device`): `requireCrewRole('commander')` + tripulante vigente de SU misión (`v_current_crew`; otro → 404). Cada uso: fila en `delegated_actions` (append-only), evento en `auth_events` y aviso a Tierra con `deliver_at = compute_deliver_at(misión, received_at)` **calculado al leer** (`reported_to_ground_at` queda sin uso). `GET /admin/audit/delegated-actions` muestra solo lo que ya llegó.
+
+**PIN sin conexión** (`offlinePin.service.js`): bcrypt en `offline_pins.pin_hash`; `offline_unlock_until = now() + OFFLINE_UNLOCK_DAYS` y cada login en línea en ese dispositivo lo renueva. La app guarda su propio verificador (PBKDF2, parámetros en `offline_verifier`). Un PIN nuevo reemplaza al anterior; el comandante lo borra en todos los dispositivos del tripulante; revocar una tableta borra los PIN de esa etiqueta para la tripulación de su misión.
+
+**Auditoría de accesos confidenciales** (`confidentialAudit.service.js`, decisión de la tarea 11): saber de quién consultó salud conductual ya revela algo conductual, así que **no** la ve admin ni el flight surgeon. `GET /admin/audit/confidential-access` → solo `behavioral_health`, sobre los astronautas de su misión (`crew_assignments`), filtrable por `astronaut_id`. `GET /me/confidential-access` → el astronauta, solo las filas sobre él. Nunca el contenido ni la IP. Leer la auditoría no agrega filas a la bitácora.
+
+**Contra Render**: `docs/api-guia-frontend.md` §12 (Git Bash y PowerShell, incluida la emergencia con TAB-1; los dos se probaron contra la API local).
+
 ## Credenciales demo
 
 > Todo es **sintético**, solo para la demo local. Contraseña de todos los usuarios del seed: **`Demo2026!`**.
@@ -239,7 +314,7 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
 - `TAB-1`: `dc_demo_tab1_sintetica`
 - `TAB-2`: `dc_demo_tab2_sintetica`
 
-`npm run db:reset` vuelve todo a este estado (solo en local; en Render, `db:reset` está deshabilitado con `NODE_ENV=production`). `node --test` **no toca** `astro_health`: usa la base de pruebas `astro_health_test` (`DB_NAME_TEST`).
+`npm run db:reset` vuelve todo a este estado (solo en local; en Render, `db:reset` está deshabilitado con `NODE_ENV=production`: ahí se usa el reinicio de demo, que cierra lo abierto sin borrar). `node --test` **no toca** `astro_health`: usa la base de pruebas `astro_health_test` (`DB_NAME_TEST`).
 
 ## Decisiones
 
@@ -367,9 +442,50 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
 - **Lectura crítica vieja**: escala igual (como en la tarea 8), pero no abre la emergencia si se midió hace más de `TRIAGE_AUTO_READING_MAX_AGE_MIN` (120 min, regla de diseño): un crítico que llega por sync 30 h después no despierta a la tripulación.
 - **Escalamientos**: categoría `emergency`, idempotentes por `client_uuid` derivado (fuente + motivo + destino). El motivo nunca lleva datos clínicos. **Admin**: no hay nivel de escalamiento para admin; su "aviso operativo" es ver esos mismos avisos en la bandeja sin `triage` (nueva vista `operational` de `canAccess`) y el panel de emergencias sin clínica.
 - **Sin bienestar**: el triaje no lee ni devuelve datos de bienestar (decisión del MVP). Única excepción: el disparador `missed_checkin` usa la HORA del último check-in (nunca sus valores); el motivo dice "sin respuesta a la alerta de check-in".
-- **Actor**: los servicios reciben `{ kind: 'user' | 'device', ... }` (`emergencyCommon.userActor` / `deviceActor`), nunca `req.user`. `deviceActor` queda listo para la credencial de tableta (tarea 11); hoy las rutas exigen Bearer.
+- **Actor**: los servicios reciben `{ kind: 'user' | 'device', ... }` (`emergencyCommon.userActor` / `deviceActor`), nunca `req.user`. Desde la tarea 11 el controlador arma `deviceActor` con `X-Device-Credential`.
 - **Sync**: `emergency_*` con `priority: emergency` en el registro (rango 0 aunque el item diga normal) y un orden entre ellos (sesión → "estoy bien" → evaluación → respuestas → completar → latido → pregunta → cierre). Completar, cerrar, latido y "estoy bien" son `idempotentBySync`: un reintento con el mismo hash es `duplicate` sin volver a ejecutar.
 - **Paso 0**: el recálculo por cortes de lo que estaba en cola ya existía desde la tarea 6 (con prueba). Faltaba el caso de un corte cerrado hacia atrás: ahora lo que estaba en cola sale con `greatest(compute_deliver_at(...), now())` (nunca con un `deliver_at` pasado que el pull ya no recogería). Prueba en `test/escalations.integration.test.js`.
+
+**Bienestar (tarea 10)**
+- **Paso 0**: `wellbeingRecorder.js` ya registraba check-in, corrección, PVT y cuestionario, y los derivados WB_*/PVT_* ya estaban en `derived.js`; el enrutamiento conductual, el recálculo por cortes de `support_requests`/`support_messages` y el flujo `p` del pull también existían. Se reutilizó todo; no se duplicó el cálculo.
+- **Migración 013** (sin seed nuevo): `wellbeing_checkins.supersedes_id` (una corrección por check-in, índice único), `escalations.closed_by`, `support_requests.closed_by` e índice de escalamientos conductuales abiertos.
+- **Un check-in por día de misión** = día UTC de `measured_at` (la misión trabaja en UTC). El segundo es una corrección; si un check-in tardío por sync cae en un día que ya tenía uno, también lo corrige (gana el último que llega). Si el nuevo no trae sueño, la lectura de sueño del anterior sigue vigente.
+- **La nota privada solo la ve el astronauta** (decisión del MVP): vuelve en `GET /me/wellbeing`; `behavioral_health` ve valores, tendencias y escalamientos, nunca la nota (las consultas de `behavioral.model.js` no la seleccionan). El astronauta leyendo lo suyo no se registra en la bitácora (no es un acceso de otro).
+- **Mensaje al astronauta**: el `recommendation` de la regla del catálogo (sin números ni colores). `offer_support` siempre `true`, en línea y por sync (el botón no depende del resultado: un booleano variable filtraría el nivel).
+- **Racha**: días UTC seguidos con check-in que terminan hoy (o ayer si hoy falta) y días con check-in en los últimos 7. No existe `/me/gamification`: va en la respuesta del check-in (`streak`).
+- **Reglas de diseño nuevas** (configurables, `basis: design_rule`, sin umbral clínico):
+  - `WELLBEING_ONE_OPEN_ESCALATION=true`: un escalamiento `behavioral_health` abierto por astronauta e indicador; mientras no se cierre, la evaluación apunta al abierto y no se crea otro. Bloqueo por astronauta + indicador (advisory lock). Aplica a WB_*, PHQ-2/GAD-2 y PVT_* (la alerta de estado al flight surgeon no se agrupa: cada PVT crítica avisa).
+  - `WELLBEING_FITNESS_MAX_AGE_H=12`: "apto para tarea crítica" solo con una PVT de las últimas 12 h (cualquier corrida, en descanso o antes de la tarea); sin PVT reciente, `not_confirmed`. Lo usan el dashboard y `/admin/compliance` (antes el dashboard tomaba la última PVT de cuando fuera).
+  - `WELLBEING_SCREENING_EVERY_DAYS=14`: PHQ-2/GAD-2 cada 14 días, `screening_due` desde el día 13 (un día antes de la conferencia psicológica; la agenda de conferencias no está modelada).
+  - Orden de la bandeja conductual y sugerencias de urgencia `now` (respiración guiada, oficial médico).
+- **`PVT_LAPSES` critical** (lo decidido en la tarea 9): `routeEvaluation` agrega para lo confidencial que el catálogo escala a `flight_surgeon` un segundo destino no confidencial (`category: behavioral`, `statusOnly`) con un motivo sin métricas ni indicador. El simulador no lo cuenta en el resumen de admin.
+- **Umbrales**: ninguno nuevo. Los de WB_*, PHQ-2/GAD-2 (corte 3) y PVT_* (11/20 lapsos, z ≥ 2, lapso ≥ 355 ms) salen del catálogo. No hay PHQ-9.
+- **Contrato (v1.4, cambios mínimos en "Cambios" del YAML)**: `sleep_hours` opcional; `WellbeingAck` + `supersedes_id`, `streak`, `screening_due`; `SupportRequest.suggestions`; acuse y cierre de `behavioral_health` (4 rutas nuevas: el contrato no tenía cómo cerrar, y el cierre es lo que libera la regla de uno abierto); bandeja con `include_closed`, `channel`, `priority`, `measured_at`; detalle con `checkins`, `escalations`, `trend`; `Compliance` + `checkin_today`, `streak_days`, `generated_at`; 200 de duplicado en cuestionarios y PVT. Se respetan los nombres del contrato aunque el brief dijera otros: urgencia `later` (= "puede esperar", el brief decía `can_wait`). El audio no está en el contrato: no se agregó.
+- **Sync**: `support_request` registrado (idempotente; mismo `client_uuid` con otro contenido → `PAYLOAD_MISMATCH`). Los handlers de bienestar ahora llaman a `wellbeing.service` (antes traducían el payload en `syncEntities.js`): la misma respuesta que en línea. El sueño del check-in entra como `wearable` (antes `manual` por sync).
+- **Simulador**: `wellbeing_decline` termina con una solicitud de apoyo `now` por el servicio real; el resumen no la cuenta (admin no puede ver ni conteos) y un error se informa como `wellbeing` sin decir qué era.
+- **Fix aparte** (tarea 9): el corte de `emergency_solar` empezaba 1 s antes de "ahora" y, si otro corte acababa de cerrarse, se solapaba, el 409 se ignoraba y la pregunta salía sin corte: la prueba fallaba en la suite completa (pasaba sola). Ahora empieza después del último corte cerrado.
+
+**Acceso (tarea 11)**
+- **Paso 0**: ya existían el bloqueo (`LOCKOUT_*`, 423, `account_locked`, desbloqueo de admin), las tablas `devices`, `offline_pins` y `delegated_actions` (007), las credenciales de TAB-1/TAB-2 en SHA-256 y `deviceActor`. No se duplicó nada: se cableó la autenticación, se agregaron los servicios y rutas, y se completó la bitácora.
+- **Migración 014** (sin seed nuevo): eventos `device_auth_failed` y `device_emergency_started` en `auth_events`, índice `(mission_id, received_at)` de `delegated_actions` y el comentario de que `reported_to_ground_at` queda sin uso.
+- **Cambios al contrato (v1.5, "Cambios" del YAML)**: `GET /admin/devices` nuevo; `X-Device-Credential` también en "estoy bien" (`astronaut_id` en el body: con la tableta compartida no hay usuario) y en preguntas a Tierra; 401 `INVALID_DEVICE_CREDENTIAL` y 429; `Device.status`; 409 `DEVICE_LABEL_TAKEN`; `reported_to_earth = false` mientras espera enlace; `offline_verifier` en `PUT /me/offline-pin` y 403 `DEVICE_NOT_OWNED` / `DEVICE_REVOKED`; 403 en `/missions/current`.
+- **"De otra misión → 401"**: la credencial autentica "una tableta de la misión X"; sobre una sesión de otra misión no es una credencial válida (401, no 403), igual que si la misión de la tableta no está activa.
+- **"Estoy bien" desde la tableta**: solo para un afectado con plazo pendiente en esa sesión (si no, 409). Es una tableta compartida: cualquiera a bordo podría tocar el botón por el afectado, igual que con su propio iPad desbloqueado (riesgo aceptado; queda el `actor_device`).
+- **Reglas de diseño nuevas** (configurables): `RATE_LIMIT_DEVICE_CREDENTIAL_PER_MINUTE=10` (solo fallos, por IP); `OFFLINE_UNLOCK_DAYS=7` (el contrato ya decía 7 días); verificador local del PIN con PBKDF2-HMAC-SHA256 y 600 000 iteraciones (OWASP Password Storage Cheat Sheet), sal de 16 bytes del dispositivo y `max_attempts = LOCKOUT_MAX_ATTEMPTS`.
+- **PIN**: se define solo en el dispositivo de la sesión (`device_id` = `did` del token) y no en una tableta revocada. El servidor nunca lo verifica ni lo devuelve: ningún endpoint acepta el PIN (ni como contraseña, Bearer, credencial de tableta o refresh: probado).
+- **Auditoría confidencial (cambio al contrato)**: `x-roles` de `GET /admin/audit/confidential-access` pasa de `[admin, behavioral_health]` a `[behavioral_health]` y se agrega `GET /me/confidential-access` para el astronauta (decidido con el responsable del backend).
+- **Enumeración por bloqueo** (límite conocido): un usuario real se bloquea a los 5 fallos y uno inexistente nunca (sigue en 401), así que el 423 revela que la cuenta existe. El contrato pide el 423; el límite de login por IP (`RATE_LIMIT_LOGIN_PER_MINUTE`) acota el abuso.
+
+**Despliegue y demo (tarea 12)**
+- **Paso 0**: la auditoría de accesos confidenciales ya estaba implementada (tarea 11: `x-roles: [behavioral_health]`, `GET /me/confidential-access`, sin `x-status-impl: pending`); no se tocó.
+- **Configuración**: `loadEnv(vars)` es pura y lanza `ConfigError`; `env.js` imprime el motivo con `[env]` y sale con 1. Las pruebas la llaman directo y un proceso real comprueba que `src/server.js` no arranca. Nombres de variables: los que ya existían; la única nueva es `OFFLINE_PIN_PBKDF2_ITERATIONS`.
+- **JWT_SECRET** fuera de development/test: obligatorio, ≥ 32 caracteres, distinto del de desarrollo, sin palabras de ejemplo (change, secret, example, default, password…) y con ≥ 10 caracteres distintos. El mensaje nunca incluye el valor.
+- **CORS**: fuera de development/test, `CORS_ORIGIN` vacío o `*` no arranca; cada origen se valida y normaliza (`URL.origin`: minúsculas, sin puerto por defecto, sin ruta). Un origen fuera de la lista no recibe `Access-Control-Allow-Origin` (no un 403): Swagger, que es del mismo origen, sigue funcionando y el navegador bloquea al resto. `render.yaml` deja `CORS_ORIGIN` con `sync: false` (antes fijaba `*`, que ahora tumbaría el deploy).
+- **Logs**: morgan con la ruta sin los valores de la query (`?cursor=…`), nunca headers ni bodies; los errores 500 y los inesperados de sync y del triaje pasan por `describeError` (tipo, código, restricción y pila; sin `detail`/`where` de PostgreSQL, que traen la fila, y con los valores de "invalid input", JWT, `rt_` y `dc_` reemplazados).
+- **Modo demo** = `SIMULATOR_ENABLED=true` y, fuera de development/test, `DEMO_SEED=true` (la base solo tiene datos sintéticos). Sin él, `POST /admin/demo/reset` da 404 antes de autenticar (como el simulador). El CLI se niega sin `--confirm ARES-1`, con `NODE_ENV=test` y en producción fuera del modo demo, siempre antes de abrir la base.
+- **Confirmación**: `confirm` = el código de la misión (`ARES-1`), en el body del endpoint y como `--confirm` en el CLI.
+- **Reinicio sin borrar**: se cierra o se marca; lo conductual se cierra pero no se cuenta (lo dispara admin). Las contraseñas se restauran solo si ya no son `Demo2026!` (así no se cierran sesiones sin necesidad).
+- **PIN**: `OFFLINE_PIN_PBKDF2_ITERATIONS` (600 000, mínimo 10 000, regla de diseño): con un PIN de 4–8 dígitos la protección real es el límite de intentos y el almacén seguro; las iteraciones solo encarecen el ataque.
 
 **Pruebas y herramientas**
 - **Pruebas con base**:
@@ -382,15 +498,16 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
 
 ## Pendientes
 
-- **`delegated_actions.reported_to_ground_at`**: la tabla es append-only (trigger), así que el recálculo por cortes no puede actualizarla. Cuando se implementen las acciones delegadas, calcular la entrega al leer (o guardar el envío y derivar `deliver_at` con `compute_deliver_at`).
+- **Acceso, cosas a mirar**: el límite de fallos de credencial es en memoria (una sola instancia, como el de login). `offline_pins.failed_attempts` no se usa (los intentos del PIN los cuenta la app sin conexión). Un PIN débil (1111, 1234) se acepta: si se quiere, agregar una lista de PIN prohibidos (regla de diseño).
 - **Hilo de Tierra**: el panel no tiene un `GET` del hilo de un escalamiento (el contrato no lo define); lo ve a bordo con `GET /escalations/{id}/messages`. Si el panel lo necesita, agregarlo al contrato.
-- **Tarea 10 (bienestar)**: los derivados WB_* y PVT_* ya están en `derived.js` y el motor los usa. Faltan los endpoints `/wellbeing/*`, que deben agrupar las lecturas (`wellbeing_checkin_id`, `pvt_run_id`, `instrument_administration_id`).
-  - **Regla para `PVT_LAPSES` critical** (decidida, sin implementar): el detalle (métricas de la PVT) va solo a `behavioral_health`, confidencial, como hoy. Además, el flight surgeon recibe **solo el estado** "aptitud no confirmada": una alerta `flight_surgeon` no confidencial, `source_type = wellbeing`, con un `reason` neutro y sin métricas (aparece en su bandeja con `category: wellbeing`; admin no la ve). Hoy `routeEvaluation` manda lo conductual solo a `behavioral_health`: al implementarlo, agrega ese segundo destino solo para PVT_LAPSES critical y su prueba.
-- **Bandeja de `behavioral_health`** (tarea 10): `wellbeing_decline` ya crea sus escalamientos confidenciales, pero todavía no hay endpoint para verlos (`GET /behavioral/*`). Hoy se verifican en la base o en `test/simulator.integration.test.js`.
-- **Simulador**: para limpiar los datos en Render no hay `db:reset`: habría que recrear la base desde el panel.
+- **Bienestar, sin hacer** (fuera del MVP): `GET /me/gamification` (la racha va en la respuesta del check-in; faltan logros), `PUT /admin/indicators/{code}/rules` (behavioral_health editando reglas), audio en "Quiero hablar con alguien" (no está en el contrato), mensajes del astronauta en el hilo de apoyo (`support_messages` `to_earth` existe en la base pero no hay ruta), `interventions` (tabla sin endpoint), recordatorios de check-in/PHQ-2 (`reminders` no se llena) y agenda real de la conferencia psicológica (hoy `screening_due` es "cada 14 días"). La auditoría de accesos ya es real (tarea 11).
+- **Bienestar, cosas a mirar**: el check-in tardío por sync de un día que ya tenía uno lo corrige aunque se haya medido antes (gana el último en llegar); si se quiere "gana el más reciente por `measured_at`", cambiar `currentCheckinOfDay`. La racha y "check-in hoy" usan el día UTC. La aptitud con PVT reciente hace que, tras la historia del simulador (PVT semanal), el dashboard muestre `not_confirmed` hasta que alguien haga una PVT.
+- **Demo**: el reinicio no puede quitar lecturas de escenarios ensayados (append-only): ver `panel_flags` en "Día de la demo". Si se quiere, una "ronda de control" en el reinicio (lecturas normales nuevas de lo que quedó en critical) lo resolvería sin borrar; no se hizo porque agrega datos que nadie midió.
+- **CORS**: faltan los orígenes reales del panel y de Expo web para `CORS_ORIGIN` en Render.
+- **Integración (tarea 13)**: la app (`origin/frontend`, `nullradt/`) llama a `POST /api/v1/alerts` y manda `{ identifier, password }` en el login; el contrato usa `POST /emergency/sessions` y `{ username, password, device_id }`. Su `EXPO_PUBLIC_API_TIMEOUT_MS=8000` no aguanta el arranque en frío de Render (~50 s).
 - **`GET /admin/sync/history`**: no está en el contrato, así que no se implementó. `sync_batches` ya tiene lo necesario (usuario, dispositivo, tamaño, conteos, offset y duración, sin payload): si el panel lo pide, agregarlo al contrato para admin y flight surgeon con metadatos y conteos totales, sin desglosar los tipos de bienestar.
-- **Sync, tipos pendientes**: `support_request` (tarea 10) responde `ENTITY_NOT_SUPPORTED`. Se agrega con `registerEntity(nombre, { when, handle })` en `syncEntities.js`; corrección de un check-in por sync tampoco existe todavía.
-- **Triaje, extras sin hacer**: detección de un evento de tripulación (`crew_event` solo existe como tipo de activación manual); activación por alarma del hábitat (`environment_alarm` se acepta del dispositivo y el contexto marca `co2`, pero una lectura crítica de CO₂ no abre sola la emergencia); estado `unreachable` de una evaluación (existe en el enum, ningún flujo lo pone); prellenado `maps_to` (fiebre desde `BODY_TEMP`): el protocolo no trae el umbral, así que el servidor no lo sugiere; credencial de tableta (tarea 11).
+- **Sync**: todos los tipos del contrato tienen servicio (`support_request` desde la tarea 10; un segundo check-in del día por sync es la corrección). Uno nuevo se agrega con `registerEntity(nombre, { when, handle })` en `syncEntities.js`.
+- **Triaje, extras sin hacer**: detección de un evento de tripulación (`crew_event` solo existe como tipo de activación manual); activación por alarma del hábitat (`environment_alarm` se acepta del dispositivo y el contexto marca `co2`, pero una lectura crítica de CO₂ no abre sola la emergencia); estado `unreachable` de una evaluación (existe en el enum, ningún flujo lo pone); prellenado `maps_to` (fiebre desde `BODY_TEMP`): el protocolo no trae el umbral, así que el servidor no lo sugiere.
 - **Triaje, cosas a mirar**: un corte cerrado hacia atrás ya no deja nada en el pasado (Paso 0), pero un evento que ya había llegado a Tierra no cambia. El reporte es una foto al cerrar: lo que llegue después por sync (p. ej. una evaluación tardía) está en la línea de tiempo del detalle, no en el reporte. El barrido del simulador adelanta el reloj (`expired_at` del plazo queda en el futuro unos segundos).
 - **Prueba de historia del simulador**: la segunda carga ahora usa el mismo "ahora" que la primera; antes fallaba si las dos cargas caían a ambos lados de un horario de la historia (p. ej. la masa de las 06:50).
 - **`reminders.delivered_at`** no se marca en el pull (sería escribir en un GET); los recordatorios se devuelven como estado.
@@ -399,11 +516,9 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
 
 ## Siguiente tarea
 
-**Tarea 10: bienestar (MVP)** (`/wellbeing/*`, `/me/wellbeing`, `/admin/behavioral/*`, `/admin/compliance`; hoy `x-status-impl: pending`).
+**Tarea 13: bugs de integración y code freeze en H44.**
 
-- Reutiliza `src/services/wellbeingRecorder.js` (check-in, PVT y cuestionario con sus lecturas agrupadas) y los handlers de sync de bienestar (`syncEntities.js`): las rutas en línea deben aceptar el mismo body que el payload de sync.
-- Respuestas al astronauta siempre neutras (`message`, `offer_support`); nunca un nivel ni un puntaje.
-- Bandeja de `behavioral_health` (`GET /admin/behavioral/inbox`): los escalamientos confidenciales ya existen (simulador `wellbeing_decline`). Cada acceso al detalle va a `confidential_access_log` (`enforceAccess`).
-- `PVT_LAPSES` critical: además del detalle a `behavioral_health`, una alerta neutra "aptitud no confirmada" al flight surgeon (ver Pendientes).
-- "Quiero hablar con alguien" (`support_request`): falta su handler de sync (`registerEntity`) y sus endpoints; viaja con `deliver_at` y ya está en el recálculo por cortes.
-- El triaje sigue sin datos de bienestar: no los agregues al reporte de la emergencia.
+- Antes: hacer en Render la lista de "Despliegue (Render)" (sobre todo `CORS_ORIGIN` **antes** del push) y confirmar el deploy con `npm run smoke -- --base=https://astro-health-api-81jd.onrender.com/api/v1`.
+- Integrar la app y el panel contra la API desplegada: la app usa rutas y campos que no están en el contrato (`POST /api/v1/alerts`, `identifier` en el login) y un timeout de 8 s; el panel necesita su origen en `CORS_ORIGIN`.
+- Corregir solo bugs de integración (contrato primero; sin migraciones ni endpoints nuevos salvo que bloqueen la demo). Code freeze en H44: después, solo el reinicio de demo y el respaldo.
+- Ensayar el guion del README ("Día de la demo") de punta a punta con el reinicio entre ensayos; los escenarios, mejor en local (sus lecturas quedan en el panel de Render).

@@ -5,7 +5,7 @@
  * cortes de comunicación. Contrato: tag Misión de docs/openapi.yaml.
  * Al crear, corregir o cerrar un corte se recalcula deliver_at de lo que esperaba enlace.
  */
-const { badRequest, notFound, conflict } = require('../utils/httpError');
+const { HttpError, badRequest, notFound, conflict, forbidden } = require('../utils/httpError');
 const { validate, uuidParam, isUuid } = require('../utils/validate');
 const {
   decodeCursor,
@@ -519,7 +519,52 @@ async function updateOutage({ id, body }) {
   }
 }
 
+// ---------------------------------------------------------------- misión vigente
+
+/**
+ * GET /missions/current: para un astronauta, la de su asignación vigente (mission_id se
+ * ignora); para Tierra, la de mission_id o la activa más reciente de su equipo (admin es
+ * global). Con el entorno, el rol de tripulación y el estado del enlace (cortes).
+ */
+async function currentMission({ userId, query }) {
+  const actor = await loadActor(userId);
+  if (!actor) throw forbidden();
+  let mission;
+  if (actor.role === 'astronaut') {
+    if (!actor.mission_ids.length) {
+      throw new HttpError(
+        403,
+        'NO_ACTIVE_ASSIGNMENT',
+        'No tienes una asignación de misión vigente.',
+      );
+    }
+    mission = await missions.findMission(actor.mission_ids[0]);
+  } else {
+    mission = await resolveMission(actor, query.mission_id);
+    if (actor.role !== 'admin' && !actor.mission_ids.includes(mission.id)) {
+      throw forbidden(null, 'No eres parte del equipo de esta misión.');
+    }
+  }
+  const [environment, outages] = await Promise.all([
+    missions.findEnvironment(mission.environment_code),
+    missions.activeAndUpcomingOutages(mission.id),
+  ]);
+  const current = outages.find((o) => o.current);
+  return {
+    mission: toMission(mission),
+    environment: toEnvironment(environment),
+    crew_role: actor.role === 'astronaut' ? actor.crew_role : null,
+    comm: {
+      delay_seconds: environment.comm_delay_seconds,
+      link: current ? 'down' : 'up',
+      ...(current ? { current_outage: toOutage(current) } : {}),
+      upcoming_outages: outages.filter((o) => !o.current).map(toOutage),
+    },
+  };
+}
+
 module.exports = {
+  currentMission,
   listMissions,
   createMission,
   updateMission,

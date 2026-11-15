@@ -60,13 +60,14 @@ test('UUID derivados: deterministas, válidos y distintos de los del simulador',
   assert.notEqual(a, uuidFor('sync-group', id, 'WB_MOOD'));
 });
 
-test('registro de tipos: los del contrato sin servicio y los desconocidos se rechazan', () => {
+test('registro de tipos: todos los del contrato tienen servicio; los desconocidos se rechazan', () => {
   for (const name of [
     'reading',
     'habitat_reading',
     'wellbeing_checkin',
     'pvt_run',
     'wellbeing_screening',
+    'support_request', // tarea 10
   ]) {
     assert.ok(entityFor(name).handler, name);
   }
@@ -74,6 +75,6 @@ test('registro de tipos: los del contrato sin servicio y los desconocidos se rec
   for (const name of ['emergency_session', 'emergency_assessment', 'emergency_answer']) {
     assert.equal(entityFor(name).handler.priority, 'emergency', name);
   }
-  assert.equal(entityFor('support_request').error.code, 'ENTITY_NOT_SUPPORTED');
+  assert.equal(entityFor('support_request').handler.priority, 'normal');
   assert.equal(entityFor('triage_answer').error.code, 'UNKNOWN_ENTITY');
 });

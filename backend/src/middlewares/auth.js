@@ -3,16 +3,18 @@
 /**
  * Middlewares de autenticación y permisos.
  * - authenticate(): valida el JWT, la versión de la contraseña y el estado de la cuenta.
+ * - authenticateUserOrDevice(): Bearer o X-Device-Credential (solo rutas del triaje).
  * - requireRole(...roles) y requireCrewRole(...crewRoles) (este último lee v_current_crew).
  * - restrictServiceAccounts: el rol `service` solo pasa a POST /api/v1/habitat/readings.
  * - Con must_change_password (o un token del 428) solo se puede cambiar la contraseña
  *   o cerrar sesión: el resto responde 428.
  */
-const { unauthenticated, forbidden } = require('../utils/httpError');
+const { HttpError, unauthenticated, forbidden } = require('../utils/httpError');
 const tokens = require('../services/tokens.service');
 const users = require('../models/users.model');
 const contextModel = require('../models/userContext.model');
 const { passwordChangeRequired } = require('../services/auth.service');
+const devicesService = require('../services/devices.service');
 
 // Lista blanca explícita del rol service (método + ruta exacta).
 const SERVICE_ALLOWED = Object.freeze([{ method: 'POST', path: '/api/v1/habitat/readings' }]);
@@ -91,6 +93,41 @@ function requireRole(...roles) {
   };
 }
 
+/**
+ * Rutas del triaje (tarea 11): sesión de usuario (Bearer) o tableta registrada sin sesión
+ * (X-Device-Credential). Con Bearer manda el usuario. Con la credencial deja req.device =
+ * { id, label, mission_id } y req.auth = null. Fallos de credencial limitados por IP (429).
+ * Solo se monta en las rutas de emergencia: en cualquier otra, la credencial no autentica
+ * (authenticate() exige Bearer → 401).
+ */
+function authenticateUserOrDevice() {
+  const asUser = authenticate();
+  return async function authenticateUserOrDeviceRequest(req, res, next) {
+    if (bearerToken(req)) return asUser(req, res, next);
+    const credential = req.get('x-device-credential');
+    if (!credential) throw unauthenticated();
+    const retryAfter = devicesService.blockedFor(req.ip);
+    if (retryAfter) {
+      res.set('Retry-After', String(retryAfter));
+      throw new HttpError(429, 'RATE_LIMITED', 'Demasiados intentos. Espera unos segundos.', {
+        retry_after_seconds: retryAfter,
+      });
+    }
+    req.auth = null;
+    req.device = await devicesService.authenticate({ credential, ip: req.ip });
+    next();
+  };
+}
+
+/** requireRole que deja pasar a una tableta ya autenticada (req.device). */
+function requireRoleOrDevice(...roles) {
+  const byRole = requireRole(...roles);
+  return function requireRoleOrDeviceMiddleware(req, res, next) {
+    if (req.device) return next();
+    return byRole(req, res, next);
+  };
+}
+
 /** Exige un rol de tripulación vigente (v_current_crew). Deja la fila en req.crew. */
 function requireCrewRole(...crewRoles) {
   return async function requireCrewRoleMiddleware(req, _res, next) {
@@ -109,6 +146,8 @@ function requireCrewRole(...crewRoles) {
 
 module.exports = {
   authenticate,
+  authenticateUserOrDevice,
+  requireRoleOrDevice,
   requireRole,
   requireCrewRole,
   restrictServiceAccounts,

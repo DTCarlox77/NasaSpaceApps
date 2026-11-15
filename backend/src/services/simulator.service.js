@@ -24,6 +24,7 @@ const wellbeing = require('../models/wellbeing.model');
 const readingsService = require('./readings.service');
 const habitatService = require('./habitat.service');
 const recorder = require('./wellbeingRecorder');
+const supportService = require('./supportRequest.service');
 const syncPush = require('./syncPush.service');
 const env = require('../config/env');
 const { derivedUuid } = require('../utils/derivedUuid');
@@ -127,6 +128,29 @@ function countGroup(tally, group, result) {
       id: r.reading_id,
       confidential: r.sensitivity === 'confidential',
     });
+  }
+}
+
+/**
+ * "Quiero hablar con alguien" por el servicio real. Confidencial: NO entra en el resumen (ni
+ * siquiera como conteo; admin dispara el simulador). Un error se informa sin decir qué era.
+ */
+async function writeSupportRequest(item, ctx, tally) {
+  const userId = ctx.byCallSign.get(item.call_sign).user_id;
+  try {
+    await supportService.createSupportRequest({
+      userId,
+      body: {
+        client_uuid: item.client_uuid,
+        urgency: item.urgency,
+        channel: item.channel,
+        content: item.content,
+        created_at: item.created_at,
+      },
+    });
+  } catch (err) {
+    if (!(err instanceof HttpError)) throw err;
+    if (tally.errors.length < 5) tally.errors.push({ type: 'wellbeing', code: err.code });
   }
 }
 
@@ -321,6 +345,7 @@ async function writeItems(items, ctx) {
         if (item.type === 'reading') await writeReading(item, ctx, tally);
         else if (item.type === 'sync_batch') await writeSyncBatch(item, ctx, tally);
         else if (item.type === 'wellbeing_day') await writeDeclineDay(item, ctx, tally, current);
+        else if (item.type === 'support_request') await writeSupportRequest(item, ctx, tally);
         else await writeGroup(item, ctx, tally);
       }
     }),
@@ -545,14 +570,18 @@ async function runEmergencyFlow(item, ctx) {
     });
   }
 
-  // Corte de enlace (si no hay uno en curso): la pregunta y el cierre quedan en cola.
+  // Corte de enlace (si no hay uno en curso): la pregunta y el cierre quedan en cola. Empieza
+  // 1 s antes de ahora, pero nunca antes del fin del último corte (si uno acaba de cerrarse,
+  // un inicio anterior se solaparía con él y el corte no se crearía).
   let outage = null;
   if (!(await simulator.activeOutage(ctx.mission.id))) {
+    const lastEnd = await simulator.lastOutageEnd(ctx.mission.id);
+    const startsAt = Math.max(Date.now() - 1000, lastEnd ? new Date(lastEnd).getTime() : 0);
     try {
       outage = await missionAdmin.createOutage({
         body: {
           mission_id: ctx.mission.id,
-          starts_at: new Date(Date.now() - 1000).toISOString(),
+          starts_at: new Date(startsAt).toISOString(),
           reason: 'Corte de enlace (simulador, emergency_solar)',
         },
       });
@@ -657,4 +686,4 @@ async function runScenario({ name, body, now = new Date() } = {}) {
   });
 }
 
-module.exports = { loadHistory, runScenario, SCENARIOS, MISSION_CODE };
+module.exports = { loadHistory, runScenario, historyParams, SCENARIOS, MISSION_CODE, MAX_DAYS };

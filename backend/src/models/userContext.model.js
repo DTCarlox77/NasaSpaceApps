@@ -52,15 +52,6 @@ async function serviceMission(userId, db = pool) {
   return rows[0] || null;
 }
 
-async function offlineUnlockUntil(userId, deviceId, db = pool) {
-  const { rows } = await db.query(
-    `SELECT offline_unlock_until FROM offline_pins
-     WHERE user_id = $1 AND device_id = $2 AND pin_hash IS NOT NULL`,
-    [userId, deviceId],
-  );
-  return rows[0] ? rows[0].offline_unlock_until : null;
-}
-
 /** ¿El astronauta compartió su bienestar con el CMO? Sin fila = no. */
 async function sharesWithCmo(astronautId, db = pool) {
   const { rows } = await db.query(
@@ -75,6 +66,5 @@ module.exports = {
   currentCrew,
   groundMissions,
   serviceMission,
-  offlineUnlockUntil,
   sharesWithCmo,
 };
