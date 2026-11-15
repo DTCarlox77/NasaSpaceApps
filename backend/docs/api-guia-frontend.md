@@ -115,7 +115,7 @@ La tripulación no ve nada del bienestar de los demás.
 - **`trigger_type: crew_event`**: nueva forma de activar el modo emergencia (un tripulante avisa, p. ej. por voz), además de `manual_button`, `missed_checkin`, `critical_reading` y `environment_alarm`. Si la app muestra el motivo de la emergencia, agrega este valor.
 - **`PATCH /api/v1/admin/assignments/{id}`**: `assigned_to` ya puede ser una fecha futura; la asignación sigue vigente hasta esa fecha. Antes respondía 400. Un periodo de comandante o de CMO que se solape con otro del mismo rol responde 409.
 
-## 9. Qué ya es real (tramos 1 y 2) y cómo pasar del mock a la API
+## 9. Qué ya es real (tareas 1–7) y cómo pasar del mock a la API
 
 En el YAML, las operaciones que **todavía** son solo mock llevan `x-status-impl: pending`. Las que no la llevan ya responden en la API local:
 
@@ -129,6 +129,7 @@ En el YAML, las operaciones que **todavía** son solo mock llevan `x-status-impl
 | Hábitat | `POST /habitat/readings`, `GET /habitat/status` |
 | Tierra | `GET /admin/dashboard/crew`, `GET /admin/inbox`, `POST /admin/escalations/{id}/ack`, `POST /admin/escalations/{id}/messages`, `GET /escalations/{id}/messages` |
 | Misión (admin) | `GET`/`POST /admin/missions`, `PATCH /admin/missions/{id}`, `GET`/`POST /admin/environments`, `PATCH /admin/environments/{code}`, `GET`/`POST /admin/assignments`, `PATCH /admin/assignments/{id}`, `GET`/`POST /admin/comm-outages`, `PATCH /admin/comm-outages/{id}` |
+| Simulador (admin, solo demo) | `POST /admin/simulator/history`, `POST /admin/simulator/scenarios/{name}` |
 
 Para pasar del mock a la API local:
 
@@ -156,3 +157,32 @@ Comportamientos reales que el mock no muestra:
 - El plan gratuito se duerme tras ~15 min sin uso: la primera petición puede tardar ~50 s. Llama a `GET /api/v1/health` al abrir la app para despertarla.
 - CORS: si tu frontend corre en un dominio propio, pide que se agregue a `CORS_ORIGIN`.
 - Los datos se comparten entre todos los que usen la API desplegada: usa `client_uuid` nuevos y no esperes un estado limpio.
+
+### Datos de demo: simulador
+
+Para tener historia en las gráficas y alertas en vivo, la API trae un simulador de datos **sintéticos** de ARES-1 (solo demo: `x-status: extra`). Responde 404 si el servidor no tiene `SIMULATOR_ENABLED=true` (en Render está activado). Solo lo llama `admin` (`mission.control`); a cualquier otro rol le responde 403.
+
+- `POST /admin/simulator/history` `{ "days": 14, "seed": 42 }`: 14 días de signos vitales, sueño, ejercicio, radiación, bienestar y hábitat cada hora. Todo en rangos normales (alguna precaución leve, ningún crítico). Es idempotente: correrlo otra vez no duplica nada. Tarda unos segundos (en Render, hasta ~1 min).
+- `POST /admin/simulator/scenarios/{name}` con `{ astronaut, module_id, intensity: "low"|"high", contagion }` (todo opcional):
+  - `solar_event`: evento solar en los dosímetros. Con `astronaut`, ese tripulante tiene náusea (crítico).
+  - `crew_illness`: fiebre, tos y FC alta en `astronaut` (LYRA). Con `contagion: true` enferma un segundo tripulante.
+  - `co2_spike`: el CO₂ de `module_id` (HAB-1) sube a precaución; en `high`, a crítico.
+  - `wellbeing_decline`: bienestar peor 5 días en `astronaut` (ATLAS): alerta **confidencial** a salud conductual. No aparece en la bandeja ni en el dashboard, y el resumen no la muestra.
+- La respuesta es un resumen: lecturas creadas, niveles por indicador y escalamientos por destino (`crew`, `flight_surgeon`). Lo de `flight_surgeon` llega a `GET /admin/inbox` 90 s después.
+
+Contra Render, con curl:
+
+```bash
+API=https://astro-health-api-81jd.onrender.com/api/v1
+TOKEN=$(curl -s -X POST $API/auth/login -H 'Content-Type: application/json'   -d '{"username":"mission.control","password":"Demo2026!","device_id":"demo-console"}'   | node -pe 'JSON.parse(require("fs").readFileSync(0)).access_token')
+AUTH="Authorization: Bearer $TOKEN"
+JSON='Content-Type: application/json'
+
+curl -s -X POST $API/admin/simulator/history -H "$AUTH" -H "$JSON" -d '{"days":14,"seed":42}'
+curl -s -X POST $API/admin/simulator/scenarios/solar_event -H "$AUTH" -H "$JSON" -d '{"intensity":"high","astronaut":"VEGA"}'
+curl -s -X POST $API/admin/simulator/scenarios/crew_illness -H "$AUTH" -H "$JSON" -d '{"astronaut":"LYRA","contagion":true}'
+curl -s -X POST $API/admin/simulator/scenarios/co2_spike -H "$AUTH" -H "$JSON" -d '{"module_id":"HAB-1","intensity":"high"}'
+curl -s -X POST $API/admin/simulator/scenarios/wellbeing_decline -H "$AUTH" -H "$JSON" -d '{"astronaut":"ATLAS"}'
+```
+
+Los datos son compartidos: si otro equipo ya cargó la historia, la tuya sale toda en `duplicate` (está bien).

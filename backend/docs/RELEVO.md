@@ -1,10 +1,10 @@
 # Relevo del backend
 
-Cierre del **tramo 2** (despliegue + tarea 6), 2026-11-14, rama `backend`. El tramo 1 cerró las tareas 1–5.
+Cierre de la **tarea 7** (simulador de datos sintéticos), 2026-11-14, rama `backend`. Antes: el tramo 1 cerró las tareas 1–5 y el tramo 2, el despliegue y la tarea 6.
 
 ## Estado
 
-**Endpoints reales** (36 de 73; el resto lleva `x-status-impl: pending` en `docs/openapi.yaml` y sigue en el mock):
+**Endpoints reales** (38 de 75; el resto lleva `x-status-impl: pending` en `docs/openapi.yaml` y sigue en el mock):
 
 | Módulo | Endpoints |
 |---|---|
@@ -16,6 +16,7 @@ Cierre del **tramo 2** (despliegue + tarea 6), 2026-11-14, rama `backend`. El tr
 | Hábitat | `POST /habitat/readings`, `GET /habitat/status` |
 | Tierra (tarea 6) | `GET /admin/dashboard/crew`, `GET /admin/inbox`, `POST /admin/escalations/{id}/ack`, `POST /admin/escalations/{id}/messages`, `GET /escalations/{id}/messages` |
 | Misión (tarea 6) | `GET`/`POST /admin/missions`, `PATCH /admin/missions/{id}`, `GET`/`POST /admin/environments`, `PATCH /admin/environments/{code}`, `GET`/`POST /admin/assignments`, `PATCH /admin/assignments/{id}`, `GET`/`POST /admin/comm-outages`, `PATCH /admin/comm-outages/{id}` |
+| Simulador (tarea 7, solo demo) | `POST /admin/simulator/history`, `POST /admin/simulator/scenarios/{name}` (`x-status: extra`; 404 sin `SIMULATOR_ENABLED=true`) |
 
 **Piezas:**
 - **Catálogo**: 26 indicadores (9 confidenciales), 112 reglas y 43 fuentes (`docs/catalogo-indicadores.json`, generado con `tools/build_catalog.py`).
@@ -24,20 +25,21 @@ Cierre del **tramo 2** (despliegue + tarea 6), 2026-11-14, rama `backend`. El tr
   - campos derivados en `src/engine/derived.js` (puro);
   - servicio de evaluación `src/services/evaluation.service.js`;
   - triaje `src/engine/triage.js`.
-- **Contrato**: `docs/openapi.yaml` v1.1 (73 operaciones). Mock con `npm run api:mock`, guía en `docs/api-guia-frontend.md`. `npm run api:lint`: 0 errores.
+- **Contrato**: `docs/openapi.yaml` v1.1 (75 operaciones). Mock con `npm run api:mock`, guía en `docs/api-guia-frontend.md`. `npm run api:lint`: 0 errores.
 - **Base de datos**:
   - migraciones 000–008 (44 tablas; la 008 agrega índices de escalamiento) y seeds 001–003;
   - el seed del catálogo se genera con `node tools/build_catalog_seed.js` (`--check` avisa si quedó desactualizado).
 - **Permisos**:
   - `src/middlewares/auth.js`: `authenticate`, `requireRole`, `requireCrewRole` y la lista blanca del rol `service`;
   - `src/services/accessPolicy.js`: `canAccess`, `enforceAccess` y la bitácora confidencial.
-- **Pruebas**: `node --test` → **319 de 319**, sin saltadas, contra la base de pruebas `astro_health_test`. Incluyen la matriz de permisos, los derivados, el catálogo, el enrutamiento de escalamientos (unitarias, 8) y las suites de base de datos (humo 4, autenticación 14, semáforo 15, escalamiento y panel 15). Si la base de pruebas no existe, esas suites se saltan con el comando para crearla.
+- **Pruebas**: `node --test` → **344 de 344**, sin saltadas, contra la base de pruebas `astro_health_test`. Incluyen la matriz de permisos, los derivados, el catálogo, el enrutamiento de escalamientos (unitarias, 8), el simulador (unitarias 14, apagado 1) y las suites de base de datos (humo 4, autenticación 14, semáforo 15, escalamiento y panel 15, simulador 10). Si la base de pruebas no existe, esas suites se saltan con el comando para crearla.
 - **Escalamiento** (tarea 6):
   - `src/services/escalation.service.js`: enrutamiento por categoría y prioridad;
   - `src/services/escalationDelivery.service.js`: queued → delivered y recálculo de `deliver_at` por cortes;
   - `src/services/escalationInbox.service.js`: bandeja, acuse y mensajes (Tierra y a bordo);
   - `src/services/dashboard.service.js`: dashboard físico de la tripulación;
   - `src/services/missionAdmin.service.js`: misiones, entornos, asignaciones y cortes.
+- **Simulador** (tarea 7): generador puro en `src/simulator/` (`random.js`, `profiles.js`, `history.js`, `scenarios.js`) y escritura en `src/services/simulator.service.js`, que usa los servicios reales (`readings.service`, `habitat.service` y el nuevo `wellbeingRecorder.js`). CLI `scripts/simulate.js`. Ver "Simulador (demo)".
 - **Despliegue**: `render.yaml` (Blueprint de Render) en la raíz del repo; arranque con `npm run start:deploy` (migra, siembra la demo si `DEMO_SEED=true` y arranca). Ver "Despliegue (Render)".
 
 ## Cómo levantar el proyecto
@@ -96,13 +98,61 @@ Requisitos: Node 20+ (`.nvmrc`) y PostgreSQL 16+ (local, p. ej. el 18 en Windows
 | `CORS_ORIGIN` | `*` o URLs separadas por coma | Ej.: `https://panel.example.com,http://localhost:5173`. |
 | `TRUST_PROXY` | `1` | Saltos de proxy; el rate limit ve la IP real del cliente. |
 | `DEMO_SEED` | `true` | Solo en el despliegue de demo. Sin la bandera, `seed.js` se niega con `NODE_ENV=production`. |
+| `SIMULATOR_ENABLED` | `true` | Activa `POST /admin/simulator/*` (sin ella, 404). El plan gratuito no tiene consola: el simulador se usa por estos endpoints. |
 | `NODE_VERSION` | `20` | |
 
 `PORT` lo pone Render. El resto (`JWT_ACCESS_TTL`, `LOCKOUT_*`, etc.) tiene valores por defecto.
 
+> **Pendiente en el panel de Render**: agregar `SIMULATOR_ENABLED=true` en *Environment* del servicio `astro-health-api` (si el Blueprint no la sincronizó al hacer push) y guardar; Render redepliega solo. Sin ella, los endpoints del simulador responden 404.
+
 **Límites del plan gratuito**: el servicio se duerme tras ~15 min sin tráfico (la primera petición tarda ~50 s) y la base gratuita expira a los 30 días. El rate limit es en memoria: una sola instancia.
 
 **Railway** (si Render falla): mismo código. Crea un PostgreSQL y un servicio desde el repo con *Root Directory* `backend`, *Start Command* `npm run start:deploy`, y las variables de arriba (`DATABASE_URL=${{Postgres.DATABASE_URL}}`; si no conecta, prueba `DB_SSL=false`).
+
+## Simulador (demo)
+
+Datos **sintéticos** de ARES-1 para que la demo tenga historia y escenarios en vivo. Todo pasa por los servicios reales (validación, reglas activas, derivados, escalamientos) como el usuario que lo registraría: cada astronauta (`recorded_by` = su usuario) y `svc.habitat` para el hábitat. Nada de SQL directo a `readings`; todo con `synthetic = true`.
+
+**Historia normal** (`days`, por defecto 14, máx. 60; `seed`, por defecto 42):
+- por astronauta y día: check-in 07:00 (WB_* y sueño), signos vitales 07:25 (presión, FC en reposo, FR, SpO₂, temperatura), ejercicio 18:00 y dosis de radiación diaria y acumulada 23:45; glucosa en ayunas cada 2–3 días, masa semanal, PVT semanal (más 3 corridas de línea base en los días 1–3 de la misión) y PHQ-2/GAD-2 cada 2 semanas;
+- hábitat: HAB-1 (hh:05) y HAB-2 (hh:35) cada hora, con CO₂, temperatura, humedad y ruido (`period` sleep de 22:00 a 06:00 UTC);
+- valores alrededor de una línea base por astronauta dentro de la banda normal: ningún crítico ni escalamiento, solo alguna precaución de autocuidado (presión ≥ 120, sueño < 7 h, glucosa ≥ 100);
+- **idempotente**: valor y `client_uuid` salen de semilla + sujeto + indicador + fecha (UUID versión 8 derivado de SHA-256). Correrla otra vez da todo `duplicate`; más tarde el mismo día solo agrega las horas nuevas. Local: ~11 s para ~3300 lecturas.
+
+**Escenarios** (`POST /admin/simulator/scenarios/{name}`, body opcional `{ astronaut, module_id, intensity: low|high, contagion }`), "ahora" encima de la historia:
+
+| Escenario | Qué crea | Resultado esperado |
+|---|---|---|
+| `solar_event` | Dosímetro de toda la tripulación con `event_active`, 3 lecturas en 90 min. Con `astronaut`, ese tripulante reporta náusea en el pico. | `RAD_DOSE_DAILY` caution (doble de la mediana → crew; evento ≥ 125 mSv → flight surgeon). `high`: ≥ 250 mSv → critical. Náusea → critical. |
+| `crew_illness` | `astronaut` (LYRA): 38.4 °C, FC 112, tos y sensación de fiebre. `contagion: true`: empezó ayer y un segundo tripulante enferma hoy. | `BODY_TEMP`, `HEART_RATE` y `SYMPTOM` en caution → crew. `high`: 39.6 °C → critical (flight surgeon + crew). |
+| `co2_spike` | `module_id` (HAB-1): 6 lecturas en 50 min, de 2.4 a 5.2 mmHg (`high`: hasta 10.8). | `HAB_CO2` caution → crew. `high`: ≥ 10 → critical → flight surgeon. |
+| `wellbeing_decline` | `astronaut` (ATLAS): 5 check-ins seguidos peores (corrige los de la historia con `supersedes_uuid`). `high`: PHQ-2 = 4 y GAD-2 = 3. | Escalamiento **confidencial** a `behavioral_health` (WB_*, y PHQ-2/GAD-2 en `high`). Nunca a la tripulación ni a admin. |
+
+- El resumen trae lecturas creadas/duplicadas, niveles por indicador **estándar** y escalamientos no confidenciales por destino. De bienestar solo cuenta registros: nunca niveles ni escalamientos (admin no puede verlos).
+- Un reintento en el mismo minuto no duplica; dispararlo más tarde crea un episodio nuevo. `solar_event` repetido acumula la dosis del evento (sigue la racha de `event_active`).
+- Las alertas a `flight_surgeon` aparecen en `GET /admin/inbox` tras el retraso de ARES-1 (90 s).
+
+**Cómo correrlo**:
+- Local (CLI, usa la base de `.env`, no necesita `SIMULATOR_ENABLED`):
+  ```bash
+  npm run sim:history -- --days 14 --seed 42
+  npm run sim:scenario -- solar_event --astronaut VEGA --intensity high
+  npm run sim:scenario -- crew_illness --contagion
+  npm run sim:scenario -- co2_spike --module HAB-2
+  npm run sim:scenario -- wellbeing_decline --astronaut ATLAS
+  ```
+- Render (sin consola): con `SIMULATOR_ENABLED=true`, como `mission.control`:
+  ```bash
+  API=https://astro-health-api-81jd.onrender.com/api/v1
+  TOKEN=$(curl -s -X POST $API/auth/login -H 'Content-Type: application/json' \
+    -d '{"username":"mission.control","password":"Demo2026!","device_id":"demo-console"}' \
+    | node -pe 'JSON.parse(require("fs").readFileSync(0)).access_token')
+  curl -s -X POST $API/admin/simulator/history -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' -d '{"days":14,"seed":42}'
+  curl -s -X POST $API/admin/simulator/scenarios/co2_spike -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' -d '{"module_id":"HAB-1","intensity":"high"}'
+  ```
+  La historia tarda unos segundos (en Render, hasta ~1 min; si el servicio dormía, súmale ~50 s).
 
 ## Credenciales demo
 
@@ -211,6 +261,20 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
 - **Misión**: crear una misión agrega al admin a su equipo en Tierra (`operations`). Los solapes se revisan antes de escribir para devolver el id en conflicto (`ASSIGNMENT_OVERLAP`, `CREW_ROLE_TAKEN`, `OUTAGE_OVERLAP`); las restricciones `EXCLUDE` siguen como red de seguridad. `active=true` usa la vigencia de `v_current_crew`.
 - **Pruebas sin sleeps**: el paso del tiempo se simula moviendo `created_at` y `deliver_at` hacia atrás.
 
+**Simulador (tarea 7)**
+- **Valores asumidos** (todos en `src/simulator/profiles.js`, con su fuente o marcados como suposición de diseño):
+  - bandas del catálogo como límites: la historia se recorta antes del umbral que escala (p. ej. sistólica ≤ 134, FC 61–98, SpO₂ ≥ 95, temperatura 36.1–37.3, sueño ≥ 6.1 h);
+  - radiación diaria 0.35 mSv ± 0.04 (0.22–0.48), de `ntrs_ascend_rad` (ISS, 0.2–0.5 mSv/día). ARES-1 es un tránsito a Marte, donde la dosis real es mayor; se usa la referencia del catálogo. Dosis de carrera previa por astronauta: 0–60 mSv (suposición);
+  - ejercicio ≈ 86–95 min/día (`ochmo_exercise`: 600 min/semana); CO₂ ≈ 2 mmHg con subida de día (`ochmo_co2`); temperatura, humedad y ruido dentro de `ochmo_eclss` y `ntrs_nc_dba`;
+  - sueño ≈ 7.2 h: la guía dice que en vuelo se duermen 6–6.5 h, pero eso daría precaución casi a diario (suposición para que la historia quede normal);
+  - medias y desviaciones de cada astronauta, horarios y periodo de sueño 22:00–06:00 UTC: suposición de diseño;
+  - escenarios: curvas y picos elegidos para cruzar los umbrales del catálogo (suposición de diseño).
+- **PVT**: la regla necesita 3 corridas previas en descanso en el mismo dispositivo. La historia agrega 3 corridas de línea base en los días 1–3 de la misión (`TAB-1`) y las semanales rotan entre esos valores, así el z nunca llega a 2 y la aptitud queda `fit`.
+- **wellbeing_decline**: el derivado cuenta check-ins seguidos con z ≥ 1.5 contra 14 días sin los últimos 3. Al 5.º día, los 2 primeros días malos ya están en la línea base y suben su desviación: por eso el empeoramiento es progresivo (35 puntos 2 días y 50 los 3 siguientes; z ≈ 2.6–3.0). Corrige el check-in del día (`supersedes_uuid`, mismo `measured_at`) en vez de agregar otro, porque dos check-ins por día mezclarían valores buenos y malos.
+- **`wellbeingRecorder.js`**: registro de check-in, corrección, PVT (calcula `pvt_runs.fitness` con `fitnessFromPvt`) y cuestionario, con sus lecturas agrupadas y por `recordAndEvaluate`. Es la base de los endpoints `/wellbeing/*` (tarea 10). `readings.model.insert` ahora acepta el grupo (`wellbeingCheckinId`, `pvtRunId`, `instrumentAdministrationId`).
+- **Endpoints**: el gate de `SIMULATOR_ENABLED` responde 404 antes de autenticar (no revela que existen) y va antes del router de `/admin` (que exige admin a todo `/admin/*`). Luego `admin`; el resto, 403.
+- **Paralelo**: cada sujeto (cada astronauta y el hábitat) se escribe en serie, en orden de `measured_at` (los derivados leen lo anterior); los sujetos corren en paralelo.
+
 **Pruebas y herramientas**
 - **Pruebas con base**:
   - usan siempre `DB_NAME_TEST` (`astro_health_test`); `test/helpers/db.js` cambia `DB_NAME` antes de cargar `src/` y se niega a correr si las dos bases coinciden;
@@ -228,16 +292,18 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
 - **Tarea 9**: `responder_safe` es una pregunta de la sesión. El servicio debe copiar esa respuesta en las respuestas de cada evaluación antes de llamar a `evaluateAssessment`; si no, el resultado es `incomplete` con `pending: "responder_safe"`. Una respuesta `{ value: null }` cuenta como pendiente.
 - **Tarea 10 (bienestar)**: los derivados WB_* y PVT_* ya están en `derived.js` y el motor los usa. Faltan los endpoints `/wellbeing/*`, que deben agrupar las lecturas (`wellbeing_checkin_id`, `pvt_run_id`, `instrument_administration_id`).
   - **Regla para `PVT_LAPSES` critical** (decidida, sin implementar): el detalle (métricas de la PVT) va solo a `behavioral_health`, confidencial, como hoy. Además, el flight surgeon recibe **solo el estado** "aptitud no confirmada": una alerta `flight_surgeon` no confidencial, `source_type = wellbeing`, con un `reason` neutro y sin métricas (aparece en su bandeja con `category: wellbeing`; admin no la ve). Hoy `routeEvaluation` manda lo conductual solo a `behavioral_health`: al implementarlo, agrega ese segundo destino solo para PVT_LAPSES critical y su prueba.
+- **Bandeja de `behavioral_health`** (tarea 10): `wellbeing_decline` ya crea sus escalamientos confidenciales, pero todavía no hay endpoint para verlos (`GET /behavioral/*`). Hoy se verifican en la base o en `test/simulator.integration.test.js`.
+- **Simulador**: `solar_event` no actualiza `RAD_DOSE_CUM` (la acumulada vuelve a cuadrar con la siguiente historia, que solo suma dosis normales). Para limpiar los datos en Render no hay `db:reset`: habría que recrear la base desde el panel.
 - **`POST /attachments`** no está implementado. `POST /readings` ya acepta `attachment_id` si el adjunto existe y es del autor.
 - **La base no hace cumplir** (lo hace la API): que las lecturas agrupadas en un check-in o una PVT sean del mismo astronauta, y recalcular `deliver_at` cuando cambia un corte (`missionAdmin.service.js` → `escalationDelivery.service.js`: cualquier otro camino que toque `mission_comm_outages` debe llamar a `recomputeAfterOutageChange`).
 
 ## Siguiente tarea
 
-**Tarea 7: simulador de datos sintéticos** (`src/simulator/`, hoy vacío).
+**Tarea 8: sincronización offline** (`POST /sync/push` y `GET /sync/pull`, hoy `x-status-impl: pending`).
 
-- Un proceso Node (`npm run sim`, p. ej. `scripts/simulate.js` + `src/simulator/`) que inicie sesión como `svc.habitat` (rol `service`) y envíe lotes a `POST /api/v1/habitat/readings` para `HAB-1` y `HAB-2` (CO₂, temperatura, humedad y ruido), con `client_uuid` nuevo por lectura y `source: simulator`.
-- Escenarios para la demo: normal, subida de CO₂ hasta caution/critical (dispara escalamientos y aparece en `GET /admin/inbox` tras el retraso de 90 s) y vuelta a la normalidad.
-- Opcional: lecturas fisiológicas sintéticas de la tripulación (como astronauta, con su login) para poblar el dashboard y las tendencias.
-- Parámetros por variables o flags: URL base (local o Render), intervalo, escenario y semilla aleatoria para que sea reproducible.
-- Todo marcado como sintético. El rol `service` solo puede llamar esa ruta (403 en cualquier otra).
-- Pruebas: generador puro (semilla → serie), y una integración corta contra `astro_health_test`.
+- `POST /sync/push`: lote de hasta 500 items `{ client_uuid, entity, priority, created_at, payload }`. Procesa primero `priority: emergency` y luego el resto por `created_at`. `payload` = body del endpoint en línea (`reading` = `POST /readings`, `habitat_reading`, `wellbeing_checkin`, `pvt_run`, …). Resultado por item: `accepted` (con `server_id` y la evaluación), `duplicate`, `conflict` o `rejected` (con el error del contrato).
+- Reutiliza los servicios en línea, sin duplicar lógica: `readings.service.createReading`, `habitat.service`, y `wellbeingRecorder.js` para bienestar (el check-in del contrato trae `mood`, `fatigue`, … y hay que traducirlo a WB_*). Lo que todavía no existe (emergencias, tarea 9) responde `rejected` con un código claro.
+- Guarda `sync_batches` y `sync_items` (migración 005) para auditar y para que un lote reenviado responda igual.
+- `GET /sync/pull`: lo que el dispositivo debe recibir desde un cursor (mensajes de Tierra con `deliver_at <= now()`, cambios de reglas, recordatorios). Revisa el contrato antes de empezar.
+- Permisos: solo `astronaut` (cada item con su autor); lo confidencial sigue sin salir hacia la tripulación ni admin.
+- Pruebas: lote mixto con los cuatro estados, orden por prioridad, idempotencia del lote y del item, y un item de cada entidad soportada.
