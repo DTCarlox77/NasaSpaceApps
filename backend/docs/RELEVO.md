@@ -64,7 +64,7 @@ Requisitos: Node 20+ (`.nvmrc`) y PostgreSQL 16+ (local, p. ej. el 18 en Windows
    npm run dev         # http://localhost:3000/api/v1/health · Swagger en /api/docs
    ```
 5. Verifica: `node --test`, `npx eslint .`, `npx prettier --check .` y `npm run api:lint`.
-   - En Windows con `core.autocrlf=true` la copia de trabajo tiene CRLF y `prettier --check` falla en todos los archivos (el repo guarda LF). Usa `npx prettier --check . --end-of-line auto`.
+   - Finales de línea: `.gitattributes` (raíz) fuerza LF en el repo y en la copia de trabajo, aunque la máquina tenga `core.autocrlf=true`. Después de este cambio, cada uno hace `git pull` y, si ve archivos modificados solo por finales de línea, `git checkout -- .` (descarta cambios sin commit: guarda antes los tuyos). Si `prettier --check` sigue marcando todo, vuelve a sacar los archivos: `git rm -r --cached -q . && git reset --hard` (con el árbol limpio).
    - Si ya tenías la base de desarrollo, aplica la migración nueva con `npm run db:migrate` (no hace falta `db:reset`).
 6. Mock para los frontends: `npm run api:mock` (`:4010`).
 7. Si cambias el catálogo: `python tools/build_catalog.py`, luego `node tools/build_catalog_seed.js` y `npm run db:reset`.
@@ -212,6 +212,7 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
   - si la base no existe la crea; sin permiso, la suite se salta con el comando para crearla;
   - cada suite la reinicia al empezar, bajo un advisory lock (`node --test` corre los archivos en paralelo).
 - **Herramientas del contrato**: `npx` con versiones fijadas (`@redocly/cli@2.72.1`, `@stoplight/prism-cli@5.16.0`); no son dependencias.
+- **Finales de línea**: LF en todo el repo por `.gitattributes` (`* text=auto eol=lf`, binarios aparte).
 - **`prism proxy --errors`**: valida las respuestas reales contra el contrato. Una petición inválida (p. ej. un enum de query) la rechaza Prism con su propio 422 antes de llegar a la API: no es un fallo; el 400 real lo cubren las pruebas.
 
 ## Pendientes
