@@ -41,22 +41,63 @@ curl -s http://localhost:4010/api/v1/me/body-status -H 'Authorization: Bearer de
 3. Si refresh responde **401 `TOKEN_REUSE_DETECTED`**, se revocó toda la sesión: vuelve al login.
 4. `POST /auth/logout` revoca el refresh del dispositivo.
 
-## 3. Lecturas sin conexión
+## 3. Sin conexión: cola local y sincronización
 
-- Cada registro creado en el dispositivo lleva un `client_uuid` (UUID v4) **generado una sola vez**, al crearlo. En los reintentos se reutiliza el mismo: el servidor responde 200 con el registro existente en vez de duplicarlo.
-- `measured_at` es la hora del dispositivo (UTC); `received_at` lo pone el servidor.
-- Para corregir una lectura, crea una nueva con `supersedes_uuid` = el `client_uuid` de la anterior. Nunca se borra.
-- Sin conexión, guarda cada operación en una cola local y envíala en lotes (máximo 500) con `POST /api/v1/sync/push`. Cada item lleva `{ client_uuid, entity, priority, created_at, payload }`; `payload` tiene el mismo body que el endpoint en línea. Las emergencias van con `priority: "emergency"` (el servidor las procesa primero).
-- Qué hacer con cada resultado del lote:
+La app trabaja sin enlace y sincroniza al volver: **sube** lo que hizo (`POST /sync/push`) y **baja** lo nuevo (`GET /sync/pull`). Las dos son solo del astronauta y ya son reales (tarea 8).
+
+### Cola en SQLite
+
+- Cada registro creado en el dispositivo lleva un `client_uuid` (UUID v4) **generado una sola vez, al crearlo**, y se guarda en la cola local (SQLite) junto con su `entity`, `priority`, `created_at` y `payload`. **En cada reintento se manda el mismo `client_uuid`**: es la clave de idempotencia (un reintento responde `duplicate`, nunca duplica).
+- `measured_at` es la hora del dispositivo (UTC) y va dentro del `payload`; `received_at` lo pone el servidor. El servidor no corrige la hora del dispositivo.
+- Para corregir una lectura, encola una nueva con `supersedes_uuid` = el `client_uuid` de la anterior (y un `client_uuid` nuevo). Nunca se borra ni se sobrescribe. Solo se puede corregir una vez.
+- `payload` = el mismo body que el endpoint en línea, sin `client_uuid` (va en el item):
+
+| `entity` | `payload` igual a |
+|---|---|
+| `reading` | `POST /readings` |
+| `habitat_reading` | un elemento de `POST /habitat/readings` (lectura manual del módulo) |
+| `wellbeing_checkin` | `POST /wellbeing/checkins` (`mood`, `fatigue`, `stress`, `crew_conflict` enteros 0–100, `sleep_hours`) |
+| `pvt_run` | `POST /wellbeing/pvt-runs` |
+| `wellbeing_screening` | `POST /wellbeing/screenings` (PHQ-2 / GAD-2) |
+| `emergency_*`, `support_request` | Todavía no: salen `rejected` con `ENTITY_NOT_SUPPORTED` (déjalos en la cola). |
+
+### Subir: `POST /sync/push`
+
+```json
+{ "device_id": "ipad-crew-01", "sent_at": "2026-11-14T08:00:00Z",
+  "items": [ { "client_uuid": "…", "entity": "reading", "priority": "normal",
+               "created_at": "2026-11-14T02:00:05Z",
+               "payload": { "indicator_code": "SPO2", "measured_at": "2026-11-14T02:00:00Z",
+                            "values": { "value": 89 }, "input_method": "wearable" } } ] }
+```
+
+Lote de ejemplo completo (24 h sin conexión, con un crítico, una corrección y un duplicado): [`docs/examples/sync-push.json`](examples/sync-push.json).
+
+- `device_id` debe ser el de tu sesión (el del login) o una tableta registrada de la misión (`TAB-1`, `TAB-2`); otro → 403 `DEVICE_NOT_OWNED`.
+- Máximo **500 items** por lote (más → 413 `PAYLOAD_TOO_LARGE`): divide la cola en lotes. Manda primero los de `priority: "emergency"`.
+- El servidor procesa primero `emergency`, luego los **críticos** (los detecta él con sus valores) y luego el resto por `measured_at`; `sequence` dice el orden real. Cada item va aparte: uno malo no tumba el lote.
+- `results` viene **en el mismo orden que `items`**. Qué hacer con cada uno:
 
 | `status` | Acción |
 |---|---|
-| `accepted` | Quítalo de la cola. `result` trae la evaluación si aplica. |
-| `duplicate` | Ya estaba; quítalo de la cola. |
-| `conflict` | Choca con el servidor (p. ej. ya hay una sesión de emergencia activa: únete a `error.details.session_id`). |
-| `rejected` | Inválido: no lo reintentes tal cual; muestra `error.message`. |
+| `accepted` | Quítalo de la cola. `result` trae lo mismo que el endpoint en línea (`evaluation`, `escalation_id`; de bienestar, solo `message` neutro) y `late_sync` / `lag_s`. |
+| `duplicate` | Ya estaba (un reintento): quítalo de la cola. `server_id` es el registro existente. |
+| `conflict` | No lo reintentes igual. `PAYLOAD_MISMATCH`: ese `client_uuid` ya existe con otro contenido (un bug: nunca reutilices un `client_uuid` para otra cosa); si querías corregir, crea una corrección con `supersedes_uuid` y un `client_uuid` nuevo. `SUPERSEDE_CONFLICT`: esa lectura ya se corrigió; muestra la vigente. Quítalo de la cola y avisa al usuario. |
+| `rejected` | Inválido: no lo reintentes tal cual. `VALIDATION_ERROR` (`details` dice el campo, p. ej. `payload.mood`), `FUTURE_TIMESTAMP` (el reloj del dispositivo está adelantado más de 5 min: pide revisar la hora), `UNKNOWN_ENTITY`. `ENTITY_NOT_SUPPORTED`: déjalo en la cola para cuando el servidor lo acepte. |
 
-- Al volver la conexión, llama a `GET /api/v1/sync/pull?cursor=<último>`. Trae mensajes de Tierra ya entregados y recordatorios. Si `rules.changed`, descarga `GET /rules`; si `protocol.changed`, descarga `GET /emergency/protocol`. Guarda el `cursor` nuevo y repite mientras `has_more`.
+- **Errores del lote completo** (no hay `results`): sin red, 5xx o 429 → reintenta el **mismo** lote con backoff exponencial y jitter (p. ej. 2 s, 4 s, 8 s… hasta 5 min); como todo es idempotente, reintentar nunca duplica. 401 → refresh del token y reintenta. 403/400/413 → no reintentes igual.
+- `clock_offset_s` = recepción − `sent_at`: si es muy grande, el reloj del dispositivo está desfasado (solo informativo).
+- **Llegó tarde** (`late_sync: true`, más de 15 min entre la medición y la recepción): la lectura se evalúa con su `measured_at` y, si escala, el aviso sale **desde ahora** (Tierra lo recibe tras el retraso de la misión). Un crítico viejo sigue escalando. El panel muestra "registrado hace X h" con `measured_at` / `lag_s` de la bandeja.
+
+### Bajar: `GET /sync/pull?cursor=&limit=`
+
+- Llámalo al reconectar (después del push), al abrir la app y cada pocos minutos mientras haya enlace. Guarda el `cursor` que devuelve y mándalo la próxima vez; si `has_more`, vuelve a llamar enseguida. Sin cursor, empieza desde el principio (instalación nueva). El mismo cursor devuelve lo mismo: si una llamada falla, repítela con el cursor anterior.
+- Trae, desde tu cursor (`limit` en total, 50 por defecto, hasta 200):
+  - `evaluations`: el resultado del servidor para tus lecturas estándar (incluidas las del push). Reemplaza el resultado que calculó la app sin conexión. `supersedes_uuid` marca correcciones.
+  - `escalations`: tus alertas que ya llegaron a su destino.
+  - `messages`: respuestas de Tierra **ya entregadas** (`deliver_at <= ahora`). Durante un corte no llega nada (en `mission.link.status: "outage"`).
+- Y el estado actual: `rules.changed` → descarga `GET /rules`; `protocol.changed` → `GET /emergency/protocol`; `catalog` y `mission` (retraso, enlace `up` / `outage`) con su versión; `reminders` pendientes y `routines` activas.
+- Bienestar: el pull **nunca** trae niveles ni alertas de bienestar (tampoco las tuyas): solo mensajes neutros.
 - Respuestas del triaje: `{ "value": true }` para sí/no y números, `{ "choice": "1_2h" }` para opciones y `{ "choice": ["nausea", "fatigue"] }` para opción múltiple.
 
 ## 4. Semáforo y figura humana
@@ -77,10 +118,10 @@ Siempre `{ "error": { "code", "message", "details" } }`. Programa contra `code`,
 |---|---|---|
 | 400 | `VALIDATION_ERROR` (o uno específico, p. ej. `WEAK_PASSWORD`) | `details` lista los campos. |
 | 401 | `UNAUTHENTICATED`, `INVALID_CREDENTIALS`, `TOKEN_REUSE_DETECTED` | Refresh o volver al login. |
-| 403 | `FORBIDDEN`, `NO_ACTIVE_ASSIGNMENT` | El rol no puede hacer esto. |
+| 403 | `FORBIDDEN`, `NO_ACTIVE_ASSIGNMENT`, `DEVICE_NOT_OWNED` | El rol no puede hacer esto (o el dispositivo del lote no es tuyo). |
 | 404 | `NOT_FOUND` | |
 | 409 | `CONFLICT`, `USERNAME_TAKEN`, `CREW_ROLE_TAKEN`, `ASSIGNMENT_OVERLAP`, `OUTAGE_OVERLAP`, `SESSION_ALREADY_ACTIVE` | `details` dice con qué choca. |
-| 413 | `PAYLOAD_TOO_LARGE` | Foto de más de 5 MB. |
+| 413 | `PAYLOAD_TOO_LARGE` | Foto de más de 5 MB o lote de sync con más de 500 items. |
 | 423 | `ACCOUNT_LOCKED` | `details.locked_until`. |
 | 428 | `PASSWORD_CHANGE_REQUIRED` | `details.password_change_token`. |
 | 429 | `RATE_LIMITED` | Espera `Retry-After` segundos. |
@@ -102,20 +143,29 @@ La tripulación no ve nada del bienestar de los demás.
 
 ## 7. MVP y extra
 
-`x-status` en cada operación: 66 son `mvp` y 7 son `extra` (se pueden dejar para el final):
+`x-status` en cada operación: 67 son `mvp` y 9 son `extra` (se pueden dejar para el final):
 
 - `PUT /me/offline-pin`
 - `POST /crew/users/{id}/unlock`, `POST /crew/users/{id}/reset-pin`, `POST /crew/devices`
 - `GET /me/routines`, `GET /me/gamification`
 - `PUT /admin/indicators/{code}/rules`
+- `POST /admin/simulator/history`, `POST /admin/simulator/scenarios/{name}` (solo demo)
 
-## 8. Cambios del contrato (v1.1)
+## 8. Cambios del contrato (v1.1 y v1.2)
 
 - **Rol `service`**: cuenta de servicio de los sensores y del simulador del hábitat. Solo puede llamar `POST /api/v1/habitat/readings` (`x-roles: [astronaut, service]`); cualquier otra ruta le responde 403. El simulador ya no usa una cuenta `admin`.
 - **`trigger_type: crew_event`**: nueva forma de activar el modo emergencia (un tripulante avisa, p. ej. por voz), además de `manual_button`, `missed_checkin`, `critical_reading` y `environment_alarm`. Si la app muestra el motivo de la emergencia, agrega este valor.
 - **`PATCH /api/v1/admin/assignments/{id}`**: `assigned_to` ya puede ser una fecha futura; la asignación sigue vigente hasta esa fecha. Antes respondía 400. Un periodo de comandante o de CMO que se solape con otro del mismo rol responde 409.
 
-## 9. Qué ya es real (tareas 1–7) y cómo pasar del mock a la API
+### v1.2 (tarea 8)
+
+- **`sex` del astronauta** (`female` | `male` | null): sexo biológico para referencias clínicas, **no** identidad de género (datos sintéticos). Lo ve el propio astronauta (`GET /me` → `context.sex`) y el flight surgeon y salud conductual en `GET /missions/{id}/crew`. Admin lo escribe (`POST /admin/users` → `astronaut.sex`, `PATCH /admin/astronauts/{id}` `{ "sex": "female" }`; otro valor → 400) pero **no lo recibe**. Otro astronauta y el dashboard nunca lo ven: si el campo no viene, no lo pintes.
+- **Sync real** (sección 3). Cambios: `entity` acepta cualquier nombre (lo desconocido sale `rejected` por item, no 400); orden emergency → críticos → resto por `measured_at`; la respuesta del push agrega `batch_id`, `clock_offset_s`, `counts` y `sequence`; el pull agrega `limit`, `catalog`, `mission`, `evaluations`, `escalations` y `routines`.
+- **Bandeja**: cada alerta de una lectura trae `measured_at`, `late_sync` y `lag_s` para mostrar "registrado hace X h".
+- `GET /missions/{id}/crew` ya es real.
+- Simulador: escenario `offline_batch` (lote de 24 h por sync).
+
+## 9. Qué ya es real (tareas 1–8) y cómo pasar del mock a la API
 
 En el YAML, las operaciones que **todavía** son solo mock llevan `x-status-impl: pending`. Las que no la llevan ya responden en la API local:
 
@@ -123,7 +173,9 @@ En el YAML, las operaciones que **todavía** son solo mock llevan `x-status-impl
 |---|---|
 | Sistema | `GET /health` |
 | Auth | `POST /auth/login`, `/auth/change-password`, `/auth/refresh`, `/auth/logout`, `GET /me` |
-| Cuentas (admin) | `POST /admin/users`, `/admin/users/{id}/reset-password`, `/admin/users/{id}/unlock` |
+| Cuentas (admin) | `POST /admin/users`, `/admin/users/{id}/reset-password`, `/admin/users/{id}/unlock`, `PATCH /admin/astronauts/{id}` |
+| Misión | `GET /missions/{id}/crew` |
+| Sync (tarea 8) | `POST /sync/push`, `GET /sync/pull` |
 | Catálogo | `GET /indicators`, `/indicators/{code}`, `/rules`, `/body-zones`, `/symptoms` |
 | Lecturas | `POST /readings`, `GET /me/readings`, `GET /me/body-status` |
 | Hábitat | `POST /habitat/readings`, `GET /habitat/status` |
@@ -168,6 +220,7 @@ Para tener historia en las gráficas y alertas en vivo, la API trae un simulador
   - `crew_illness`: fiebre, tos y FC alta en `astronaut` (LYRA). Con `contagion: true` enferma un segundo tripulante.
   - `co2_spike`: el CO₂ de `module_id` (HAB-1) sube a precaución; en `high`, a crítico.
   - `wellbeing_decline`: bienestar peor 5 días en `astronaut` (ATLAS): alerta **confidencial** a salud conductual. No aparece en la bandeja ni en el dashboard, y el resumen no la muestra.
+  - `offline_batch`: 24 h sin conexión de `astronaut` (ORION) empujadas por `POST /sync/push` desde `TAB-1` (el mismo lote que `docs/examples/sync-push.json`): el SpO₂ crítico de hace 6 h escala con `late_sync`; trae una corrección y un duplicado. El resumen agrega `sync` con los conteos.
 - La respuesta es un resumen: lecturas creadas, niveles por indicador y escalamientos por destino (`crew`, `flight_surgeon`). Lo de `flight_surgeon` llega a `GET /admin/inbox` 90 s después.
 
 Contra Render, con curl:
@@ -183,6 +236,23 @@ curl -s -X POST $API/admin/simulator/scenarios/solar_event -H "$AUTH" -H "$JSON"
 curl -s -X POST $API/admin/simulator/scenarios/crew_illness -H "$AUTH" -H "$JSON" -d '{"astronaut":"LYRA","contagion":true}'
 curl -s -X POST $API/admin/simulator/scenarios/co2_spike -H "$AUTH" -H "$JSON" -d '{"module_id":"HAB-1","intensity":"high"}'
 curl -s -X POST $API/admin/simulator/scenarios/wellbeing_decline -H "$AUTH" -H "$JSON" -d '{"astronaut":"ATLAS"}'
+curl -s -X POST $API/admin/simulator/scenarios/offline_batch -H "$AUTH" -H "$JSON" -d '{"astronaut":"ORION"}'
+```
+
+### Sync contra Render (como astronauta)
+
+```bash
+API=https://astro-health-api-81jd.onrender.com/api/v1
+ATOKEN=$(curl -s -X POST $API/auth/login -H 'Content-Type: application/json' \
+  -d '{"username":"a.ortega","password":"Demo2026!","device_id":"demo-ipad"}' \
+  | node -pe 'JSON.parse(require("fs").readFileSync(0)).access_token')
+# Push del lote de ejemplo (desde backend/; device_id TAB-1 es una tableta de la misión).
+# La primera vez sale accepted; los siguientes, duplicate (reintento idempotente).
+curl -s -X POST $API/sync/push -H "Authorization: Bearer $ATOKEN" \
+  -H 'Content-Type: application/json' -d @docs/examples/sync-push.json
+# Pull: guarda .cursor y mándalo la próxima vez.
+curl -s "$API/sync/pull?limit=50" -H "Authorization: Bearer $ATOKEN"
+curl -s "$API/sync/pull?limit=50&cursor=<cursor>" -H "Authorization: Bearer $ATOKEN"
 ```
 
 Los datos son compartidos: si otro equipo ya cargó la historia, la tuya sale toda en `duplicate` (está bien).

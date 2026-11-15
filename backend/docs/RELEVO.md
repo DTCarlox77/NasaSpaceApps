@@ -1,22 +1,24 @@
 # Relevo del backend
 
-Cierre de la **tarea 7** (simulador de datos sintéticos), 2026-11-14, rama `backend`. Antes: el tramo 1 cerró las tareas 1–5 y el tramo 2, el despliegue y la tarea 6.
+Cierre de la **tarea 8** (sincronización offline-first, y además `sex` del astronauta y la dosis acumulada del evento solar), 2026-11-15, rama `backend`. Antes: el tramo 1 cerró las tareas 1–5; el tramo 2, el despliegue y la tarea 6; luego la tarea 7 (simulador).
 
 ## Estado
 
-**Endpoints reales** (38 de 75; el resto lleva `x-status-impl: pending` en `docs/openapi.yaml` y sigue en el mock):
+**Endpoints reales** (42 de 76; el resto lleva `x-status-impl: pending` en `docs/openapi.yaml` y sigue en el mock):
 
 | Módulo | Endpoints |
 |---|---|
 | Sistema | `GET /health` |
 | Auth | `POST /auth/login`, `/auth/change-password`, `/auth/refresh`, `/auth/logout`, `GET /me` |
-| Cuentas (admin) | `POST /admin/users`, `/admin/users/{id}/reset-password`, `/admin/users/{id}/unlock` |
+| Cuentas (admin) | `POST /admin/users`, `/admin/users/{id}/reset-password`, `/admin/users/{id}/unlock`, `PATCH /admin/astronauts/{id}` (tarea 8, `sex`) |
+| Misión | `GET /missions/{id}/crew` (tarea 8) |
 | Catálogo | `GET /indicators`, `/indicators/{code}`, `/rules`, `/body-zones`, `/symptoms` |
 | Lecturas | `POST /readings`, `GET /me/readings`, `GET /me/body-status` |
 | Hábitat | `POST /habitat/readings`, `GET /habitat/status` |
 | Tierra (tarea 6) | `GET /admin/dashboard/crew`, `GET /admin/inbox`, `POST /admin/escalations/{id}/ack`, `POST /admin/escalations/{id}/messages`, `GET /escalations/{id}/messages` |
 | Misión (tarea 6) | `GET`/`POST /admin/missions`, `PATCH /admin/missions/{id}`, `GET`/`POST /admin/environments`, `PATCH /admin/environments/{code}`, `GET`/`POST /admin/assignments`, `PATCH /admin/assignments/{id}`, `GET`/`POST /admin/comm-outages`, `PATCH /admin/comm-outages/{id}` |
 | Simulador (tarea 7, solo demo) | `POST /admin/simulator/history`, `POST /admin/simulator/scenarios/{name}` (`x-status: extra`; 404 sin `SIMULATOR_ENABLED=true`) |
+| Sync (tarea 8) | `POST /sync/push`, `GET /sync/pull` |
 
 **Piezas:**
 - **Catálogo**: 26 indicadores (9 confidenciales), 112 reglas y 43 fuentes (`docs/catalogo-indicadores.json`, generado con `tools/build_catalog.py`).
@@ -25,14 +27,14 @@ Cierre de la **tarea 7** (simulador de datos sintéticos), 2026-11-14, rama `bac
   - campos derivados en `src/engine/derived.js` (puro);
   - servicio de evaluación `src/services/evaluation.service.js`;
   - triaje `src/engine/triage.js`.
-- **Contrato**: `docs/openapi.yaml` v1.1 (75 operaciones). Mock con `npm run api:mock`, guía en `docs/api-guia-frontend.md`. `npm run api:lint`: 0 errores.
+- **Contrato**: `docs/openapi.yaml` v1.2 (76 operaciones; los cambios de cada versión, en la sección "Cambios" de `info.description`). Mock con `npm run api:mock`, guía en `docs/api-guia-frontend.md`. `npm run api:lint`: 0 errores.
 - **Base de datos**:
-  - migraciones 000–008 (44 tablas; la 008 agrega índices de escalamiento) y seeds 001–003;
+  - migraciones 000–010 (44 tablas; la 008 agrega índices de escalamiento, la 009 `astronauts.sex` y la 010 completa `sync_batches` / `sync_items` como historial) y seeds 001–003;
   - el seed del catálogo se genera con `node tools/build_catalog_seed.js` (`--check` avisa si quedó desactualizado).
 - **Permisos**:
   - `src/middlewares/auth.js`: `authenticate`, `requireRole`, `requireCrewRole` y la lista blanca del rol `service`;
   - `src/services/accessPolicy.js`: `canAccess`, `enforceAccess` y la bitácora confidencial.
-- **Pruebas**: `node --test` → **344 de 344**, sin saltadas, contra la base de pruebas `astro_health_test`. Incluyen la matriz de permisos, los derivados, el catálogo, el enrutamiento de escalamientos (unitarias, 8), el simulador (unitarias 14, apagado 1) y las suites de base de datos (humo 4, autenticación 14, semáforo 15, escalamiento y panel 15, simulador 10). Si la base de pruebas no existe, esas suites se saltan con el comando para crearla.
+- **Pruebas**: `node --test` → **373 de 373**, sin saltadas, contra la base de pruebas `astro_health_test`. Incluyen la matriz de permisos, los derivados, el catálogo, el enrutamiento de escalamientos (unitarias, 8), el simulador (unitarias 15, apagado 1), `sex` (unitarias 5), sync (unitarias 5) y las suites de base de datos (humo 4, autenticación 14, semáforo 15, escalamiento y panel 15, simulador 9, `sex` 6, sync 12). Si la base de pruebas no existe, esas suites se saltan con el comando para crearla.
 - **Escalamiento** (tarea 6):
   - `src/services/escalation.service.js`: enrutamiento por categoría y prioridad;
   - `src/services/escalationDelivery.service.js`: queued → delivered y recálculo de `deliver_at` por cortes;
@@ -40,6 +42,7 @@ Cierre de la **tarea 7** (simulador de datos sintéticos), 2026-11-14, rama `bac
   - `src/services/dashboard.service.js`: dashboard físico de la tripulación;
   - `src/services/missionAdmin.service.js`: misiones, entornos, asignaciones y cortes.
 - **Simulador** (tarea 7): generador puro en `src/simulator/` (`random.js`, `profiles.js`, `history.js`, `scenarios.js`) y escritura en `src/services/simulator.service.js`, que usa los servicios reales (`readings.service`, `habitat.service` y el nuevo `wellbeingRecorder.js`). CLI `scripts/simulate.js`. Ver "Simulador (demo)".
+- **Sync** (tarea 8): `src/services/syncPush.service.js` (lote, orden, reloj, conflictos e historial), `src/services/syncEntities.js` (registro de tipos → servicios reales; extensible para el triaje), `src/services/syncPull.service.js` (cursor por flujos) y `src/models/sync.model.js`. Ver "Sincronización offline".
 - **Despliegue**: `render.yaml` (Blueprint de Render) en la raíz del repo; arranque con `npm run start:deploy` (migra, siembra la demo si `DEMO_SEED=true` y arranca). Ver "Despliegue (Render)".
 
 ## Cómo levantar el proyecto
@@ -62,7 +65,7 @@ Requisitos: Node 20+ (`.nvmrc`) y PostgreSQL 16+ (local, p. ej. el 18 en Windows
 4. Arranca:
    ```bash
    npm i
-   npm run db:reset    # migraciones 000–007 + seeds (solo la base de desarrollo)
+   npm run db:reset    # migraciones 000–010 + seeds (solo la base de desarrollo)
    npm run dev         # http://localhost:3000/api/v1/health · Swagger en /api/docs
    ```
 5. Verifica: `node --test`, `npx eslint .`, `npx prettier --check .` y `npm run api:lint`.
@@ -100,6 +103,7 @@ Requisitos: Node 20+ (`.nvmrc`) y PostgreSQL 16+ (local, p. ej. el 18 en Windows
 | `DEMO_SEED` | `true` | Solo en el despliegue de demo. Sin la bandera, `seed.js` se niega con `NODE_ENV=production`. |
 | `SIMULATOR_ENABLED` | `true` | Activa `POST /admin/simulator/*` (sin ella, 404). El plan gratuito no tiene consola: el simulador se usa por estos endpoints. |
 | `NODE_VERSION` | `20` | |
+| `SYNC_*` | (por defecto) | `SYNC_MAX_BATCH=500`, `SYNC_MAX_FUTURE_SKEW_S=300`, `SYNC_LATE_AFTER_S=900`, `SYNC_PULL_SETTLE_MS=2000`. No hace falta ponerlas en Render. |
 
 `PORT` lo pone Render. El resto (`JWT_ACCESS_TTL`, `LOCKOUT_*`, etc.) tiene valores por defecto.
 
@@ -127,9 +131,10 @@ Datos **sintéticos** de ARES-1 para que la demo tenga historia y escenarios en 
 | `crew_illness` | `astronaut` (LYRA): 38.4 °C, FC 112, tos y sensación de fiebre. `contagion: true`: empezó ayer y un segundo tripulante enferma hoy. | `BODY_TEMP`, `HEART_RATE` y `SYMPTOM` en caution → crew. `high`: 39.6 °C → critical (flight surgeon + crew). |
 | `co2_spike` | `module_id` (HAB-1): 6 lecturas en 50 min, de 2.4 a 5.2 mmHg (`high`: hasta 10.8). | `HAB_CO2` caution → crew. `high`: ≥ 10 → critical → flight surgeon. |
 | `wellbeing_decline` | `astronaut` (ATLAS): 5 check-ins seguidos peores (corrige los de la historia con `supersedes_uuid`). `high`: PHQ-2 = 4 y GAD-2 = 3. | Escalamiento **confidencial** a `behavioral_health` (WB_*, y PHQ-2/GAD-2 en `high`). Nunca a la tripulación ni a admin. |
+| `offline_batch` (tarea 8) | `astronaut` (ORION): ~24 h sin conexión en `TAB-1`, empujadas por `POST /sync/push` (13 items: vitales, ejercicio, check-in, PVT, un SpO₂ 89 % de hace 6 h, una presión corregida con `supersedes_uuid` y un duplicado). | 12 `accepted` + 1 `duplicate`. El SpO₂ se procesa primero, llega con `late_sync` y escala desde la recepción (flight surgeon + crew). Mismo minuto → todo `duplicate`. |
 
 - El resumen trae lecturas creadas/duplicadas, niveles por indicador **estándar** y escalamientos no confidenciales por destino. De bienestar solo cuenta registros: nunca niveles ni escalamientos (admin no puede verlos).
-- Un reintento en el mismo minuto no duplica; dispararlo más tarde crea un episodio nuevo. `solar_event` repetido acumula la dosis del evento (sigue la racha de `event_active`).
+- Un reintento en el mismo minuto no duplica; dispararlo más tarde crea un episodio nuevo. `solar_event` repetido acumula la dosis del evento (sigue la racha de `event_active`) y deja una `RAD_DOSE_CUM` por tripulante = acumulada previa + dosis del evento; la historia que se cargue después suma también esas dosis de evento a su acumulada.
 - Las alertas a `flight_surgeon` aparecen en `GET /admin/inbox` tras el retraso de ARES-1 (90 s).
 
 **Cómo correrlo**:
@@ -140,6 +145,9 @@ Datos **sintéticos** de ARES-1 para que la demo tenga historia y escenarios en 
   npm run sim:scenario -- crew_illness --contagion
   npm run sim:scenario -- co2_spike --module HAB-2
   npm run sim:scenario -- wellbeing_decline --astronaut ATLAS
+  npm run sim:offline-batch -- --astronaut ORION      # = sim:scenario -- offline_batch
+  # Solo arma el lote (sin base), p. ej. para regenerar el ejemplo del contrato:
+  npm run sim:offline-batch -- --dry-run --now 2026-11-14T08:00:00Z --out docs/examples/sync-push.json
   ```
 - Render (sin consola): con `SIMULATOR_ENABLED=true`, como `mission.control`:
   ```bash
@@ -153,6 +161,34 @@ Datos **sintéticos** de ARES-1 para que la demo tenga historia y escenarios en 
     -H 'Content-Type: application/json' -d '{"module_id":"HAB-1","intensity":"high"}'
   ```
   La historia tarda unos segundos (en Render, hasta ~1 min; si el servicio dormía, súmale ~50 s).
+
+## Sincronización offline
+
+La app guarda todo en SQLite sin conexión y al reconectar sube lotes (`POST /sync/push`) y baja cambios (`GET /sync/pull`). Guía para la app: `docs/api-guia-frontend.md` §3.
+
+**Push** (`syncPush.service.js`):
+1. Sobre del lote: `device_id`, `sent_at`, 1–`SYNC_MAX_BATCH` items (más → 413 antes de tocar nada).
+2. Solo `astronaut` con asignación; el `device_id` debe ser suyo: el `did` de su sesión, uno con refresh token o PIN offline suyo, o una tableta activa de su misión (`devices.label`). Si no, 403 `DEVICE_NOT_OWNED`.
+3. Se crea la fila de `sync_batches` (con `clock_offset_ms` = recepción − `sent_at`).
+4. Cada item: sobre (`client_uuid`, `entity`, `priority`, `created_at`, `payload`), handler del registro (`syncEntities.js`) y hash SHA-256 del payload canónico (claves ordenadas, fechas ISO normalizadas; sin `created_at` ni `priority`).
+5. Orden: rango 0 `priority: emergency`, 1 crítico (reglas activas con los valores del payload y `sex`, sin derivados), 2 el resto; dentro, por `measured_at` (o `created_at`); una corrección baja el rango de su original del mismo lote y los originales van antes que las correcciones.
+6. Por item, en su propia transacción (la del servicio): futuro → `FUTURE_TIMESTAMP`; hash distinto al aceptado antes → `PAYLOAD_MISMATCH`; si no, el servicio real (`createReading`, `createHabitatReadings`, `wellbeingRecorder`). Un 409 del servicio → `conflict` (`SUPERSEDE_CONFLICT` si es por `supersedes_uuid`); otro error → `rejected` (un error inesperado también: `INTERNAL_ERROR`, sin tumbar el lote).
+7. `sync_items` registra cada item procesado (estado, `server_id`, código de error, hash, `late_sync`, `lag_s`) y al final se guardan los conteos y la duración del lote.
+
+**Pull** (`syncPull.service.js`): cuatro flujos keyset (marca, id) — evaluaciones de sus lecturas estándar, sus escalamientos no confidenciales ya entregados, mensajes de Tierra entregados y respuestas a sus solicitudes de apoyo — mezclados por fecha hasta `limit`. El cursor (base64url) guarda la marca de cada flujo y las versiones de reglas, protocolo, catálogo y misión (`changed`). Solo lee hasta `now() − SYNC_PULL_SETTLE_MS`.
+
+**Ejemplo**: `docs/examples/sync-push.json` (el lote de `offline_batch` con `--now 2026-11-14T08:00:00Z`; una prueba lo empuja tal cual).
+
+**Curl contra Render** (como astronauta; desde `backend/`):
+```bash
+API=https://astro-health-api-81jd.onrender.com/api/v1
+ATOKEN=$(curl -s -X POST $API/auth/login -H 'Content-Type: application/json' \
+  -d '{"username":"a.ortega","password":"Demo2026!","device_id":"demo-ipad"}' \
+  | node -pe 'JSON.parse(require("fs").readFileSync(0)).access_token')
+curl -s -X POST $API/sync/push -H "Authorization: Bearer $ATOKEN" \
+  -H 'Content-Type: application/json' -d @docs/examples/sync-push.json
+curl -s "$API/sync/pull?limit=50" -H "Authorization: Bearer $ATOKEN"
+```
 
 ## Credenciales demo
 
@@ -276,6 +312,22 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
 - **Endpoints**: el gate de `SIMULATOR_ENABLED` responde 404 antes de autenticar (no revela que existen) y va antes del router de `/admin` (que exige admin a todo `/admin/*`). Luego `admin`; el resto, 403.
 - **Paralelo**: cada sujeto (cada astronauta y el hábitat) se escribe en serie, en orden de `measured_at` (los derivados leen lo anterior); los sujetos corren en paralelo.
 
+**Sincronización (tarea 8)**
+- **Migraciones**: 009 = `astronauts.sex`, 010 = sincronización. `sync_batches` y `sync_items` ya existían (005): la 010 no los crea, los completa (conteos por resultado, `late_count`, `clock_offset_ms`, `duration_ms`; `payload_hash`, `late_sync`, `lag_s`), cambia el CHECK de `item_count` (el máximo lo pone `SYNC_MAX_BATCH`) y el de `entity` (cualquier nombre `^[a-z][a-z0-9_]{0,39}$`, para registrar también los tipos desconocidos), y quita el UNIQUE `(batch_id, client_uuid)` (un client_uuid repetido en el lote es el duplicado del segundo). Nunca se guarda el payload, solo su hash.
+- **Contrato (cambios mínimos, anotados en "Cambios" del YAML)**: se respetan los nombres del contrato aunque el brief dijera otros: `entity` (no `type`), `accepted` (no `created`), `created_at` en el item y `measured_at` en el payload, `wellbeing_screening` (no `instrument_administration`). Cambió: `entity` deja de ser enum cerrado; el orden pasa a emergency → críticos → resto por `measured_at` (antes "por created_at"); respuesta con `batch_id`, `clock_offset_s`, `counts`, `sequence`, `late_sync`/`lag_s`; 403 en push; el pull agrega `limit`, `catalog`, `mission`, `evaluations`, `escalations`, `routines`; la bandeja agrega `measured_at`, `late_sync`, `lag_s`. Todo aditivo para quien ya usaba el mock, salvo que el ejemplo de `emergency_answer` ahora sale `rejected` (`ENTITY_NOT_SUPPORTED`) hasta la tarea 9.
+- **Política de conflictos**:
+  - idempotencia por `client_uuid` del autor (como en línea): mismo `client_uuid` + mismo contenido → `duplicate` con el `server_id` existente;
+  - mismo `client_uuid` + otro contenido → `conflict` `PAYLOAD_MISMATCH`: se compara el hash con el del item aceptado antes por sync y, para lecturas creadas en línea o por el simulador, contra la lectura guardada (indicador, valores, método, `measured_at`, `supersedes_uuid`). Nunca se sobrescribe (append-only);
+  - segunda corrección del mismo original → `conflict` `SUPERSEDE_CONFLICT` (el índice único de 005);
+  - un `conflict` no se reintenta igual: la app lo saca de la cola y avisa.
+- **Reintentos**: un lote reenviado crea otra fila en `sync_batches` (queda el historial de reintentos) pero ninguna fila de datos nueva: lecturas, evaluaciones, escalamientos y grupos de bienestar quedan igual (lo prueba `test/sync.integration.test.js`).
+- **Reloj**: `measured_at` nunca se corrige. Más de `SYNC_MAX_FUTURE_SKEW_S` (300 s) en el futuro → `FUTURE_TIMESTAMP`; la misma tolerancia aplica ahora en línea (`measuredAtIssue`, antes fija en 5 min). El offset del lote solo se registra.
+- **Llegada tarde**: se evalúa con su `measured_at` (los derivados usan el historial anterior a esa hora) y el escalamiento se crea al recibirla, con `compute_deliver_at(misión, now())` y sus cortes: un crítico de hace 30 h sigue escalando y llega a Tierra 90 s después de la recepción. `late_sync` = más de `SYNC_LATE_AFTER_S` (900 s, regla de diseño) entre medición y recepción; se calcula igual en la bandeja (`measured_at`, `late_sync`, `lag_s`) para cualquier lectura, llegue por sync o en línea.
+- **Críticos primero**: el servidor no confía en la prioridad del dispositivo para lo crítico; lo evalúa con los valores del payload. Una regla que dependa de derivados (p. ej. noches seguidas) no se detecta así: esa lectura va en su orden normal.
+- **Bienestar por sync**: el check-in del contrato (`mood`, `fatigue`, `stress`, `crew_conflict`, `sleep_hours`, `private_note`) se traduce a WB_* y `SLEEP_HOURS` (`input_method: manual`); PVT (`lapses`, `mean_rt_ms`, `false_starts`) a PVT_*; screening a PHQ2/GAD2_SCORE. Las lecturas del grupo llevan `client_uuid` derivados (`derivedUuid('sync-group', client_uuid del item, código)`, UUID v8), distintos de los del simulador (`sim-uuid`). La respuesta es neutra (`message`, `offer_support: true` siempre, para no filtrar nada; `fitness` en PVT). Los deslizadores se validan enteros 0–100 en el handler (el catálogo no tiene rango para WB_*).
+- **Pull**: cursor por flujo, así un flujo no frena a otro; `has_more` si quedó algo de cualquier flujo. Las fechas del cursor van en UTC con microsegundos (no dependen de la zona del servidor). El margen de 2 s (`SYNC_PULL_SETTLE_MS`) evita perder filas de transacciones que confirman tarde; las pruebas lo ponen en 0. Los escalamientos salen cuando llegan a destino (`deliver_at`) y con el estado de ese momento: los cambios posteriores (acuse, respuesta) llegan como mensajes.
+- **Recordatorios y rutinas**: el pull devuelve los vigentes en cada respuesta (estado, no incremental); todavía no se llenan (no hay endpoints que los creen).
+
 **Pruebas y herramientas**
 - **Pruebas con base**:
   - usan siempre `DB_NAME_TEST` (`astro_health_test`); `test/helpers/db.js` cambia `DB_NAME` antes de cargar `src/` y se niega a correr si las dos bases coinciden;
@@ -294,17 +346,20 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
 - **Tarea 10 (bienestar)**: los derivados WB_* y PVT_* ya están en `derived.js` y el motor los usa. Faltan los endpoints `/wellbeing/*`, que deben agrupar las lecturas (`wellbeing_checkin_id`, `pvt_run_id`, `instrument_administration_id`).
   - **Regla para `PVT_LAPSES` critical** (decidida, sin implementar): el detalle (métricas de la PVT) va solo a `behavioral_health`, confidencial, como hoy. Además, el flight surgeon recibe **solo el estado** "aptitud no confirmada": una alerta `flight_surgeon` no confidencial, `source_type = wellbeing`, con un `reason` neutro y sin métricas (aparece en su bandeja con `category: wellbeing`; admin no la ve). Hoy `routeEvaluation` manda lo conductual solo a `behavioral_health`: al implementarlo, agrega ese segundo destino solo para PVT_LAPSES critical y su prueba.
 - **Bandeja de `behavioral_health`** (tarea 10): `wellbeing_decline` ya crea sus escalamientos confidenciales, pero todavía no hay endpoint para verlos (`GET /behavioral/*`). Hoy se verifican en la base o en `test/simulator.integration.test.js`.
-- **Simulador**: `solar_event` no actualiza `RAD_DOSE_CUM` (la acumulada vuelve a cuadrar con la siguiente historia, que solo suma dosis normales). Para limpiar los datos en Render no hay `db:reset`: habría que recrear la base desde el panel.
+- **Simulador**: para limpiar los datos en Render no hay `db:reset`: habría que recrear la base desde el panel.
+- **`GET /admin/sync/history`**: no está en el contrato, así que no se implementó. `sync_batches` ya tiene lo necesario (usuario, dispositivo, tamaño, conteos, offset y duración, sin payload): si el panel lo pide, agregarlo al contrato para admin y flight surgeon con metadatos y conteos totales, sin desglosar los tipos de bienestar.
+- **Sync, tipos pendientes**: `emergency_session|assessment|answer|heartbeat` (tarea 9) y `support_request` (tarea 10) responden `ENTITY_NOT_SUPPORTED`. Se agregan con `registerEntity(nombre, { when, handle })` en `syncEntities.js`; corrección de un check-in por sync tampoco existe todavía.
+- **Pull y cortes cerrados hacia atrás**: si un corte se cierra con un `ends_at` en el pasado, un mensaje que estaba en cola puede quedar con `deliver_at` anterior al último pull y el cursor lo salta. Con cortes cerrados "ahora" (lo normal) no pasa. Arreglo posible: al recalcular, `greatest(compute_deliver_at(...), now())` para lo que estaba en cola.
+- **`reminders.delivered_at`** no se marca en el pull (sería escribir en un GET); los recordatorios se devuelven como estado.
 - **`POST /attachments`** no está implementado. `POST /readings` ya acepta `attachment_id` si el adjunto existe y es del autor.
 - **La base no hace cumplir** (lo hace la API): que las lecturas agrupadas en un check-in o una PVT sean del mismo astronauta, y recalcular `deliver_at` cuando cambia un corte (`missionAdmin.service.js` → `escalationDelivery.service.js`: cualquier otro camino que toque `mission_comm_outages` debe llamar a `recomputeAfterOutageChange`).
 
 ## Siguiente tarea
 
-**Tarea 8: sincronización offline** (`POST /sync/push` y `GET /sync/pull`, hoy `x-status-impl: pending`).
+**Tarea 9: triaje autónomo** (`/emergency/*`, hoy `x-status-impl: pending`; `GET /admin/emergencies` y `/{id}`).
 
-- `POST /sync/push`: lote de hasta 500 items `{ client_uuid, entity, priority, created_at, payload }`. Procesa primero `priority: emergency` y luego el resto por `created_at`. `payload` = body del endpoint en línea (`reading` = `POST /readings`, `habitat_reading`, `wellbeing_checkin`, `pvt_run`, …). Resultado por item: `accepted` (con `server_id` y la evaluación), `duplicate`, `conflict` o `rejected` (con el error del contrato).
-- Reutiliza los servicios en línea, sin duplicar lógica: `readings.service.createReading`, `habitat.service`, y `wellbeingRecorder.js` para bienestar (el check-in del contrato trae `mood`, `fatigue`, … y hay que traducirlo a WB_*). Lo que todavía no existe (emergencias, tarea 9) responde `rejected` con un código claro.
-- Guarda `sync_batches` y `sync_items` (migración 005) para auditar y para que un lote reenviado responda igual.
-- `GET /sync/pull`: lo que el dispositivo debe recibir desde un cursor (mensajes de Tierra con `deliver_at <= now()`, cambios de reglas, recordatorios). Revisa el contrato antes de empezar.
-- Permisos: solo `astronaut` (cada item con su autor); lo confidencial sigue sin salir hacia la tripulación ni admin.
-- Pruebas: lote mixto con los cuatro estados, orden por prioridad, idempotencia del lote y del item, y un item de cada entidad soportada.
+- **Usa la prioridad `emergency` de sync**: las entidades `emergency_session`, `emergency_assessment`, `emergency_answer` y `emergency_heartbeat` ya llegan por `POST /sync/push` y hoy responden `ENTITY_NOT_SUPPORTED`. Regístralas en `src/services/syncEntities.js` (`registerEntity`) con los mismos servicios que los endpoints en línea: `syncPush.service` ya las procesa antes que todo (rango 0, por `measured_at`/`created_at`). Un `SESSION_ALREADY_ACTIVE` debe salir `conflict` con `details.session_id` (el ejemplo del contrato).
+- `responder_safe` es una pregunta de la sesión: copia esa respuesta en cada evaluación antes de llamar a `evaluateAssessment` (si no, `incomplete` con `pending: "responder_safe"`). `{ value: null }` cuenta como pendiente.
+- **Disparadores** (`trigger_type`): `manual_button`, `crew_event`, `critical_reading` (una lectura crítica, también si llega por sync con `late_sync`: decide si una lectura vieja abre sesión), `environment_alarm` y `missed_checkin`.
+- **Demo**: recarga la historia del simulador el mismo día de la demo (`POST /admin/simulator/history`), para que haya check-in de hoy y `missed_checkin` no active el triaje por error. Ojo también con `offline_batch`: su check-in es de hace 1 h.
+- Prellenado desde lecturas (`emergency_answers.source_reading_id`) y el interruptor de hombre muerto (`heartbeat`).
