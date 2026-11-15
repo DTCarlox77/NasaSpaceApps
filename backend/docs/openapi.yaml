@@ -1040,7 +1040,6 @@ paths:
       summary: Lista misiones
       operationId: listMissions
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -1071,6 +1070,8 @@ paths:
                         created_at: '2026-09-30T08:00:00Z'
                         updated_at: '2026-11-14T00:00:00Z'
                     next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -1078,9 +1079,9 @@ paths:
     post:
       tags: [Misión]
       summary: Crea una misión
+      description: Nace `planned`. El admin que la crea entra a su equipo en Tierra (`operations`). **409** si el `code` ya existe.
       operationId: createMission
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth, gravity_fields]
       requestBody:
@@ -1122,7 +1123,6 @@ paths:
       summary: Actualiza una misión
       operationId: updateMission
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -1162,7 +1162,6 @@ paths:
       summary: Lista entornos
       operationId: listEnvironments
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [gravity_fields, distance_from_earth]
       parameters:
@@ -1226,6 +1225,8 @@ paths:
                           updated_at: '2026-11-14T00:00:00Z',
                         }
                     next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -1235,7 +1236,6 @@ paths:
       summary: Crea un entorno
       operationId: createEnvironment
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [gravity_fields, distance_from_earth]
       requestBody:
@@ -1291,7 +1291,6 @@ paths:
       summary: Actualiza un entorno (p. ej. el retraso de comunicación)
       operationId: updateEnvironment
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [gravity_fields, distance_from_earth]
       parameters:
@@ -1335,14 +1334,13 @@ paths:
       summary: Lista asignaciones de tripulación (historial incluido)
       operationId: listAssignments
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [isolation_confinement]
       parameters:
         - $ref: '#/components/parameters/MissionIdQuery'
         - name: active
           in: query
-          description: true = solo vigentes (`assigned_to` nulo).
+          description: true = solo vigentes (`assigned_from <= now() < assigned_to`, como `v_current_crew`); false = solo las no vigentes.
           schema: { type: boolean }
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -1377,6 +1375,10 @@ paths:
                           created_at: '2026-09-30T08:00:00Z',
                         }
                     next_cursor: eyJpZCI6IjIyMDAwMDAwIn0
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -1386,7 +1388,6 @@ paths:
       summary: Asigna un astronauta a una misión
       operationId: createAssignment
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [isolation_confinement]
       requestBody:
@@ -1444,7 +1445,6 @@ paths:
         CMO no puede tener un periodo que se solape con otro del mismo rol en la misión (**409**).
       operationId: updateAssignment
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [isolation_confinement]
       parameters:
@@ -1497,7 +1497,6 @@ paths:
       summary: Lista cortes de comunicación de una misión
       operationId: listCommOutages
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -1523,6 +1522,10 @@ paths:
                         reason: 'Conjunción solar (demo)'
                         created_at: '2026-11-14T10:00:00Z'
                     next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -1533,7 +1536,6 @@ paths:
       description: Sin `ends_at` el corte queda abierto y `compute_deliver_at` devuelve null (los mensajes esperan en cola).
       operationId: createCommOutage
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       requestBody:
@@ -1585,9 +1587,12 @@ paths:
     patch:
       tags: [Misión]
       summary: Cierra o corrige un corte de comunicación
+      description: |
+        `ends_at` cierra el corte (o lo reabre con null). Al crear o cambiar un corte se recalcula
+        `deliver_at` de todo lo que todavía no llegó (escalamientos, mensajes y solicitudes de
+        apoyo): lo que estaba en cola sale cuando vuelve el enlace + el retraso del entorno.
       operationId: updateCommOutage
       x-status: mvp
-      x-status-impl: pending
       x-roles: [admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5194,10 +5199,15 @@ paths:
     get:
       tags: [Tierra]
       summary: Semáforo físico de la tripulación
-      description: Por astronauta e indicador físico, nivel, último valor y tendencia, más cumplimiento y aptitud. **Sin estado conductual.**
+      description: |
+        Por astronauta de la tripulación vigente e indicador físico con lecturas: nivel, último
+        valor, serie (hasta 10 puntos; valor principal = `value` o la sistólica) y tendencia
+        (último valor frente a la media de los anteriores, ±5 %; menos de 2 puntos =
+        `insufficient_data`). Más cumplimiento y aptitud según la matriz de permisos.
+        **Sin estado conductual**: las lecturas salen de `v_readings_standard`.
+        `behavioral_health` → 403.
       operationId: getCrewDashboard
       x-status: mvp
-      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [gravity_fields, space_radiation, hostile_closed_env, distance_from_earth]
       parameters:
@@ -5248,6 +5258,10 @@ paths:
                             series:
                               - { measured_at: '2026-11-14T06:50:00Z', value: 18 }
                               - { measured_at: '2026-11-14T07:50:00Z', value: 31 }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -5259,13 +5273,14 @@ paths:
       summary: Bandeja de escalamientos ya entregados en Tierra
       description: |
         Basada en `v_ground_inbox`: escalamientos `flight_surgeon` con `deliver_at <= now()` y no
-        cerrados, ordenados por prioridad y luego por `deliver_at`. Lo que está en cola
+        cerrados, ordenados por prioridad (`emergency` > `urgent` > `routine`) y luego por
+        `deliver_at` ascendente (lo que espera desde hace más tiempo, primero). Lo que está en cola
         (`deliver_at` futuro o null) no aparece todavía. `category`: `reading` (lectura),
         `emergency` (triaje), `wellbeing` (alerta de bienestar escalada al flight surgeon: solo
-        estado), `manual`.
+        estado; `admin` no la ve), `manual`. Lo confidencial (`behavioral_health`) nunca aparece.
+        Al leer la bandeja, lo que ya llegó pasa de `queued` a `delivered`.
       operationId: getGroundInbox
       x-status: mvp
-      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5333,6 +5348,10 @@ paths:
                           basis: 'source'
                           source_ids: ['aha_bp', 'ama_bp2025']
                     next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -5342,9 +5361,12 @@ paths:
     post:
       tags: [Tierra]
       summary: Marca un escalamiento como recibido
+      description: |
+        Solo sobre lo que ya está en la bandeja (`deliver_at <= now()`); antes responde **404**.
+        Idempotente: un segundo acuse devuelve el primero (y no retrocede un `responded`).
+        **409** si el escalamiento está cerrado.
       operationId: ackEscalation
       x-status: mvp
-      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5377,10 +5399,13 @@ paths:
     post:
       tags: [Tierra]
       summary: Responde a la tripulación (viaja con retraso)
-      description: Devuelve `deliver_at` calculado con `compute_deliver_at`. Si el enlace está caído y el corte sigue abierto, `deliver_at` es null (en cola).
+      description: |
+        Devuelve `deliver_at` calculado con `compute_deliver_at`. Si el enlace está caído y el
+        corte sigue abierto, `deliver_at` es null (en cola) y se recalcula al cerrar el corte.
+        El escalamiento pasa a `responded` (y cuenta como acuse si no lo había). Igual que el
+        acuse: **404** si todavía no llegó a Tierra y **409** si está cerrado.
       operationId: replyEscalation
       x-status: mvp
-      x-status-impl: pending
       x-roles: [flight_surgeon, admin]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5427,15 +5452,19 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /api/v1/escalations/{id}/messages:
     get:
       tags: [Tierra]
       summary: Mensajes de un escalamiento (lado astronauta)
-      description: Solo los ya entregados a bordo (`deliver_at <= now()`).
+      description: |
+        Hilo visto a bordo: los mensajes de Tierra (`to_crew`) solo cuando ya se entregaron
+        (`deliver_at <= now()`); los enviados desde a bordo (`to_earth`), siempre. Lo ve el
+        astronauta del escalamiento (y el CMO si es físico); otro tripulante → 403.
       operationId: listEscalationMessages
       x-status: mvp
-      x-status-impl: pending
       x-roles: [astronaut]
       x-hazards: [distance_from_earth]
       parameters:
@@ -5463,6 +5492,8 @@ paths:
                         created_at: '2026-11-14T08:11:00Z'
                         deliver_at: '2026-11-14T08:12:30Z'
                     next_cursor: null
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
@@ -7002,7 +7033,10 @@ components:
         crew_role: { $ref: '#/components/schemas/CrewRole' }
         assigned_from: { $ref: '#/components/schemas/Timestamp' }
         assigned_to:
-          { type: string, format: date-time, nullable: true, description: null = vigente. }
+          type: string
+          format: date-time
+          nullable: true
+          description: null = sin fecha de fin. Vigente mientras assigned_from <= now() < assigned_to.
         created_at: { $ref: '#/components/schemas/Timestamp' }
     AssignmentCreate:
       type: object
@@ -8215,11 +8249,23 @@ components:
                 items: { $ref: '#/components/schemas/DashboardIndicator' }
               compliance:
                 type: object
+                nullable: true
+                description: |
+                  Check-ins de bienestar hechos en 7 días (solo el conteo). `null` si la matriz de
+                  permisos no deja verlo a tu rol (hoy lo ve `admin`; el flight surgeon, no).
                 required: [checkins_completed_7d, checkins_expected_7d]
                 properties:
-                  checkins_completed_7d: { type: integer, minimum: 0 }
-                  checkins_expected_7d: { type: integer, minimum: 0 }
-              fitness: { $ref: '#/components/schemas/Fitness' }
+                  checkins_completed_7d: { type: integer, minimum: 0, maximum: 7 }
+                  checkins_expected_7d:
+                    type: integer
+                    minimum: 1
+                    maximum: 7
+                    description: Días de la asignación dentro de la ventana (hasta 7).
+              fitness:
+                type: string
+                enum: [fit, not_confirmed]
+                nullable: true
+                description: Aptitud de la PVT más reciente (sin PVT = `not_confirmed`). `null` si tu rol no puede verla.
     InboxItem:
       type: object
       required:
@@ -8243,7 +8289,10 @@ components:
         call_sign: { type: string, nullable: true }
         category: { type: string, enum: [reading, emergency, wellbeing, manual] }
         source_type:
-          { type: string, enum: [reading, emergency_assessment, emergency_session, manual] }
+          {
+            type: string,
+            enum: [reading, emergency_assessment, emergency_session, wellbeing, manual],
+          }
         source_id: { type: string, format: uuid, nullable: true }
         level: { $ref: '#/components/schemas/EscalationLevel' }
         priority: { $ref: '#/components/schemas/Priority' }
