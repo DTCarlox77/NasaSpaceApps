@@ -8,6 +8,7 @@ const router = Router();
 // Panel de Tierra (x-roles: flight_surgeon, admin). behavioral_health tiene su propia bandeja.
 const ground = requireRole('flight_surgeon', 'admin');
 
+router.get('/admin/dashboard/crew', authenticate(), ground, ctrl.crewDashboard);
 router.get('/admin/inbox', authenticate(), ground, ctrl.inbox);
 router.post('/admin/escalations/:id/ack', authenticate(), ground, ctrl.ack);
 router.post('/admin/escalations/:id/messages', authenticate(), ground, ctrl.reply);

@@ -1,6 +1,16 @@
 'use strict';
 
+const dashboardService = require('../services/dashboard.service');
 const inboxService = require('../services/escalationInbox.service');
+
+async function crewDashboard(req, res) {
+  res.json(
+    await dashboardService.crewDashboard({
+      userId: req.auth.userId,
+      missionId: req.query.mission_id,
+    }),
+  );
+}
 
 async function inbox(req, res) {
   res.json(await inboxService.inbox({ userId: req.auth.userId, query: req.query }));
@@ -26,4 +36,4 @@ async function crewMessages(req, res) {
   );
 }
 
-module.exports = { inbox, ack, reply, crewMessages };
+module.exports = { crewDashboard, inbox, ack, reply, crewMessages };
