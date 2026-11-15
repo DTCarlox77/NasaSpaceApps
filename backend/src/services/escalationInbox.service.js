@@ -49,7 +49,12 @@ const groundResource = (esc) => ({
   sensitivity: esc.is_confidential ? 'confidential' : 'standard',
   category: esc.category,
   action: 'read',
-  view: esc.category === 'behavioral' ? 'escalated_alert' : 'detail',
+  view:
+    esc.category === 'behavioral'
+      ? 'escalated_alert'
+      : esc.category === 'emergency'
+        ? 'operational'
+        : 'detail',
 });
 
 /** Categorías de la BD que el actor puede ver en la bandeja de la misión. */
@@ -159,6 +164,8 @@ async function inbox({ userId, query }) {
   const categories = visibleCategories(actor, mission.id);
   if (!categories.length) throw forbidden(null, 'No tienes permiso para ver esta bandeja.');
 
+  // Plazos vencidos del hombre muerto (la instancia pudo dormirse): antes de leer la bandeja.
+  await require('./emergency.service').runTriageSweep();
   await delivery.promoteDelivered(mission.id);
   const rows = await escalations.inboxPage({
     missionId: mission.id,
@@ -168,11 +175,24 @@ async function inbox({ userId, query }) {
     after,
     limit,
   });
+  // De una emergencia, admin solo ve el estado operativo: sin la clasificación del triaje.
+  const clinicalEmergency = canAccess(actor, {
+    astronaut_id: '*',
+    mission_id: mission.id,
+    sensitivity: 'standard',
+    category: 'emergency',
+    action: 'read',
+    view: 'detail',
+  });
   return toPage(
     rows,
     limit,
     (r) => ({ r: r.priority_rank, d: r.deliver_at_cursor, id: r.id }),
-    toInboxItem,
+    (r) => {
+      const item = toInboxItem(r);
+      if (!clinicalEmergency) delete item.triage;
+      return item;
+    },
   );
 }
 

@@ -278,11 +278,23 @@ async function recomputePending(missionId, db = pool) {
        AND sm.deliver_at IS DISTINCT FROM ${smNext}`,
     [missionId],
   );
+  // Línea de tiempo de emergencias (lo que Tierra ve del triaje), tarea 9.
+  const evNext = requeued('ev', 's.mission_id', 'ev.created_at');
+  const emergencyEvents = await db.query(
+    `UPDATE emergency_events ev
+     SET deliver_at = ${evNext}
+     FROM emergency_sessions s
+     WHERE s.id = ev.session_id AND s.mission_id = $1
+       AND (ev.deliver_at IS NULL OR ev.deliver_at > now())
+       AND ev.deliver_at IS DISTINCT FROM ${evNext}`,
+    [missionId],
+  );
   return {
     escalations: escalations.rowCount,
     escalation_messages: messages.rowCount,
     support_requests: supportRequests.rowCount,
     support_messages: supportMessages.rowCount,
+    emergency_events: emergencyEvents.rowCount,
   };
 }
 

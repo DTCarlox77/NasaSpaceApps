@@ -17,7 +17,8 @@
  *     category,            // 'physical' | 'behavioral' | 'emergency'
  *     action,              // 'read' | 'write'
  *     view,                // opcional: 'detail' (por defecto) | 'escalated_alert' | 'compliance' |
- *                          //           'fitness' | 'clinical_profile' (sexo biológico del perfil)
+ *                          //           'fitness' | 'clinical_profile' (sexo biológico del perfil) |
+ *                          //           'operational' (estado de una emergencia, sin datos clínicos)
  *     emergency_active,    // opcional: hay una emergencia activa del triaje en la misión
  *     share_with_cmo,      // opcional: privacy_preferences.share_with_cmo del dueño
  *   }
@@ -32,7 +33,14 @@ const confidentialAccess = require('../models/confidentialAccess.model');
 const SENSITIVITIES = ['standard', 'confidential'];
 const CATEGORIES = ['physical', 'behavioral', 'emergency'];
 const ACTIONS = ['read', 'write'];
-const VIEWS = ['detail', 'escalated_alert', 'compliance', 'fitness', 'clinical_profile'];
+const VIEWS = [
+  'detail',
+  'escalated_alert',
+  'compliance',
+  'fitness',
+  'clinical_profile',
+  'operational',
+];
 
 function assertResource(resource) {
   if (!resource || typeof resource !== 'object') throw new TypeError('resource inválido');
@@ -108,6 +116,8 @@ function canAccess(actor, resource) {
       // Solo lectura de lo estándar del panel; de bienestar, cumplimiento y aptitud.
       if (action !== 'read' || confidential) return false;
       if (category === 'behavioral') return view === 'compliance' || view === 'fitness';
+      // De una emergencia, solo el estado operativo: el detalle clínico es del flight surgeon.
+      if (category === 'emergency') return view === 'operational';
       return true;
 
     default:

@@ -117,24 +117,27 @@ async function evaluationsPage({ astronautId, horizon, key, limit }, db = pool) 
  * Escalamientos del astronauta que ya llegaron a destino (deliver_at <= horizon). Nunca los
  * confidenciales (bienestar): a la tripulación solo le llegan mensajes neutros.
  */
-async function escalationsPage({ astronautId, horizon, key, limit }, db = pool) {
+async function escalationsPage({ astronautId, missionId, horizon, key, limit }, db = pool) {
   const { rows } = await db.query(
     `SELECT * FROM (
        SELECT e.deliver_at AS ts, e.id, e.source_type, e.source_id, e.level::text AS level,
               e.priority::text AS priority, e.status::text AS status, e.reason, e.created_at,
               e.deliver_at, to_char(e.deliver_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS ts_text
        FROM escalations e
-       WHERE e.astronaut_id = $1 AND NOT e.is_confidential AND e.category <> 'behavioral'
+       WHERE (e.astronaut_id = $1
+              -- Emergencia (tarea 9): el aviso a bordo es para toda la tripulación.
+              OR (e.category = 'emergency' AND e.level = 'crew' AND e.mission_id = $4))
+         AND NOT e.is_confidential AND e.category <> 'behavioral'
          AND e.deliver_at IS NOT NULL AND e.deliver_at <= $2) x
-     WHERE true ${after(key, 4)}
+     WHERE true ${after(key, 5)}
      ORDER BY ts, id LIMIT $3`,
-    [astronautId, horizon, limit + 1, ...keyParams(key)],
+    [astronautId, horizon, limit + 1, missionId, ...keyParams(key)],
   );
   return rows;
 }
 
 /** Mensajes de Tierra en sus escalamientos (no confidenciales), ya entregados. */
-async function escalationMessagesPage({ astronautId, horizon, key, limit }, db = pool) {
+async function escalationMessagesPage({ astronautId, missionId, horizon, key, limit }, db = pool) {
   const { rows } = await db.query(
     `SELECT * FROM (
        SELECT m.deliver_at AS ts, m.id, m.escalation_id AS thread_id, m.direction::text AS direction,
@@ -143,11 +146,14 @@ async function escalationMessagesPage({ astronautId, horizon, key, limit }, db =
        FROM escalation_messages m
        JOIN escalations e ON e.id = m.escalation_id
        LEFT JOIN users u ON u.id = m.author_id
-       WHERE e.astronaut_id = $1 AND NOT e.is_confidential AND m.direction = 'to_crew'
+       WHERE (e.astronaut_id = $1
+              -- Respuestas de Tierra en una emergencia de su misión: para toda la tripulación.
+              OR (e.category = 'emergency' AND e.mission_id = $4))
+         AND NOT e.is_confidential AND m.direction = 'to_crew'
          AND m.deliver_at IS NOT NULL AND m.deliver_at <= $2) x
-     WHERE true ${after(key, 4)}
+     WHERE true ${after(key, 5)}
      ORDER BY ts, id LIMIT $3`,
-    [astronautId, horizon, limit + 1, ...keyParams(key)],
+    [astronautId, horizon, limit + 1, missionId, ...keyParams(key)],
   );
   return rows;
 }

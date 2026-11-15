@@ -102,7 +102,9 @@ async function pull({ auth, query }) {
   const { server_time: serverTime, horizon } = await sync.horizon(env.sync.pullSettleMs);
 
   const pages = await Promise.all(
-    STREAMS.map((s) => FETCH[s]({ astronautId, horizon, key: keys[s], limit })),
+    STREAMS.map((s) =>
+      FETCH[s]({ astronautId, missionId: actor.mission_ids[0], horizon, key: keys[s], limit }),
+    ),
   );
   const merged = STREAMS.flatMap((s, i) => pages[i].map((row) => ({ s, order: i, row })));
   merged.sort(
