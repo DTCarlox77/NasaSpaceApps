@@ -1,5 +1,18 @@
 import bcrypt from 'bcryptjs';
-import * as ExpoCrypto from 'expo-crypto';
+/** expo-crypto si el binario lo trae; si no (Expo Go sin el módulo), Web Crypto o Math.random como último recurso. */
+function getRandomBytes(len: number): Uint8Array {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('expo-crypto').getRandomBytes(len);
+  } catch {
+    const out = new Uint8Array(len);
+    const c = (globalThis as { crypto?: { getRandomValues?: (a: Uint8Array) => Uint8Array } }).crypto;
+    if (c?.getRandomValues) return c.getRandomValues(out);
+    for (let i = 0; i < len; i++) out[i] = Math.floor(Math.random() * 256);
+    return out;
+  }
+}
+const ExpoCrypto = { getRandomBytes };
 
 /**
  * Primitivas criptográficas del "servidor a bordo" simulado (sin dependencias nativas extra: válido en Expo Go).
