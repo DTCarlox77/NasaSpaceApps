@@ -3,12 +3,16 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
+import { apiEnabled } from '@/core/config/env';
 import { palette, useAppTheme } from '@/core/theme';
-import { AppText, Card } from '@/presentation/components/ui';
+import type { Fitness } from '@/domain/entities/Wellbeing';
+import { pvtMetrics } from '@/domain/usecases/WellbeingUseCases';
+import { container } from '@/di/container';
+import { AppText, Card, ToggleRow } from '@/presentation/components/ui';
 import { TestScaffold, type TestRunProps } from '@/presentation/features/tests/TestScaffold';
 import { useAuthStore } from '@/presentation/store/authStore';
 import { useHealthLogStore } from '@/presentation/store/healthLogStore';
-import { resultsOf, useTestsStore } from '@/presentation/store/testsStore';
+import { refreshPendingCount } from '@/presentation/sync/syncEngine';
 
 const TRIALS = 6;
 type State = 'wait' | 'go' | 'early' | 'hit';
@@ -29,6 +33,7 @@ function ReactionRun({ onComplete }: TestRunProps) {
   const falseStarts = useRef(0);
   const [falseCount, setFalseCount] = useState(0);
   const goAt = useRef(0);
+  const startedAt = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const arm = () => {
@@ -41,6 +46,7 @@ function ReactionRun({ onComplete }: TestRunProps) {
   };
 
   useEffect(() => {
+    startedAt.current = performance.now();
     arm();
     return () => {
       if (timer.current) clearTimeout(timer.current);
@@ -68,8 +74,15 @@ function ReactionRun({ onComplete }: TestRunProps) {
     setLast(ms);
     setState('hit');
     if (next.length >= TRIALS) {
+      // Se mide cada estímulo: métricas del PVT para POST /wellbeing/pvt-runs (lapso = respuesta ≥ 355 ms).
+      const m = pvtMetrics(next);
+      const durationS = Math.max(1, Math.round((performance.now() - startedAt.current) / 1000));
       timer.current = setTimeout(
-        () => onComplete({ score: median(next), details: { best: Math.min(...next), falseStarts: falseStarts.current, trials: next.length } }),
+        () =>
+          onComplete({
+            score: median(next),
+            details: { best: Math.min(...next), falseStarts: falseStarts.current, trials: m.trials, lapses: m.lapses, meanRtMs: m.meanRtMs, durationS },
+          }),
         700,
       );
       return;
@@ -108,31 +121,71 @@ function ReactionRun({ onComplete }: TestRunProps) {
   );
 }
 
+type PvtState = { status: 'sending' } | { status: 'sent'; fitness: Fitness; message: string } | { status: 'queued' | 'local' | 'error' };
+
 export default function ReactionTest() {
   const { t } = useTranslation();
-  const { spacing } = useAppTheme();
+  const { spacing, colors } = useAppTheme();
   const userId = useAuthStore((s) => s.session?.userId ?? '');
+  const [beforeCritical, setBeforeCritical] = useState(false);
+  const [pvt, setPvt] = useState<PvtState | null>(null);
+  const withApi = apiEnabled();
 
   return (
     <TestScaffold
       id="reaction"
       Run={(p) => <ReactionRun {...p} />}
       format={(s) => `${s} ms`}
+      introExtra={
+        withApi ? (
+          <ToggleRow icon="construct-outline" title={t('tests.pvt.beforeCritical')} value={beforeCritical} onValueChange={setBeforeCritical} />
+        ) : undefined
+      }
       onSaved={(r) => {
-        // Alimenta el indicador "tiempo de reacción" (cerebro). Se compara con TU línea base, no con un umbral médico.
-        const prev = resultsOf(useTestsStore.getState().results[userId], 'reaction').filter((x) => x !== r).slice(-7);
-        const baseline = prev.length >= 3 ? prev.reduce((a, b) => a + b.score, 0) / prev.length : null;
+        // El PVT es confidencial (bienestar): el indicador del cuerpo queda "sin evaluar", sin semáforo propio.
         useHealthLogStore.getState().addReading(userId, {
           indicatorId: 'reactionTime',
-          status: baseline === null ? 'unevaluated' : r.score > baseline * 1.15 ? 'caution' : 'normal',
+          status: 'unevaluated',
           reading: { value: r.score, takenAt: r.createdAt, source: 'manual', synced: false },
         });
+        if (!withApi) return;
+        setPvt({ status: 'sending' });
+        container.submitPvtRun
+          .execute({
+            measuredAt: r.createdAt,
+            beforeCriticalTask: beforeCritical,
+            durationS: r.details.durationS,
+            trials: r.details.trials ?? 0,
+            lapses: r.details.lapses ?? 0,
+            meanRtMs: r.details.meanRtMs ?? r.score,
+            falseStarts: r.details.falseStarts ?? 0,
+          })
+          .then((out) => {
+            setPvt(out.status === 'sent' ? { status: 'sent', fitness: out.fitness, message: out.message } : { status: out.status });
+            if (out.status === 'queued') void refreshPendingCount();
+          })
+          .catch(() => setPvt({ status: 'error' }));
       }}
       extra={(r) => (
-        <Card style={[styles.row, { gap: spacing.md }]}>
-          <Stat label={t('tests.reaction.bestTrial')} value={`${r.details.best} ms`} />
-          <Stat label={t('tests.reaction.falseStartsLabel')} value={String(r.details.falseStarts)} />
-        </Card>
+        <>
+          <Card style={[styles.row, { gap: spacing.md }]}>
+            <Stat label={t('tests.reaction.bestTrial')} value={`${r.details.best} ms`} />
+            <Stat label={t('tests.reaction.falseStartsLabel')} value={String(r.details.falseStarts)} />
+          </Card>
+          {withApi && pvt && (
+            <Card tone="alt" style={{ gap: spacing.xs }}>
+              <AppText variant="label" color="textMuted">{t('tests.pvt.fitnessTitle')}</AppText>
+              {pvt.status === 'sent' ? (
+                <>
+                  <AppText variant="h3" style={{ color: colors.text }}>{t(`tests.pvt.fitness.${pvt.fitness}`)}</AppText>
+                  <AppText variant="bodySmall" color="textSecondary">{pvt.message}</AppText>
+                </>
+              ) : (
+                <AppText variant="bodySmall" color="textSecondary">{t(`tests.pvt.state.${pvt.status}`)}</AppText>
+              )}
+            </Card>
+          )}
+        </>
       )}
     />
   );

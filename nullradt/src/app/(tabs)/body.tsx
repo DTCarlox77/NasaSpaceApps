@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '@/core/theme';
 import { BODY_SYSTEM_IDS } from '@/domain/entities/BodySystem';
-import type { BodySystemId, HealthIndicator, HealthStatus } from '@/domain/entities/HealthIndicator';
+import { indicatorKey, type BodySystemId, type HealthIndicator, type HealthStatus } from '@/domain/entities/HealthIndicator';
 import { BodyFigure } from '@/presentation/components/health/BodyFigure';
 import { Sparkline } from '@/presentation/components/health/Sparkline';
 import { AppText, Button, Card, FadeInView, PressableScale, Screen, StatusBadge } from '@/presentation/components/ui';
@@ -89,7 +89,7 @@ export default function MonitorScreen() {
           </FadeInView>
 
           {system.indicators.map((ind, i) => (
-            <FadeInView key={ind.id} index={3 + i}>
+            <FadeInView key={indicatorKey(ind)} index={3 + i}>
               <IndicatorCard indicator={ind} onDetails={() => comingSoon(t('body.details'))} onMeasure={() => (isMeasurable(ind.id) ? router.push({ pathname: '/measure', params: { indicator: ind.id } }) : comingSoon(t('body.measure')))} />
             </FadeInView>
           ))}
@@ -132,12 +132,22 @@ function IndicatorCard({ indicator, onDetails, onMeasure }: { indicator: HealthI
             <AppText color="textMuted">{indicator.unit}</AppText>
           </View>
           <AppText variant="caption" color="textMuted">
-            {r ? `${timeAgo(r.takenAt, t)} · ${t(`health.source.${r.source}`)}${r.synced ? '' : ` · ${t('health.onDevice')}`}` : t('body.noReadings')}
+            {r
+              ? [timeAgo(r.takenAt, t), r.source ? t(`health.source.${r.source}`) : null, r.synced ? null : t('health.onDevice')].filter(Boolean).join(' · ')
+              : t('body.noReadings')}
           </AppText>
         </View>
         <Sparkline data={indicator.trend} />
       </View>
       <AppText variant="bodySmall" color="textSecondary">{t(`indicators.${indicator.id}.description`)}</AppText>
+      {/* Recomendación del servidor, tal cual. */}
+      {indicator.recommendation ? <AppText variant="bodySmall">{indicator.recommendation}</AppText> : null}
+      {indicator.localOnly && (
+        <AppText variant="caption" color="textMuted">{t('body.localOnly')}</AppText>
+      )}
+      {indicator.sources?.length ? (
+        <AppText variant="caption" color="textMuted" numberOfLines={2}>{t('body.sources', { list: indicator.sources.map((s) => s.title).join(' · ') })}</AppText>
+      ) : null}
       <View style={[styles.row, { gap: spacing.sm }]}>
         <Button label={t('body.details')} variant="secondary" size="sm" onPress={onDetails} />
         <Button label={t('body.measure')} leftIcon="add" size="sm" onPress={onMeasure} />

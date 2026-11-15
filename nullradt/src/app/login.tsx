@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
+import { apiEnabled } from '@/core/config/env';
 import { useAppTheme } from '@/core/theme';
 import { Button } from '@/presentation/components/ui';
 import { IdentifyStep } from '@/presentation/features/auth/IdentifyStep';
@@ -23,7 +24,8 @@ export default function LoginScreen() {
   const { colors, spacing, radius } = useAppTheme();
   const insets = useSafeAreaInsets();
   const enterApp = useAuthStore((s) => s.enterApp);
-  const hasMission = useSettingsStore((s) => !!s.selectedMissionId);
+  // Con API la misión la asigna el servidor: tras la biometría se entra directo.
+  const hasMission = useSettingsStore((s) => apiEnabled() || !!s.selectedMissionId);
   const [step, setStep] = useState<0 | 1>(0);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
 

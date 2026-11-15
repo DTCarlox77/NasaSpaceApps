@@ -15,7 +15,9 @@ import { useHealthOverview } from '@/presentation/hooks/useHealthOverview';
 import { useCurrentMission } from '@/presentation/hooks/useMissions';
 import { useMissionStatus } from '@/presentation/hooks/useMissionStatus';
 import { useAuthStore } from '@/presentation/store/authStore';
-import { useCrew } from '@/presentation/hooks/useCrew';
+import { useCrew, useCrewRoster } from '@/presentation/hooks/useCrew';
+import { apiEnabled } from '@/core/config/env';
+import { indicatorKey } from '@/domain/entities/HealthIndicator';
 import { useCheckInStore } from '@/presentation/store/checkInStore';
 import { todayKey } from '@/presentation/store/routineStore';
 import { useUiStore } from '@/presentation/store/uiStore';
@@ -47,6 +49,8 @@ export default function HomeScreen() {
   const firstName = displayName.split(' ')[0] ?? '';
   const { selectedSystem, setSelectedSystem } = useUiStore();
   const { crew, me } = useCrew();
+  const { roster } = useCrewRoster();
+  const session = useAuthStore((s) => s.session);
   const userId = useAuthStore((s) => s.session?.userId ?? '');
   const checkedToday = useCheckInStore((s) => !!s.entries[userId]?.[todayKey()]);
 
@@ -98,6 +102,23 @@ export default function HomeScreen() {
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </Card>
+        {apiEnabled() && roster && roster.members.length > 0 && (
+          <Card onPress={() => router.push('/crew')} accessibilityLabel={t('crew.title')} style={{ gap: spacing.md }}>
+            <View style={[styles.row, { gap: spacing.sm }]}>
+              <Ionicons name="people-outline" size={20} color={colors.primaryText} />
+              <AppText variant="h3" style={styles.flex}>{t('home.crewTitle')}</AppText>
+            </View>
+            {roster.members.map((m) => (
+              <View key={m.astronautId} style={[styles.row, { gap: spacing.md }]}>
+                <Avatar name={m.callSign} size={40} />
+                <View style={styles.flex}>
+                  <AppText variant="title">{m.callSign}{m.astronautId === session?.astronautId ? ` · ${t('crew.you')}` : ''}</AppText>
+                  <AppText variant="caption" color="textSecondary">{t(`crewRoles.${m.crewRole}`)}</AppText>
+                </View>
+              </View>
+            ))}
+          </Card>
+        )}
         {crew.length > 0 && (
           <Card onPress={() => router.push('/crew')} accessibilityLabel={t('crew.title')} style={{ gap: spacing.md }}>
             <View style={[styles.row, { gap: spacing.sm }]}>
@@ -142,7 +163,7 @@ export default function HomeScreen() {
                 </View>
                 <AppText variant="bodySmall" color="textSecondary" numberOfLines={3}>{t(`systems.${system.id}.role`)}</AppText>
                 {system.indicators.map((ind) => (
-                  <IndicatorRow key={ind.id} indicator={ind} onPress={() => openSystem(system.id)} />
+                  <IndicatorRow key={indicatorKey(ind)} indicator={ind} onPress={() => openSystem(system.id)} />
                 ))}
                 <Button label={t('home.exploreSystem')} variant="secondary" fullWidth onPress={() => openSystem(system.id)} />
               </View>
@@ -157,7 +178,7 @@ export default function HomeScreen() {
           <AppText variant="h3">{t('home.allIndicators')}</AppText>
           <View style={[styles.wrap, { gap: spacing.md }]}>
             {overview.indicators.map((ind) => (
-              <View key={ind.id} style={styles.gridItem}>
+              <View key={indicatorKey(ind)} style={styles.gridItem}>
                 <IndicatorTile indicator={ind} onPress={() => openSystem(ind.systemId)} />
               </View>
             ))}
@@ -190,7 +211,7 @@ export default function HomeScreen() {
               <View style={{ gap: spacing.sm }}>
                 <AppText variant="label">{t('home.needsAttentionTitle')}</AppText>
                 {overview.needsAttention.map((ind) => (
-                  <IndicatorRow key={ind.id} indicator={ind} onPress={() => openSystem(ind.systemId)} />
+                  <IndicatorRow key={indicatorKey(ind)} indicator={ind} onPress={() => openSystem(ind.systemId)} />
                 ))}
               </View>
             )}
@@ -208,12 +229,14 @@ export default function HomeScreen() {
               <AppText variant="label" style={{ color: colors.onNightMuted }}>{t('home.missionProgress')}</AppText>
             </View>
             <AppText variant="h3" style={{ color: colors.onNight }}>{currentMission.name}</AppText>
-            <AppText style={{ color: colors.onNightMuted }}>{t('mission.dayOf', { day: currentMission.day, total: currentMission.totalDays })}</AppText>
-            <ProgressBar value={currentMission.day / currentMission.totalDays} color={colors.primary} onDark />
+            <AppText style={{ color: colors.onNightMuted }}>
+              {currentMission.totalDays ? t('mission.dayOf', { day: currentMission.day, total: currentMission.totalDays }) : t('mission.dayOnly', { day: currentMission.day })}
+            </AppText>
+            {currentMission.totalDays > 0 && <ProgressBar value={currentMission.day / currentMission.totalDays} color={colors.primary} onDark />}
             <View style={[styles.row, { gap: spacing.lg, marginTop: spacing.sm }]}>
               <View style={styles.flex}>
                 <ProgressBar
-                  value={mission.checkInsDone / mission.checkInsPlanned}
+                  value={mission.checkInsPlanned ? Math.min(mission.checkInsDone / mission.checkInsPlanned, 1) : 0}
                   color={palette.orange[300]}
                   label={t('home.dailyCheckIn', { done: mission.checkInsDone, total: mission.checkInsPlanned })}
                   onDark

@@ -18,7 +18,10 @@
     "seeAll": "See all",
     "notifications": "Notifications",
     "profile": "Profile",
-    "back": "Back"
+    "back": "Back",
+    "done": "Done",
+    "yes": "Yes",
+    "no": "No"
   },
   "disclaimer": "Decision-support tool. Not a medical diagnosis. When in doubt, contact your crew or the flight surgeon.",
   "status": {
@@ -108,7 +111,9 @@
     "measure": "Measure",
     "noReadings": "No readings yet",
     "recommendations": "Recommendations",
-    "protocolNote": "Guidance from onboard protocol. It does not replace your flight surgeon."
+    "protocolNote": "Guidance from onboard protocol. It does not replace your flight surgeon.",
+    "localOnly": "On this device only: the server catalog has no such indicator, so it stays unevaluated.",
+    "sources": "Sources: {{list}}"
   },
   "log": {
     "title": "Log a measurement",
@@ -145,8 +150,8 @@
     "sending": "Sending…",
     "sentTitle": "Report sent",
     "sentBody": "The mission system received your report.",
-    "queuedTitle": "Saved offline",
-    "queuedBody": "No connection to the server. The report was queued and will be sent automatically. If urgent, alert your crew in person.",
+    "queuedTitle": "Queued with priority",
+    "queuedBody": "No connection to the server. The emergency is queued and will be sent before anything else when back online. If urgent, tell your crew in person.",
     "close": "Close",
     "cancel": "Cancel",
     "open": "Open alert",
@@ -159,7 +164,37 @@
     "holdToDeactivate": "Hold to deactivate",
     "deactivateHint": "Was it a mistake? Hold for 5 seconds to deactivate it.",
     "cancelledTitle": "Alert deactivated",
-    "cancelledBody": "The crew was told it was a mistake."
+    "cancelledBody": "The crew was told it was a mistake.",
+    "voiceLocal": "Caution alert saved on the device.",
+    "cautionLocalHint": "A caution isn't an emergency: it's saved on the device and not sent. If needed, tell someone in person.",
+    "responderSafe": "Are you in a safe place?",
+    "noteLocal": "The note isn't sent: the server's emergency doesn't include it.",
+    "sessionOpenTitle": "Emergency open",
+    "sessionOpenBody": "The server opened the mission emergency.",
+    "joinedBody": "An emergency was already open in the mission: you joined it.",
+    "localTitle": "Saved on the device",
+    "localCautionBody": "The caution alert stayed on this device only: it isn't sent as an emergency.",
+    "crewAndEarthNotified": "Your crew and Earth were notified (Earth gets it with the mission delay).",
+    "secureSelf": "Get to safety first.",
+    "sessionStatus": "Status",
+    "statuses": {
+      "pending": "Waiting for confirmation",
+      "active": "Active",
+      "closed": "Closed",
+      "cancelled": "Cancelled",
+      "merged": "Merged into another"
+    },
+    "startedAt": "Started",
+    "roster": "Crew",
+    "noTriageYet": "Per-crew-member assessment (triage) isn't in the app yet.",
+    "refresh": "Refresh status",
+    "deactivateServerHint": "False alarm? Hold for 5 seconds to cancel the emergency.",
+    "closeOnlyLeads": "Only the commander or the crew medical officer can close the emergency.",
+    "cancelledServerBody": "The emergency was cancelled as a false alarm.",
+    "falseAlarmNote": "False alarm (cancelled from the app)",
+    "closeForbiddenTitle": "Not allowed",
+    "closeForbidden": "Only the commander or the crew medical officer can close the emergency.",
+    "closeErrorTitle": "Couldn't cancel"
   },
   "voice": {
     "start": "Dictate by voice",
@@ -307,7 +342,15 @@
       "idFormat": "Enter your astronaut ID in the format NR-A-0000.",
       "passwordRequired": "Enter your password.",
       "invalid": "Incorrect ID or password.",
-      "network": "Could not reach the server. Try again."
+      "network": "Could not reach the server. Try again.",
+      "usernameFormat": "Enter your username (lowercase, e.g. a.ortega).",
+      "invalidUser": "Incorrect username or password",
+      "locked": "Account locked until {{time}}. Ask the commander to unlock it.",
+      "noAssignment": "You have no active mission. Ask mission control to assign you.",
+      "rateLimited": "Too many attempts. Wait {{seconds}} s and try again.",
+      "weakPassword": "The password must have at least {{min}} characters and differ from the current one.",
+      "passwordMismatch": "Passwords don't match.",
+      "changeExpired": "The password-change permission expired. Sign in again."
     },
     "demoHint": "Prototype without a server: any password works. Synthetic data.",
     "demoSession": "Demo session",
@@ -325,7 +368,18 @@
       "face": "Face ID",
       "iris": "Iris",
       "generic": "Biometrics"
-    }
+    },
+    "username": "Username",
+    "changePasswordTitle": "Change your password",
+    "changePasswordBody": "First sign-in: set a new password with at least {{min}} characters.",
+    "newPassword": "New password",
+    "confirmPassword": "Repeat the password",
+    "changePasswordSubmit": "Save and continue",
+    "passwordChanged": "Password updated",
+    "passwordChangedBody": "You can now use the app with your new password.",
+    "sessionExpiredTitle": "Signed out",
+    "sessionExpiredBody": "Your session expired. Sign in again.",
+    "sessionReuseBody": "For security, your sessions were closed. Sign in again."
   },
   "mission": {
     "selectTitle": "Select your mission",
@@ -343,7 +397,15 @@
       "active": "In progress",
       "scheduled": "Scheduled",
       "training": "Training"
-    }
+    },
+    "assignedTitle": "Your mission",
+    "assignedBody": "Mission control assigned you to this mission. Your health plan and its rules follow it.",
+    "code": "Code",
+    "yourRole": "Your role",
+    "dayOnly": "Day {{day}}",
+    "commDelay": "Earth delay",
+    "commDelayValue": "{{seconds}} s one way",
+    "noAssignment": "Couldn't read your mission. Check your connection."
   },
   "connectivity": {
     "offlineTitle": "No Earth link — offline sign-in",
@@ -440,19 +502,15 @@
   },
   "wellbeing": {
     "title": "Wellbeing",
-    "subtitle": "Confidential daily check: stored only on this device.",
+    "subtitle": "Confidential daily check-in: no crew member sees your answers.",
     "streak": "Streak (days)",
     "total": "Checks",
     "today": "Today",
     "formEyebrow": "1 minute",
     "formTitle": "How are you today?",
     "mood": "Mood",
-    "energy": "Energy",
     "stress": "Stress",
-    "low": "Low",
-    "high": "High",
     "sleep": "Hours of sleep",
-    "sleepShort": "Sleep",
     "hours_one": "{{count}} h",
     "hours_other": "{{count}} h",
     "symptoms": "Symptoms",
@@ -466,26 +524,44 @@
       "fatigue": "Fatigue",
       "none": "None"
     },
-    "note": "Note (optional)",
-    "notePlaceholder": "Type or dictate how you feel",
-    "submit": "Save check",
-    "completeScales": "Answer mood, energy and stress to save.",
-    "saved": "Check saved",
-    "savedBody": "Thanks. It was saved on your device.",
-    "doneTitle": "Today's check done",
-    "doneBody": "You can edit it during the day.",
-    "allGood": "All good. Keep it up.",
-    "flags": {
-      "lowMood": "Low mood: consider talking to your crew or the psychological support team.",
-      "highStress": "High stress: try a breathing break and talk about your workload.",
-      "poorSleep": "You slept under 6 h: review your wind-down routine.",
-      "vision": "Blurred vision: log it and check the Eyes system in Monitor."
-    },
+    "note": "Private note (optional)",
+    "notePlaceholder": "Only you will see it",
+    "submit": "Save check-in",
+    "completeScales": "Move the four sliders to save.",
+    "saved": "Check-in saved",
+    "savedBody": "Thanks for checking in.",
+    "doneTitle": "Today's check-in is done",
     "goMonitor": "Go to Monitor",
-    "edit": "Edit check",
+    "edit": "Correct today's check-in",
     "history": "Recent days",
-    "historyLine": "Sleep {{sleep}} h · Energy {{energy}}/5 · Stress {{stress}}/5",
-    "private": "Your answers are not shared automatically. This is not a medical assessment."
+    "private": "Not a medical assessment: you'll never see a score or a color. If a change persists, only behavioral health gets a confidential notice.",
+    "week": "This week",
+    "correctTitle": "Correct today's check-in",
+    "correctBody": "The new one replaces today's (nothing is deleted).",
+    "fatigue": "Fatigue",
+    "crewConflict": "Friction with the crew",
+    "sliders": {
+      "moodLow": "Very low",
+      "moodHigh": "Very good",
+      "fatigueLow": "Rested",
+      "fatigueHigh": "Exhausted",
+      "stressLow": "Calm",
+      "stressHigh": "Very stressed",
+      "conflictLow": "No friction",
+      "conflictHigh": "A lot of friction"
+    },
+    "sleepOptional": "Add sleep hours (optional)",
+    "symptomsShared": "Symptoms are a physical reading: they go to the medical team separately from the (confidential) check-in. Congestion and insomnia stay on the device.",
+    "symptomsLocal": "Symptoms are saved on the device.",
+    "queued": "Offline: your check-in stayed on the device and will be sent when back online.",
+    "localMessage": "Thanks for checking in.",
+    "errorTitle": "Couldn't save",
+    "errorBody": "Check the data and try again.",
+    "corrected": "Today's check-in was updated.",
+    "streakLine": "Streak: {{days}} days · {{week}} of {{goal}} this week",
+    "historyDone": "Check-in completed",
+    "historyNote": "with private note",
+    "pendingSync": "pending upload"
   },
   "more": {
     "title": "More",
@@ -567,6 +643,15 @@
         "Wash hands before meals.",
         "Report early signs of illness."
       ]
+    },
+    "metabolism": {
+      "name": "Metabolism and nutrition",
+      "short": "Metabolism",
+      "role": "Metabolism turns food into energy. Onboard diet, exercise and stress can change your glucose.",
+      "recommendations": [
+        "Follow your mission meal plan.",
+        "Measure fasting glucose when the protocol asks for it."
+      ]
     }
   },
   "indicators": {
@@ -614,6 +699,46 @@
       "name": "Body temperature",
       "short": "Temperature",
       "description": "Core body temperature. Can signal an infection or an immune response."
+    },
+    "glucose": {
+      "name": "Blood glucose",
+      "short": "Glucose",
+      "description": "Blood sugar. Diet, exercise and in-flight stress can change it."
+    },
+    "sleepHours": {
+      "name": "Sleep hours",
+      "short": "Sleep",
+      "description": "Hours slept (wristband or manual). Onboard light and schedules disrupt sleep."
+    },
+    "radDoseDaily": {
+      "name": "Daily radiation dose",
+      "short": "Daily radiation",
+      "description": "Dosimeter dose for the day. It rises during solar events."
+    },
+    "radDoseCum": {
+      "name": "Cumulative radiation dose",
+      "short": "Cumulative radiation",
+      "description": "Career cumulative dose, compared with NASA limits."
+    },
+    "bodyMass": {
+      "name": "Body mass",
+      "short": "Mass",
+      "description": "Weight measured on board. Microgravity can reduce muscle and bone."
+    },
+    "exerciseMin": {
+      "name": "Exercise",
+      "short": "Exercise",
+      "description": "Daily exercise minutes: protects bones and muscles in microgravity."
+    },
+    "visionCheck": {
+      "name": "Visual symptoms (SANS)",
+      "short": "Visual symptoms",
+      "description": "Yes/no checklist of vision changes linked to long flights. The number is how many answers were “yes”."
+    },
+    "symptoms": {
+      "name": "Reported symptoms",
+      "short": "Symptoms",
+      "description": "Symptoms you logged in this body area. The number is how many you marked."
     }
   },
   "health": {
@@ -676,7 +801,8 @@
   "errors": {
     "viewTitle": "This view could not be displayed",
     "viewBody": "The rest of the app keeps working. If it persists, share this message with the team:",
-    "retry": "Retry"
+    "retry": "Retry",
+    "generic": "Something went wrong. Try again."
   },
   "crew": {
     "title": "Crew",
@@ -711,7 +837,24 @@
     "alertSentBody": "{{what}} {{value}}. Your crew was notified.",
     "alertCancelledTitle": "Alert deactivated",
     "alertCancelledBody": "The crew was told it was a mistake.",
-    "bloodType": "Blood type"
+    "bloodType": "Blood type",
+    "healthTitle": "Crew health",
+    "comingSoon": "Available soon.",
+    "statusOffline": "Offline: the crew status can't be read.",
+    "rosterUnavailable": "Couldn't read the crew. Check your connection.",
+    "privacyNote": "No crew member sees anyone else's wellbeing. Physical alerts are shown without values.",
+    "emergencyOpen": "Emergency open · {{status}}",
+    "physicalTitle": "Physical status (crew medical officer only)",
+    "zones": {
+      "heart": "Heart",
+      "lungs": "Lungs",
+      "immune": "Immune",
+      "metabolism": "Metabolism",
+      "muscle": "Muscle",
+      "bones": "Bones",
+      "brain": "Brain",
+      "eyes": "Eyes"
+    }
   },
   "measure": {
     "simulated": "Simulated device and reading (demo)",
@@ -752,13 +895,31 @@
     "result": {
       "normal": "Within the reference range.",
       "caution": "Outside your usual range. Repeat at rest and tell your crew.",
-      "critical": "Value outside the safe range. Your crew was notified automatically."
+      "critical": "Value outside the safe range. Your crew was notified automatically.",
+      "unevaluated": "Unevaluated: there is no validated rule for this value."
     },
     "crewNotified": "Your crew received the reading and can come to help.",
     "rule": "Classified using {{source}}. Decision support, not a diagnosis.",
     "openAlert": "Open emergency alert",
     "done": "Done",
-    "again": "Measure again"
+    "again": "Measure again",
+    "sending": "Evaluating on the server…",
+    "serverRule": "Status and recommendation computed by the server with the catalog's cited rules. Not a diagnosis.",
+    "outcome": {
+      "queued": "Offline: the reading was saved on the device and the server will evaluate it when syncing.",
+      "local": "Saved on the device only.",
+      "error": "The server didn't accept the reading. Check the value and try again."
+    },
+    "escalated": {
+      "self": "Self-care",
+      "crew": "Your crew was notified",
+      "flightSurgeon": "Earth was notified"
+    },
+    "escalatedBody": {
+      "self": "Follow the recommendation.",
+      "crew": "The protocol rule escalated this reading to your crew.",
+      "flightSurgeon": "The flight surgeon will get it with the mission delay. Follow the recommendation meanwhile."
+    }
   },
   "connectivityScreen": {
     "title": "Connectivity",
@@ -913,6 +1074,110 @@
       "bad": "Oops, not that one",
       "length": "Length: {{n}}",
       "best": "Best: {{n}}"
+    },
+    "pvt": {
+      "beforeCritical": "I'm doing this before a critical task",
+      "fitnessTitle": "Fitness for critical task",
+      "fitness": {
+        "fit": "Fit",
+        "not_confirmed": "Not confirmed"
+      },
+      "state": {
+        "sending": "Sending to the server…",
+        "queued": "Offline: it will be sent when back online.",
+        "local": "Saved on the device.",
+        "error": "Couldn't send the result."
+      },
+      "syncedTitle": "Reaction test synced"
     }
+  },
+  "crewRoles": {
+    "commander": "Commander",
+    "pilot": "Pilot",
+    "crew_medical_officer": "Crew medical officer",
+    "flight_engineer": "Flight engineer",
+    "mission_specialist": "Mission specialist"
+  },
+  "areYouOk": {
+    "voice": "Are you OK? Tap I'm OK if you can.",
+    "title": "Are you OK?",
+    "body": "A critical reading opened an emergency. Confirm whether you're OK.",
+    "countdown": "Confirm within {{seconds}} s or your crew and Earth will be notified.",
+    "expiredBody": "Time is up: your crew and Earth were notified.",
+    "imOk": "I'm OK",
+    "error": "Couldn't confirm. Try again or tell someone in person.",
+    "result": {
+      "confirmed": "Thanks. It's recorded that you're OK.",
+      "expired": "The deadline passed: your crew and Earth were notified.",
+      "queued": "Offline: your answer will be sent first when back online. Tell someone in person.",
+      "waiting": "",
+      "sending": "",
+      "error": ""
+    }
+  },
+  "support": {
+    "cta": "I want to talk to someone",
+    "title": "Talk to someone",
+    "subtitle": "Write to behavioral health on Earth. It's confidential: no crew member sees your request.",
+    "urgency": "When?",
+    "urgencies": {
+      "later": "It can wait",
+      "today": "Today",
+      "now": "Now"
+    },
+    "channel": "How?",
+    "channels": {
+      "message": "Message",
+      "session": "Session"
+    },
+    "content": "Tell us (anything you want)",
+    "placeholder": "Type or dictate your message",
+    "send": "Send",
+    "privacy": "It reaches Earth with the mission delay. During a link outage it's sent when the link is back.",
+    "suggestionsTitle": "While the reply arrives",
+    "history": "Your requests",
+    "status": {
+      "local": "Saved on the device (demo mode, no server)",
+      "queued": "Pending upload: it will be sent when back online",
+      "noLink": "Pending: no link with Earth",
+      "onTheWay": "On its way to Earth (arrives at {{time}})",
+      "delivered": "Delivered to Earth"
+    },
+    "replyFrom": "Behavioral health",
+    "sentTitle": "Request sent",
+    "sentBody": {
+      "sent": "Behavioral health will get it with the mission delay.",
+      "queued": "Offline: it will be sent when back online.",
+      "local": "Saved on the device (demo mode)."
+    },
+    "errorTitle": "Couldn't send",
+    "errorBody": "Check the message and try again.",
+    "replyTitle": "You have a reply",
+    "replyBody": "Behavioral health replied to your request."
+  },
+  "screening": {
+    "title": "Short questionnaire",
+    "subtitle": "Two questions about mood and two about anxiety. You'll never see a score.",
+    "cardTitle": "Short questionnaire due",
+    "cardBody": "4 questions before your psychological conference.",
+    "unavailable": "You need a connection to load the questionnaire.",
+    "submit": "Send answers",
+    "queued": "Offline: your answers will be sent when back online.",
+    "privacy": "Confidential: only behavioral health sees it, before your private conference.",
+    "errorTitle": "Couldn't send",
+    "errorBody": "Try again."
+  },
+  "sync": {
+    "conflictTitle": "Record not applied",
+    "conflictBody": "The server already had a different version of a record (or it was already corrected). The current one is shown.",
+    "rejectedTitle": "Record rejected",
+    "rejectedBody": "The server rejected a record saved offline because of invalid data.",
+    "clockBody": "The phone clock is ahead. Check the device date and time.",
+    "emergencySentTitle": "Emergency sent",
+    "emergencySentBody": "The queued emergency reached the server.",
+    "earthReplyTitle": "Message from Earth",
+    "pendingBody_one": "{{count}} record is still on the device; it will be sent when back online.",
+    "pendingBody_other": "{{count}} records are still on the device; they will be sent when back online.",
+    "doneBody": "Everything is synced with the server."
   }
 }

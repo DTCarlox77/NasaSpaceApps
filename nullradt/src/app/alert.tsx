@@ -6,9 +6,11 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
+import { apiEnabled } from '@/core/config/env';
 import { palette, useAppTheme } from '@/core/theme';
 import { speak, stopSpeaking } from '@/core/speech/speech';
-import type { DeliveryResult, ReportSeverity } from '@/domain/entities/EmergencyReport';
+import type { DeliveryResult, EmergencySessionInfo, ReportSeverity } from '@/domain/entities/EmergencyReport';
+import { canCloseEmergency } from '@/domain/entities/Session';
 import { container } from '@/di/container';
 import {
   AppText,
@@ -22,6 +24,9 @@ import {
 import { Disclaimer } from '@/presentation/components/feedback/Disclaimer';
 import { useMissionStatus } from '@/presentation/hooks/useMissionStatus';
 import { alertCrew, cancelCrewAlert } from '@/presentation/features/crew/crewAlerts';
+import { useAuthStore } from '@/presentation/store/authStore';
+import { showToast } from '@/presentation/store/toastStore';
+import { refreshPendingCount, runSync } from '@/presentation/sync/syncEngine';
 
 type Phase = 'idle' | 'sending' | DeliveryResult['status'] | 'cancelled';
 
@@ -31,15 +36,27 @@ const HOLD_COLOR: Record<ReportSeverity, string> = {
   critical: palette.red[600],
 };
 
+/**
+ * Emergencia (agitar el teléfono o botón).
+ * - Con API, CRÍTICO → POST /emergency/sessions (`manual_button`); si ya hay una abierta, te une a ella.
+ *   Sin conexión → cola con prioridad `emergency` (se sube antes que todo).
+ * - PRECAUCIÓN no es una emergencia: el contrato no tiene endpoint, queda solo en el dispositivo.
+ * - Sin API (demo): aviso simulado a la tripulación, todo local.
+ */
 export default function AlertScreen() {
   const { t, i18n } = useTranslation();
   const { colors, spacing, radius } = useAppTheme();
   const { trigger } = useLocalSearchParams<{ trigger?: string }>();
   const mission = useMissionStatus();
+  const session = useAuthStore((s) => s.session);
+  const withApi = apiEnabled();
   const [severity, setSeverity] = useState<ReportSeverity>('critical');
+  const [safe, setSafe] = useState<'yes' | 'no'>('yes');
   const [phase, setPhase] = useState<Phase>('idle');
   const [note, setNote] = useState('');
   const [crewAlertId, setCrewAlertId] = useState<string | null>(null);
+  const [emergency, setEmergency] = useState<EmergencySessionInfo | null>(null);
+  const [closing, setClosing] = useState(false);
   const lang = i18n.language === 'es' ? 'es' : 'en';
 
   useEffect(() => {
@@ -58,26 +75,69 @@ export default function AlertScreen() {
       language: lang,
       missionDay: mission?.missionDay,
       note: note.trim() || undefined,
+      responderSafe: severity === 'critical' ? safe === 'yes' : undefined,
     });
     setPhase(result.status);
-    // La señal también llega a la tripulación (simulado sin backend).
-    setCrewAlertId(alertCrew({ kind: 'sos', severity }).id);
+    if (result.status === 'sent') setEmergency(result.session);
+    if (result.status === 'queued') void refreshPendingCount();
+    if (!withApi) {
+      // Modo demo: la señal llega a la tripulación de forma simulada.
+      setCrewAlertId(alertCrew({ kind: 'sos', severity }).id);
+    }
     speak(
       result.status === 'sent'
         ? t('alert.voiceSent', { severity: t(`status.${severity}`) })
-        : t('alert.voiceQueued'),
+        : result.status === 'queued'
+          ? t('alert.voiceQueued')
+          : withApi
+            ? t('alert.voiceLocal')
+            : t('alert.voiceSent', { severity: t(`status.${severity}`) }),
       lang,
     );
-  }, [severity, trigger, lang, mission?.missionDay, note, t]);
+    if (result.status === 'queued') void runSync();
+  }, [severity, trigger, lang, mission?.missionDay, note, safe, t, withApi]);
 
-  const done = phase === 'sent' || phase === 'queued' || phase === 'cancelled';
+  const done = phase === 'sent' || phase === 'queued' || phase === 'local' || phase === 'cancelled';
+  const canClose = withApi && phase === 'sent' && !!emergency && canCloseEmergency(session);
 
-  /** Desactivar (si se envió por error): mantener 5 s. */
-  const deactivate = () => {
-    if (crewAlertId) cancelCrewAlert(crewAlertId);
-    setPhase('cancelled');
+  /** Desactivar (si se envió por error): mantener 5 s. Con API solo comandante u oficial médico (falsa alarma). */
+  const deactivate = async () => {
+    if (!withApi) {
+      if (crewAlertId) cancelCrewAlert(crewAlertId);
+      setPhase('cancelled');
+      return;
+    }
+    if (!emergency) return;
+    setClosing(true);
+    try {
+      const res = await container.closeEmergency.execute(emergency.id, 'cancelled', t('alert.falseAlarmNote'));
+      if (res === 'forbidden') showToast({ level: 'caution', title: t('alert.closeForbiddenTitle'), body: t('alert.closeForbidden') });
+      else setPhase('cancelled');
+    } catch {
+      showToast({ level: 'caution', title: t('alert.closeErrorTitle'), body: t('errors.generic') });
+    } finally {
+      setClosing(false);
+    }
   };
+
+  const refresh = async () => {
+    if (!emergency) return;
+    const next = await container.getEmergencySession.execute(emergency.id);
+    if (next) setEmergency({ ...next, joined: emergency.joined });
+  };
+
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
+  const sentBody =
+    phase === 'sent'
+      ? emergency?.joined
+        ? t('alert.joinedBody')
+        : t('alert.sessionOpenBody')
+      : phase === 'queued'
+        ? t('alert.queuedBody')
+        : withApi
+          ? t('alert.localCautionBody')
+          : t('alert.sentBody');
 
   return (
     <SafeAreaView style={[styles.flex, { backgroundColor: colors.background }]}>
@@ -114,11 +174,27 @@ export default function AlertScreen() {
                   { value: 'critical', label: t('status.critical') },
                 ]}
               />
+              {withApi && severity === 'caution' && <AppText variant="caption" color="textMuted">{t('alert.cautionLocalHint')}</AppText>}
             </View>
+
+            {withApi && severity === 'critical' && (
+              <View style={{ gap: spacing.sm }}>
+                <AppText variant="title">{t('alert.responderSafe')}</AppText>
+                <SegmentedControl<'yes' | 'no'>
+                  value={safe}
+                  onChange={setSafe}
+                  options={[
+                    { value: 'yes', label: t('common.yes') },
+                    { value: 'no', label: t('common.no') },
+                  ]}
+                />
+              </View>
+            )}
 
             <View style={{ gap: spacing.sm }}>
               <AppText variant="title">{t('alert.note')}</AppText>
               <VoiceNoteInput value={note} onChangeText={setNote} placeholder={t('alert.note')} />
+              {withApi && <AppText variant="caption" color="textMuted">{t('alert.noteLocal')}</AppText>}
             </View>
 
             <View style={[styles.center, styles.flex, { gap: spacing.md, paddingVertical: spacing.lg }]}>
@@ -139,39 +215,65 @@ export default function AlertScreen() {
           </ScrollView>
           </KeyboardAvoidingView>
         ) : (
-          <Animated.View key={phase} entering={FadeIn.duration(250)} style={[styles.flex, { gap: spacing.xl }]}>
+          <ScrollView contentContainerStyle={{ gap: spacing.xl }} showsVerticalScrollIndicator={false}>
+          <Animated.View key={phase} entering={FadeIn.duration(250)} style={{ gap: spacing.xl }}>
             {phase === 'cancelled' ? (
               <Card tone="alt" style={[styles.center, { gap: spacing.md, paddingVertical: spacing.xxxl }]}>
                 <Ionicons name="close-circle" size={64} color={colors.textMuted} />
                 <AppText variant="h2" align="center">{t('alert.cancelledTitle')}</AppText>
-                <AppText color="textSecondary" align="center">{t('alert.cancelledBody')}</AppText>
+                <AppText color="textSecondary" align="center">{t(withApi ? 'alert.cancelledServerBody' : 'alert.cancelledBody')}</AppText>
               </Card>
             ) : (
               <>
-                <Card style={[styles.center, { gap: spacing.md, paddingVertical: spacing.xxl, backgroundColor: colors.status.critical.background, borderColor: colors.status.critical.ring, borderWidth: 1 }]}>
-                  <Ionicons name="radio" size={56} color={colors.status.critical.solid} />
-                  <AppText variant="h2" align="center">{t('alert.signalSent')}</AppText>
-                  <AppText color="textSecondary" align="center">
-                    {phase === 'sent' ? t('alert.sentBody') : t('alert.queuedBody')}
+                <Card style={[styles.center, { gap: spacing.md, paddingVertical: spacing.xxl, backgroundColor: colors.status[severity].background, borderColor: colors.status[severity].ring, borderWidth: 1 }]}>
+                  <Ionicons name={phase === 'local' && withApi ? 'phone-portrait-outline' : 'radio'} size={56} color={colors.status[severity].solid} />
+                  <AppText variant="h2" align="center">
+                    {phase === 'sent' ? t('alert.sessionOpenTitle') : phase === 'queued' ? t('alert.queuedTitle') : withApi ? t('alert.localTitle') : t('alert.signalSent')}
                   </AppText>
-                  <AppText variant="label" align="center" style={{ color: colors.status.critical.text }}>{t('alert.crewNotified')}</AppText>
+                  <AppText color="textSecondary" align="center">{sentBody}</AppText>
+                  {(phase === 'sent' || !withApi) && (
+                    <AppText variant="label" align="center" style={{ color: colors.status[severity].text }}>
+                      {withApi ? t('alert.crewAndEarthNotified') : t('alert.crewNotified')}
+                    </AppText>
+                  )}
                 </Card>
-                <View style={[styles.center, { gap: spacing.sm }]}>
-                  <HoldToConfirmButton
-                    label={t('alert.holdToDeactivate')}
-                    hint={t('alert.deactivateHint')}
-                    color={palette.neutral[700]}
-                    icon="power"
-                    size={150}
-                    duration={5000}
-                    onConfirm={deactivate}
-                  />
-                  <AppText variant="caption" color="textMuted" align="center">{t('alert.deactivateHint')}</AppText>
-                </View>
+
+                {phase === 'sent' && emergency && (
+                  <Card style={{ gap: spacing.sm }}>
+                    {emergency.nextStep === 'secure_self' && (
+                      <AppText variant="title" style={{ color: colors.status.critical.text }}>{t('alert.secureSelf')}</AppText>
+                    )}
+                    <InfoRow label={t('alert.sessionStatus')} value={t(`alert.statuses.${emergency.status}`)} />
+                    <InfoRow label={t('alert.startedAt')} value={new Date(emergency.startedAt).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })} />
+                    {emergency.roster.length > 0 && <InfoRow label={t('alert.roster')} value={emergency.roster.join(', ')} />}
+                    <AppText variant="caption" color="textMuted">{t('alert.noTriageYet')}</AppText>
+                    <Button label={t('alert.refresh')} variant="outline" size="sm" leftIcon="refresh" onPress={refresh} />
+                  </Card>
+                )}
+
+                {(!withApi || canClose) && (
+                  <View style={[styles.center, { gap: spacing.sm }]}>
+                    <HoldToConfirmButton
+                      label={closing ? t('alert.sending') : t('alert.holdToDeactivate')}
+                      hint={t('alert.deactivateHint')}
+                      color={palette.neutral[700]}
+                      icon="power"
+                      size={150}
+                      duration={5000}
+                      disabled={closing}
+                      onConfirm={deactivate}
+                    />
+                    <AppText variant="caption" color="textMuted" align="center">{t(withApi ? 'alert.deactivateServerHint' : 'alert.deactivateHint')}</AppText>
+                  </View>
+                )}
+                {withApi && phase === 'sent' && !canClose && (
+                  <AppText variant="caption" color="textMuted" align="center">{t('alert.closeOnlyLeads')}</AppText>
+                )}
               </>
             )}
             <Button label={t('alert.close')} variant={phase === 'cancelled' ? 'primary' : 'outline'} onPress={close} fullWidth />
           </Animated.View>
+          </ScrollView>
         )}
 
         <Disclaimer />
@@ -180,9 +282,20 @@ export default function AlertScreen() {
   );
 }
 
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.infoRow}>
+      <AppText variant="bodySmall" color="textMuted">{label}</AppText>
+      <AppText variant="label" style={styles.infoValue}>{value}</AppText>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center' },
   center: { alignItems: 'center', justifyContent: 'center' },
   badge: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  infoValue: { flexShrink: 1, textAlign: 'right' },
 });

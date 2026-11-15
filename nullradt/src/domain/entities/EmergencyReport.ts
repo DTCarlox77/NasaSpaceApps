@@ -13,12 +13,36 @@ export interface EmergencyReport {
   language: 'es' | 'en';
   missionDay?: number;
   note?: string;
+  /** ¿Quien activa está a salvo? (contrato: `responder_safe`). */
+  responderSafe?: boolean;
   /** Toda la demo usa datos sintéticos. */
   synthetic: boolean;
 }
 
+/** Estado de una sesión de emergencia del servidor (POST /emergency/sessions). */
+export interface EmergencySessionInfo {
+  id: string;
+  status: 'pending' | 'active' | 'closed' | 'cancelled' | 'merged';
+  /** true = ya había una emergencia abierta en la misión y te uniste a ella. */
+  joined: boolean;
+  /** 'secure_self' = mostrar "ponte a salvo" antes de evaluar. */
+  nextStep: 'start_assessments' | 'secure_self' | null;
+  startedAt: string;
+  missionCode?: string;
+  /** Tripulantes de la sesión (call signs del roster, ordenado por riesgo por el servidor). */
+  roster: string[];
+}
+
 export type DeliveryResult =
-  /** La API confirmó recepción. */
-  | { status: 'sent'; report: EmergencyReport }
-  /** Sin conexión o API caída: queda en cola local y se reintenta luego. */
-  | { status: 'queued'; report: EmergencyReport; reason: string };
+  /** El servidor abrió (o te unió a) una sesión de emergencia. */
+  | { status: 'sent'; report: EmergencyReport; session: EmergencySessionInfo | null }
+  /** Sin conexión o API caída: queda en cola local (prioridad emergencia) y se reintenta antes que todo. */
+  | { status: 'queued'; report: EmergencyReport; reason: string }
+  /**
+   * Solo en el dispositivo: modo demo sin servidor, o una alerta de PRECAUCIÓN
+   * (no es una emergencia y el contrato no tiene endpoint para ella).
+   */
+  | { status: 'local'; report: EmergencyReport };
+
+/** Resultado de "Estoy bien" (POST /emergency/sessions/{id}/confirm). */
+export type ConfirmOkOutcome = 'confirmed' | 'expired' | 'queued';

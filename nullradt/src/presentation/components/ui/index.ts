@@ -10,6 +10,7 @@ export { ProgressBar } from './ProgressBar';
 export { Screen } from './Screen';
 export { SectionHeader } from './SectionHeader';
 export { SegmentedControl } from './SegmentedControl';
+export { Slider } from './Slider';
 export { StatusBadge } from './StatusBadge';
 export { TextField, type TextFieldHandle } from './TextField';
 export { ToggleRow } from './ToggleRow';

@@ -8,3 +8,19 @@ export class GetCrew {
     return this.repository.list();
   }
 }
+
+export class GetCrewRoster {
+  constructor(private readonly repository: CrewRepository) {}
+
+  execute() {
+    return this.repository.getRoster();
+  }
+}
+
+export class GetCrewStatus {
+  constructor(private readonly repository: CrewRepository) {}
+
+  execute() {
+    return this.repository.getStatus();
+  }
+}

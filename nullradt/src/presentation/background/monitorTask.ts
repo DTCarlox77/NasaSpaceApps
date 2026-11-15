@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
+import { apiEnabled } from '@/core/config/env';
 import i18n from '@/core/i18n';
 import { sendSystemNotification } from '@/core/notifications/notificationService';
 import { container } from '@/di/container';
@@ -9,7 +10,7 @@ import { container } from '@/di/container';
 /**
  * Monitoreo en segundo plano (offline-first).
  * Cada ~15 min (mínimo del sistema operativo), aunque la app esté cerrada:
- *  1) reintenta enviar las alertas que quedaron en cola,
+ *  1) sincroniza la cola offline con el servidor (POST /sync/push + GET /sync/pull),
  *  2) consulta el estado de salud y, si hay un indicador CRÍTICO nuevo, avisa con una notificación del sistema.
  * Importante: `defineTask` debe ejecutarse al cargar el módulo (por eso se importa en el layout raíz).
  */
@@ -18,7 +19,9 @@ const NOTIFIED_KEY = 'nullradt-bg-notified';
 
 TaskManager.defineTask(HEALTH_MONITOR_TASK, async () => {
   try {
-    await container.flushPendingReports.execute().catch(() => 0);
+    // Sube la cola offline (emergencias primero) y baja lo nuevo, si hay sesión con servidor.
+    const { session } = await container.restoreSession.execute();
+    if (apiEnabled() && session && !session.demo) await container.syncNow.execute(session.userId).catch(() => null);
     const overview = await container.getHealthOverview.execute();
     if (overview.snapshot.origin === 'mock') return BackgroundTask.BackgroundTaskResult.Success;
 

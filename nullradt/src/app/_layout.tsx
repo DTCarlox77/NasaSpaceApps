@@ -10,6 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { appFonts } from '@/core/fonts/fonts';
+import { container } from '@/di/container';
 import { AppThemeProvider, useAppTheme } from '@/core/theme';
 import { BrandIntro } from '@/presentation/components/brand/BrandIntro';
 import { ToastHost } from '@/presentation/components/feedback/ToastHost';
@@ -19,6 +20,7 @@ import { useForegroundNotifications } from '@/presentation/hooks/useForegroundNo
 import { useLanguageSync } from '@/presentation/hooks/useLanguageSync';
 import { useNotificationSetup } from '@/presentation/hooks/useNotificationSetup';
 import { useShakeToAlert } from '@/presentation/hooks/useShakeToAlert';
+import { useSyncLoop } from '@/presentation/hooks/useSyncLoop';
 import { useAuthStore } from '@/presentation/store/authStore';
 import { useSettingsStore } from '@/presentation/store/settingsStore';
 
@@ -63,6 +65,8 @@ function RootNavigator() {
           <Stack.Screen name="tests/vision" />
           <Stack.Screen name="tests/stroop" />
           <Stack.Screen name="tests/memory" />
+          <Stack.Screen name="support" />
+          <Stack.Screen name="screening" />
         </Stack.Protected>
         <Stack.Protected guard={status === 'signedOut' || status === 'locked'} redirectTo="/">
           <Stack.Screen name="login" options={{ animation: 'fade' }} />
@@ -82,6 +86,7 @@ function AppShell() {
   useLanguageSync();
   useNotificationSetup();
   useBackgroundMonitor();
+  useSyncLoop();
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
@@ -100,6 +105,8 @@ export default function RootLayout() {
   const finishIntro = useCallback(() => setIntroDone(true), []);
 
   useEffect(() => {
+    // Despierta la API al abrir (Render gratuito se duerme ~50 s): GET /health con timeout de 60 s, sin bloquear.
+    void container.wakeServer.execute();
     useAuthStore.getState().bootstrap().catch(() => useAuthStore.setState({ status: 'signedOut' }));
   }, []);
 

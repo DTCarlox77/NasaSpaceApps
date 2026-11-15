@@ -1,17 +1,47 @@
-import type { Credentials, Session } from '@/domain/entities/Session';
+import { apiEnabled } from '@/core/config/env';
+import { InvalidCredentialsError, type Credentials, type Session } from '@/domain/entities/Session';
 import type { AuthRepository, SessionRepository } from '@/domain/repositories/AuthRepository';
+import { healthCacheDataSource } from '../datasources/local/healthCacheDataSource';
 import { sessionSecureDataSource } from '../datasources/local/sessionSecureDataSource';
+import { crewMockDataSource } from '../datasources/mock/crewMockDataSource';
 import { sessionMockDataSource } from '../datasources/mock/sessionMockDataSource';
 import { authRemoteDataSource } from '../datasources/remote/authRemoteDataSource';
 
+/**
+ * Con EXPO_PUBLIC_API_URL: login real (POST /auth/login). Sin API: modo DEMO offline
+ * (ID + contraseña de prueba de la tripulación sintética, sesión `demo: true`) para la presentación.
+ */
 export class AuthRepositoryImpl implements AuthRepository {
   constructor(
     private readonly remote = authRemoteDataSource,
     private readonly mock = sessionMockDataSource,
+    private readonly crew = crewMockDataSource,
   ) {}
 
-  login(credentials: Credentials): Promise<Session> {
-    return this.remote.login(credentials);
+  async login(credentials: Credentials): Promise<Session> {
+    if (apiEnabled()) return this.remote.login(credentials);
+    const member = this.crew.verify(credentials.identifier, credentials.password);
+    if (!member) throw new InvalidCredentialsError();
+    return {
+      userId: member.id,
+      displayName: member.displayName,
+      role: member.role,
+      token: `demo-token-${Date.now().toString(36)}`,
+      issuedAt: new Date().toISOString(),
+      demo: true,
+    };
+  }
+
+  changePassword(changeToken: string, currentPassword: string, newPassword: string): Promise<Session> {
+    return this.remote.changePassword(changeToken, currentPassword, newPassword);
+  }
+
+  async logout(): Promise<void> {
+    if (apiEnabled()) await this.remote.logout();
+  }
+
+  async wakeUp(): Promise<boolean> {
+    return apiEnabled() ? this.remote.wakeUp() : false;
   }
 
   demoSession(): Session {
@@ -28,8 +58,9 @@ export class SessionRepositoryImpl implements SessionRepository {
   load() {
     return this.local.load();
   }
-  clear() {
-    return this.local.clear();
+  async clear() {
+    // Datos de salud personales en caché: se borran al cerrar sesión (la cola de sync se conserva por dueño).
+    await Promise.all([this.local.clear(), healthCacheDataSource.clear().catch(() => {})]);
   }
   isBiometricEnabled() {
     return this.local.isBiometricEnabled();
