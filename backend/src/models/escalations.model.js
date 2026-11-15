@@ -80,6 +80,37 @@ async function insert(
   return { row: existing.rows[0] || null, created: false };
 }
 
+/**
+ * Escalamiento conductual (behavioral_health) todavía no cerrado del astronauta para el
+ * indicador de la lectura que lo originó. Para la regla de uno abierto por indicador.
+ */
+async function findOpenBehavioral({ astronautId, indicatorCode }, db = pool) {
+  const { rows } = await db.query(
+    `SELECT e.id, e.source_id, e.status
+     FROM escalations e JOIN readings r ON r.id = e.source_id
+     WHERE e.astronaut_id = $1 AND e.level = 'behavioral_health' AND e.source_type = 'wellbeing'
+       AND e.status <> 'closed' AND r.indicator_code = $2
+     ORDER BY e.created_at, e.id
+     LIMIT 1`,
+    [astronautId, indicatorCode],
+  );
+  return rows[0] || null;
+}
+
+/** Cierre por behavioral_health (idempotente: si ya estaba cerrado, lo deja igual). */
+async function close(id, userId, db = pool) {
+  const { rows } = await db.query(
+    `UPDATE escalations
+     SET status = 'closed',
+         closed_at = COALESCE(closed_at, now()),
+         closed_by = CASE WHEN closed_at IS NULL THEN $2 ELSE closed_by END
+     WHERE id = $1
+     RETURNING id, status, closed_at, closed_by`,
+    [id, userId],
+  );
+  return rows[0] || null;
+}
+
 async function findById(id, db = pool) {
   const { rows } = await db.query(
     `SELECT ${ESCALATION_COLUMNS}, (deliver_at IS NOT NULL AND deliver_at <= now()) AS delivered
@@ -301,6 +332,8 @@ async function recomputePending(missionId, db = pool) {
 module.exports = {
   GROUND_LEVELS,
   insert,
+  findOpenBehavioral,
+  close,
   findById,
   lockById,
   promoteDelivered,
