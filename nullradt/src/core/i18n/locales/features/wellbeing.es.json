@@ -1,0 +1,134 @@
+{
+  "wellbeingPlus": {
+    "formEyebrow": "Check-in diario · 20 segundos · confidencial",
+    "vas": {
+      "mood": { "label": "¿Cómo está tu ánimo?", "low": "Muy bajo", "high": "Muy bueno", "short": "Ánimo" },
+      "fatigue": { "label": "¿Cuánta fatiga sientes?", "low": "Nada", "high": "Agotado/a", "short": "Fatiga" },
+      "stress": { "label": "¿Cuánto estrés sientes?", "low": "Nada", "high": "Muchísimo", "short": "Estrés" },
+      "crewConflict": { "label": "¿Roces con la tripulación?", "low": "Ninguno", "high": "Muchos", "short": "Roces" }
+    },
+    "fromWristband": "de la pulsera (sintético)",
+    "corrected": "corregido a mano",
+    "addMore": "Añadir síntomas o una nota (opcional)",
+    "completeScales": "Mueve las 4 escalas para guardar.",
+    "doneBody": "Gracias. Se compara con tu rango habitual, nunca con un día suelto.",
+    "sleepLine": "Sueño {{hours}} h",
+    "sustainedTitle": "Cambio sostenido en tu bienestar",
+    "sustained": {
+      "mood": "Tu ánimo lleva varios días por debajo de tu rango habitual.",
+      "fatigue": "Tu fatiga lleva varios días por encima de tu rango habitual.",
+      "stress": "Tu estrés lleva varios días por encima de tu rango habitual.",
+      "crewConflict": "Los roces con la tripulación llevan varios días por encima de lo habitual."
+    },
+    "sustainedNote": "No es un diagnóstico. Salud conductual verá este aviso de forma confidencial; tu tripulación no.",
+    "seedStable": "Demo: 14 días estables",
+    "seedWorsening": "Demo: 14 días con empeoramiento",
+    "limits": "Límites: la app no maneja crisis graves (ante riesgo inmediato, avisa al oficial médico y usa el canal de emergencia de la misión). La prueba de reacción está inspirada en la PVT-B, no es el software validado de NASA.",
+    "fit": {
+      "title": "Aptitud para tarea crítica",
+      "pending": "Prueba de reacción de 3 min pendiente hoy",
+      "requiredTitle": "Prueba de reacción obligatoria",
+      "requiredBody": "Antes de una tarea crítica necesitas un resultado «apto» hoy.",
+      "criticalTag": "Tarea crítica · requiere prueba de reacción"
+    },
+    "pvt": {
+      "duration": "Duración",
+      "full": "3 min (PVT-B)",
+      "demo": "30 s (demo)",
+      "disclaimer": "Inspirada en la PVT-B (Basner et al., 2011): estímulos cada 1–4 s, lapso ≥ 355 ms. Se compara con tu línea base en esta misma tableta. No es el software validado.",
+      "remaining": "Quedan {{seconds}} s",
+      "responses_one": "{{count}} respuesta",
+      "responses_other": "{{count}} respuestas",
+      "lapses": "Lapsos (≥ 355 ms)",
+      "verdict": {
+        "yes": "Apto: sí",
+        "notConfirmed": "Apto: no confirmado",
+        "baseline": "Construyendo tu línea base (3 pruebas)"
+      },
+      "onlyFitToEarth": "A control de misión solo llega «apto: sí / no confirmado», nunca tus tiempos.",
+      "earthTitle": "Aptitud para tarea crítica",
+      "fitYes": "Apto: sí",
+      "fitNotConfirmed": "Apto: no confirmado"
+    },
+    "screening": {
+      "title": "Cuestionario quincenal",
+      "subtitle": "PHQ-2 + GAD-2 · antes de tu conferencia psicológica",
+      "open": "Disponible: conferencia el día de misión {{day}}",
+      "next_one": "Se abre en {{count}} día (conferencia: día {{day}})",
+      "next_other": "Se abre en {{count}} días (conferencia: día {{day}})",
+      "done": "Hecho para la conferencia del día {{day}}",
+      "doneTitle": "Ya lo completaste",
+      "notYetTitle": "Todavía no toca",
+      "early": "Adelantar (demo)",
+      "prompt": "Durante las últimas 2 semanas, ¿con qué frecuencia te han molestado estos problemas?",
+      "private": "Confidencial: solo lo verá salud conductual. Control de misión solo sabrá que lo completaste.",
+      "items": {
+        "phq1": "Poco interés o placer en hacer cosas",
+        "phq2": "Sentirte decaído/a, deprimido/a o sin esperanzas",
+        "gad1": "Sentirte nervioso/a, ansioso/a o con los nervios de punta",
+        "gad2": "No poder dejar de preocuparte o no poder controlar la preocupación"
+      },
+      "options": { "0": "Ningún día", "1": "Varios días", "2": "Más de la mitad de los días", "3": "Casi todos los días" },
+      "submit": "Enviar de forma confidencial",
+      "thanks": "Gracias por responder",
+      "positiveBody": "Tus respuestas sugieren que podría ayudarte hablar con alguien. Salud conductual recibirá un aviso confidencial; tu tripulación no lo verá.",
+      "negativeBody": "Se guardó de forma confidencial para tu próxima conferencia.",
+      "source": "PHQ-2 y GAD-2 (Pfizer, uso libre). No se usa el PHQ-9 porque exige un protocolo de crisis.",
+      "bhTitle": "Cuestionario quincenal · {{name}}",
+      "bhTitlePositive": "Cuestionario POSITIVO · {{name}}",
+      "bhBody": "PHQ-2 = {{phq}} · GAD-2 = {{gad}} (corte ≥ 3) · día de misión {{day}}.",
+      "complianceTitle": "Cumplimiento: cuestionario quincenal",
+      "complianceBody": "{{name}} completó el cuestionario quincenal."
+    },
+    "talk": {
+      "title": "Quiero hablar con alguien",
+      "subtitle": "Salud conductual en Tierra · confidencial",
+      "cardBody": "Mensaje o sesión, con el retraso real del enlace",
+      "cta": "Quiero hablar con alguien",
+      "invisible": "Invisible para la tripulación: no genera avisos a bordo ni aparece en las alertas compartidas.",
+      "delay": "Ida y vuelta mínima con el enlace actual: {{rtt}} (más los cortes de señal).",
+      "empty": "Aún no hay mensajes.",
+      "message": "Mensaje",
+      "session": "Sesión",
+      "placeholder": "Escribe o dicta lo que quieras contar…",
+      "sessionPlaceholder": "¿Cuándo te viene bien? (opcional)",
+      "send": "Enviar",
+      "requestSession": "Solicitar sesión",
+      "sessionDefault": "Solicito una sesión privada con salud conductual.",
+      "messageTitle": "Mensaje confidencial · {{name}}",
+      "sessionTitle": "Solicitud de sesión · {{name}}",
+      "bh": "Salud conductual",
+      "replyTitle": "Salud conductual",
+      "replyMessage": "Recibimos tu mensaje. Gracias por escribir. Te responderemos personalmente en la próxima ventana de comunicación.",
+      "replySession": "Recibimos tu solicitud. Te proponemos una sesión privada en la próxima ventana de enlace disponible.",
+      "crisis": "Si sientes que estás en peligro inmediato, avisa al oficial médico a bordo y usa el canal de emergencia de la misión: este chat tiene retraso."
+    },
+    "privacy": {
+      "title": "Privacidad del bienestar",
+      "subtitle": "Quién ve qué",
+      "sharedOff": "No compartes con la tripulación (recomendado por defecto)",
+      "sharedOn": "Compartes tu estado con comandante y oficial médico",
+      "shareTitle": "Compartir con comandante y oficial médico",
+      "shareBody": "Desactivado por defecto. Si lo activas, verán tu estado resumido y tu aptitud, nunca el detalle.",
+      "emergencyOn": "Hay un triaje de emergencia activo: comandante y oficial médico ven temporalmente tu estado.",
+      "whoSees": "Qué ve cada rol de TUS datos",
+      "viewers": {
+        "behavioral_health": "Salud conductual (Tierra)",
+        "flight_surgeon": "Flight surgeon (Tierra)",
+        "admin": "Control de misión",
+        "commander": "Comandante (a bordo)",
+        "medical_officer": "Oficial médico (a bordo)",
+        "crew": "Resto de la tripulación"
+      },
+      "data": {
+        "wellbeingDetail": "Detalle de bienestar",
+        "wellbeingStatus": "Estado y alertas",
+        "fitness": "Aptitud",
+        "compliance": "Cumplimiento",
+        "medical": "Signos vitales"
+      },
+      "reason": { "shared": "compartido", "emergency": "emergencia", "onboardCare": "atención a bordo", "self": "tú" },
+      "footer": "Se calcula con la misma regla que aplica el servidor (domain/access/visibility.ts). Tú siempre ves todo lo tuyo."
+    }
+  }
+}

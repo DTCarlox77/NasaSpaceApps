@@ -1,0 +1,362 @@
+{
+  "indicatorDetail": {
+    "title": "Indicador",
+    "noData": "Aún no hay lecturas",
+    "synthetic": "Sintético",
+    "chartA11y_one": "Gráfica con {{count}} lectura. Toca para ver un punto.",
+    "chartA11y_other": "Gráfica con {{count}} lecturas. Toca para ver un punto.",
+    "syntheticNote": "Incluye datos sintéticos de demostración (marcados como puntos pequeños en la gráfica).",
+    "evolution": "Evolución en el tiempo",
+    "period7": "7 días",
+    "period30": "30 días",
+    "periodAll": "Todo",
+    "legendNormal": "Rango normal (regla)",
+    "legendCaution": "Precaución",
+    "legendPersonal": "Tu rango habitual",
+    "tapHint": "Toca la gráfica para ver el valor, la fecha y el origen de cada lectura.",
+    "function": "Qué mide y por qué importa",
+    "guide": "Guía paso a paso",
+    "readAloud": "Leer en voz alta",
+    "tabHow": "Cómo medir",
+    "tabMeaning": "Qué significa",
+    "tabActions": "Qué hacer",
+    "current": "Tu estado actual",
+    "overdue": "Medición pendiente",
+    "nextDue": "Próxima medición",
+    "every": "cada {{hours}} h",
+    "measureDevice": "Medir con el equipo",
+    "registerManual": "Registrar a mano o con cámara"
+  },
+  "rules": {
+    "title": "Evaluación y escalamiento",
+    "escalationTitle": "Escalamiento",
+    "escalationBody": {
+      "self": "Autocuidado: sigue la guía. No hace falta avisar a nadie.",
+      "crew": "Tripulación: se avisó al oficial médico a bordo porque el valor se repite fuera de rango.",
+      "flightSurgeon": "Flight surgeon: se avisó a la tripulación y el reporte va a Tierra (llega con el retraso del enlace)."
+    },
+    "remeasure": "Vuelve a medir en {{min}} min en reposo para confirmar.",
+    "kinds": {
+      "news2": "Regla: puntuación NEWS2 (0 normal · 1–2 precaución · 3 crítico).",
+      "aha": "Regla: categorías de presión arterial de la AHA + sistólica ≤ 90 (NEWS2).",
+      "reference": "Regla: rango de referencia publicado.",
+      "baseline": "Regla: comparación con TU línea base personal (no es un umbral clínico; el flight surgeon puede ajustar el margen).",
+      "none": "Sin regla validada a bordo: se guarda y se envía para revisión experta.",
+      "sex": "Regla: límite clínico distinto para hombres y mujeres."
+    },
+    "source": "Fuente: {{source}}",
+    "reasons": {
+      "inRange": "Dentro del rango del protocolo.",
+      "news2Low": "Ligeramente fuera de rango según NEWS2.",
+      "news2High": "Muy fuera de rango según NEWS2.",
+      "bpCrisis": "Presión en rango de crisis hipertensiva (AHA).",
+      "bpLow": "Sistólica muy baja (≤ 90 mmHg).",
+      "bpHigh": "Presión alta (hipertensión según la AHA).",
+      "bpElevated": "Presión elevada (AHA).",
+      "bpLowish": "Sistólica algo baja (91–110 mmHg, NEWS2).",
+      "iopHigh": "Presión ocular por encima de 21 mmHg.",
+      "iopLow": "Presión ocular por debajo de 10 mmHg.",
+      "noBaseline": "Aún no hay línea base personal (se necesitan 3 lecturas).",
+      "baselineWorse": "Peor que tu rango habitual.",
+      "baselineOk": "Dentro de tu rango habitual.",
+      "noRule": "Registrado para revisión: no hay regla validada a bordo.",
+      "gripLow": "Fuerza por debajo del corte para tu sexo (EWGSOP2).",
+      "calciumHigh": "Calcio urinario por encima del límite para tu sexo.",
+      "noSex": "Falta tu sexo en la ficha para evaluarlo."
+    },
+    "earthTitle": "Escalamiento médico · {{name}}",
+    "earthBody": "{{what}}: {{value}} ({{status}})."
+  },
+  "register": {
+    "title": "Registrar medición",
+    "subtitle": "A mano o con foto del equipo",
+    "permissionTitle": "Sin permiso",
+    "permissionBody": "Permite el acceso a la cámara o a las fotos en los ajustes del teléfono.",
+    "invalid": "Revisa el valor: debe estar entre {{min}} y {{max}} (la diastólica, menor que la sistólica).",
+    "indicator": "¿Qué vas a registrar?",
+    "photoTitle": "Foto del equipo (opcional)",
+    "photoBody": "Toma una foto de la pantalla del equipo de medición. Se guarda como evidencia en el dispositivo para que el flight surgeon pueda verificar la lectura. Sin conexión no hay lectura automática: escribe abajo el número que ves.",
+    "photoA11y": "Foto del equipo de medición",
+    "retake": "Cambiar foto",
+    "camera": "Cámara",
+    "gallery": "Galería",
+    "valueTitle": "Valor",
+    "systolic": "Sistólica",
+    "diastolic": "Diastólica",
+    "note": "Nota (opcional)",
+    "notePlaceholder": "Contexto: tras ejercicio, al despertar…",
+    "evaluate": "Guardar y evaluar",
+    "photoAttached": "Foto adjunta",
+    "seeDetail": "Ver evolución",
+    "another": "Registrar otra"
+  },
+  "achievements": {
+    "title": "Logros",
+    "subtitle": "Se premia completar, nunca el resultado",
+    "level": "Nivel {{level}}",
+    "points_one": "{{count}} punto",
+    "points_other": "{{count}} puntos",
+    "pointsLabel": "puntos",
+    "cardLine": "Hoy +{{today}} · racha {{streak}} d · {{badges}}/{{total}} insignias",
+    "toNext_one": "Falta {{count}} punto para el siguiente nivel",
+    "toNext_other": "Faltan {{count}} puntos para el siguiente nivel",
+    "today": "Hoy llevas +{{count}}",
+    "streaks": "Rachas",
+    "days_one": "{{count}} día",
+    "days_other": "{{count}} días",
+    "streak": {
+      "checkIn": "Check-in diario",
+      "measurement": "Mediciones",
+      "exercise": "Ejercicio",
+      "sleep": "Sueño registrado"
+    },
+    "badges": "Insignias",
+    "howTitle": "Cómo se ganan puntos",
+    "how": {
+      "measurement": "Cada medición (máx. 5 al día)",
+      "checkIn": "Check-in de bienestar",
+      "test": "Cada test cognitivo (máx. 4 al día)",
+      "exercise": "Sesión de ejercicio completada",
+      "sleep": "Registrar tu sueño",
+      "screening": "Cuestionario quincenal completado",
+      "fitness": "Prueba de reacción completada"
+    },
+    "fairPlay": "Un valor fuera de rango suma igual que uno normal: lo importante es medir y reportar con honestidad.",
+    "unlocked": "Desbloqueada",
+    "badge": {
+      "firstMeasurement": {
+        "title": "Primera medición",
+        "body": "Registra tu primera lectura."
+      },
+      "tenMeasurements": {
+        "title": "Constancia",
+        "body": "Registra 10 mediciones."
+      },
+      "camera": {
+        "title": "Evidencia",
+        "body": "Registra una lectura con foto."
+      },
+      "checkIn7": {
+        "title": "Semana completa",
+        "body": "7 días seguidos de check-in."
+      },
+      "checkIn30": {
+        "title": "Hábito",
+        "body": "30 check-ins en total."
+      },
+      "exercise5": {
+        "title": "Contra la microgravedad",
+        "body": "Completa ejercicio 5 días."
+      },
+      "sleep7": {
+        "title": "Buen descanso",
+        "body": "Registra tu sueño 7 días."
+      },
+      "allTests": {
+        "title": "Mente ágil",
+        "body": "Los 4 tests en un mismo día."
+      },
+      "screening": {
+        "title": "Hablar ayuda",
+        "body": "Completa el cuestionario quincenal."
+      },
+      "fitCheck": {
+        "title": "Listo para la tarea",
+        "body": "Completa la prueba de reacción."
+      }
+    }
+  },
+  "guides": {
+    "heartRate": {
+      "how": [
+        "Descansa 5 minutos sentado o sujeto en el saco de dormir, sin hablar.",
+        "Colócate el pulsioxímetro en el dedo índice (o usa la pulsera) y mantén la mano quieta a la altura del corazón.",
+        "Espera a que el valor se estabilice al menos 30 segundos.",
+        "Registra el valor. Si acabas de hacer ejercicio, espera 15 minutos antes de medir."
+      ],
+      "meaning": "Son los latidos por minuto en reposo. En microgravedad los fluidos se desplazan hacia la cabeza y el corazón trabaja distinto; además el estrés, la fiebre o la deshidratación lo elevan. Se evalúa con la tabla NEWS2: 51–90 es normal.",
+      "actions": {
+        "normal": "Sigue con tu rutina y la medición programada.",
+        "caution": "Descansa, hidrátate y vuelve a medir en 15 min. Si se repite fuera de rango, se avisa al oficial médico.",
+        "critical": "Detén la actividad, colócate en reposo y avisa a la tripulación ahora. Se escala al flight surgeon.",
+        "unevaluated": "Registra el valor; se revisará más tarde."
+      }
+    },
+    "bloodPressure": {
+      "how": [
+        "Descansa 5 minutos con la espalda apoyada y los pies sujetos.",
+        "Coloca el manguito en el brazo desnudo, 2–3 cm por encima del codo, a la altura del corazón.",
+        "No hables ni te muevas durante la medición.",
+        "Toma dos lecturas separadas por 1 minuto y registra la segunda."
+      ],
+      "meaning": "Sistólica / diastólica en mmHg. En vuelo, el cambio de fluidos y la pérdida de forma física cardiovascular la modifican. Normal (AHA): menos de 120/80. Elevada: 120–129. Alta: desde 130/80. Crisis: más de 180/120. Una sistólica de 90 o menos también es crítica (NEWS2).",
+      "actions": {
+        "normal": "Sin acciones. Repite según el horario de la misión.",
+        "caution": "Repite en 15 min en reposo. Reduce sal y cafeína ese día. Si persiste, se avisa a la tripulación.",
+        "critical": "Reposo inmediato y aviso a la tripulación. Si hay dolor de pecho, mareo intenso o visión borrosa, activa el triaje.",
+        "unevaluated": "Registra el valor; se revisará más tarde."
+      }
+    },
+    "spo2": {
+      "how": [
+        "Calienta las manos si están frías.",
+        "Coloca el pulsioxímetro en un dedo sin esmalte y mantén la mano quieta.",
+        "Espera a que la onda de pulso sea estable (unos 30 s).",
+        "Registra el valor."
+      ],
+      "meaning": "Porcentaje de oxígeno en la sangre. Depende de la atmósfera de la cabina (CO₂, presión) y de los pulmones. NEWS2: 96 % o más es normal; 92–95 % precaución; 91 % o menos crítico.",
+      "actions": {
+        "normal": "Sin acciones.",
+        "caution": "Respira profundo, revisa los sensores de CO₂ del módulo y vuelve a medir. Si persiste, avisa a la tripulación.",
+        "critical": "Avisa a la tripulación ahora y revisa la atmósfera del módulo. Usa oxígeno según el procedimiento de a bordo.",
+        "unevaluated": "Registra el valor; se revisará más tarde."
+      }
+    },
+    "respRate": {
+      "how": [
+        "Ponte la banda respiratoria o pide a un compañero que observe tu pecho.",
+        "Respira con normalidad, sin intentar controlar el ritmo.",
+        "Cuenta las respiraciones durante 60 segundos completos.",
+        "Registra el número."
+      ],
+      "meaning": "Respiraciones por minuto. Sube con la fiebre, el CO₂ alto, la ansiedad o el dolor. NEWS2: 12–20 es normal.",
+      "actions": {
+        "normal": "Sin acciones.",
+        "caution": "Descansa y vuelve a medir en 15 min. Revisa el CO₂ del módulo.",
+        "critical": "Avisa a la tripulación. Más de 25 o menos de 9 por minuto requiere atención inmediata.",
+        "unevaluated": "Registra el valor; se revisará más tarde."
+      }
+    },
+    "reactionTime": {
+      "how": [
+        "Haz la prueba de reacción en un lugar tranquilo, siempre con la misma tableta.",
+        "Sujeta el dispositivo con firmeza y usa el mismo dedo cada vez.",
+        "Toca en cuanto aparezca el estímulo, sin adelantarte.",
+        "El resultado se guarda automáticamente."
+      ],
+      "meaning": "Mide tu nivel de alerta. La falta de sueño, la fatiga y el estrés lo hacen más lento. Se compara con TU línea base (no hay un valor 'normal' universal): más de un 15 % peor que tu media es precaución.",
+      "actions": {
+        "normal": "Estás dentro de tu rango habitual.",
+        "caution": "Prioriza el descanso. Antes de una tarea crítica repite la prueba; si no se confirma la aptitud, coméntalo con el comandante.",
+        "critical": "No aplica a este indicador.",
+        "unevaluated": "Necesitas 3 pruebas para construir tu línea base."
+      }
+    },
+    "eyePressure": {
+      "how": [
+        "Sigue el procedimiento del tonómetro de a bordo con ayuda del oficial médico.",
+        "Aplica la gota anestésica si el equipo lo requiere.",
+        "Mide cada ojo por separado y registra el valor más alto.",
+        "Puedes adjuntar una foto de la pantalla del tonómetro."
+      ],
+      "meaning": "Presión dentro del ojo en mmHg. En vuelos largos puede aparecer el síndrome neuro-ocular (SANS). Referencia de la Academia Americana de Oftalmología: 10–21 mmHg.",
+      "actions": {
+        "normal": "Sin acciones.",
+        "caution": "Haz el test de claridad visual y anota cambios en la visión. El flight surgeon revisará la tendencia.",
+        "critical": "No aplica a este indicador.",
+        "unevaluated": "Registra el valor; se revisará más tarde."
+      }
+    },
+    "urinaryCalcium": {
+      "how": [
+        "Recoge la orina de 24 horas en el kit de a bordo.",
+        "Procesa la muestra según el procedimiento del analizador.",
+        "Registra el valor en mg/día y adjunta la foto del resultado."
+      ],
+      "meaning": "En microgravedad los huesos pierden calcio, que se elimina por la orina (y aumenta el riesgo de cálculos renales). Se considera alto por encima de 275 mg/día en hombres y de 250 mg/día en mujeres.",
+      "actions": {
+        "normal": "Sigue con el ejercicio de resistencia y la hidratación habitual.",
+        "caution": "Bebe más agua, revisa tu ejercicio de resistencia y coméntalo con el oficial médico. El flight surgeon revisará la tendencia.",
+        "critical": "No aplica a este indicador.",
+        "unevaluated": "Registra el valor; se revisará más tarde."
+      }
+    },
+    "gripStrength": {
+      "how": [
+        "Sujeta el dinamómetro con el brazo pegado al cuerpo y el codo a 90°.",
+        "Aprieta con toda tu fuerza durante 3 segundos.",
+        "Haz 3 intentos con la mano dominante y registra el mejor."
+      ],
+      "meaning": "Fuerza de agarre en kg, un reflejo de la masa muscular. Sin gravedad los músculos se atrofian si no se entrenan. Se considera baja por debajo de 27 kg en hombres y de 16 kg en mujeres; además, una caída de más del 10 % respecto a tu línea base es precaución.",
+      "actions": {
+        "normal": "Mantén tu plan de ejercicio de resistencia.",
+        "caution": "Revisa con la tripulación tu cumplimiento del ejercicio de resistencia (ARED).",
+        "critical": "No aplica a este indicador.",
+        "unevaluated": "Necesitas 3 lecturas para construir tu línea base."
+      }
+    },
+    "bodyTemperature": {
+      "how": [
+        "No comas ni bebas nada caliente o frío 15 minutos antes.",
+        "Coloca el termómetro según su tipo (frente, oído u oral).",
+        "Espera la señal del equipo y registra el valor."
+      ],
+      "meaning": "Temperatura corporal en °C. La fiebre puede indicar una infección; el sistema inmune funciona distinto en el espacio. NEWS2: 36,1–38,0 °C es normal.",
+      "actions": {
+        "normal": "Sin acciones.",
+        "caution": "Hidrátate, descansa y vuelve a medir en 1 h. Anota síntomas en tu check-in.",
+        "critical": "Avisa a la tripulación y aíslate si el protocolo lo indica. Se escala al flight surgeon.",
+        "unevaluated": "Registra el valor; se revisará más tarde."
+      }
+    }
+  },
+  "measureSession": {
+    "title": "Registrar medición",
+    "subtitle": "Mediciones pendientes de hoy",
+    "pendingTitle_one": "{{count}} medición pendiente",
+    "pendingTitle_other": "{{count}} mediciones pendientes",
+    "mustComplete": "La sesión termina cuando estén todas. Si sales, se guarda y la retomas donde la dejaste.",
+    "howTitle": "¿Cómo quieres hacerlas?",
+    "guided": "Paso a paso",
+    "free": "A mi elección",
+    "guidedHint": "Te llevamos de una a la siguiente en el orden recomendado (presión primero, en reposo).",
+    "freeHint": "Eliges el orden en la lista; igual hay que completarlas todas.",
+    "start": "Empezar",
+    "progress": "{{done}} de {{total}} completadas",
+    "nextIs": "Siguiente: {{name}}",
+    "completeTitle": "¡Sesión completa!",
+    "completeBody": "Todas las mediciones de hoy quedaron registradas y evaluadas.",
+    "locked": "Primero completa la anterior",
+    "withDevice": "Con el equipo",
+    "manual": "A mano o con cámara",
+    "continueWith": "Continuar: {{name}}",
+    "finish": "Terminar",
+    "newSession": "Empezar una sesión nueva",
+    "nextStep_one": "Siguiente: {{name}} (queda {{count}})",
+    "nextStep_other": "Siguiente: {{name}} (quedan {{count}})",
+    "backToList_one": "Volver a la lista (queda {{count}})",
+    "backToList_other": "Volver a la lista (quedan {{count}})",
+    "seeSummary": "Ver resumen de la sesión",
+    "leaveTitle": "Faltan mediciones",
+    "leaveBody_one": "Queda {{count}} medición. Se guarda tu progreso para terminarla después.",
+    "leaveBody_other": "Quedan {{count}} mediciones. Se guarda tu progreso para terminarlas después.",
+    "keepGoing": "Seguir midiendo",
+    "leaveAnyway": "Salir por ahora",
+    "nothingTitle": "No hay mediciones pendientes",
+    "nothingBody": "Ya registraste todo lo que tocaba hoy.",
+    "registerOther": "Registrar otra medición"
+  },
+  "sexRange": {
+    "title": "Rango normal para ti",
+    "same": "La fuente clínica usa el mismo rango para hombres y mujeres.",
+    "bothSexes": "Rango normal (hombres y mujeres)",
+    "sex": {
+      "male": "Hombres",
+      "female": "Mujeres"
+    },
+    "ages": "{{ages}} años",
+    "you": "tú",
+    "upTo": "hasta {{value}}",
+    "atLeast": "{{value}} o más",
+    "typical": {
+      "heartRate": "Valor típico (mediana): {{value}}",
+      "gripStrength": "Máximo típico en adultos jóvenes (mediana): {{value}}"
+    },
+    "explain": {
+      "heartRate": "Rango entre los percentiles 5 y 95 de adultos sanos en reposo. En promedio, las mujeres tienen el pulso más alto que los hombres (74 frente a 71 lpm a partir de los 20 años). Las alertas siguen la regla clínica NEWS2, que es igual para ambos sexos.",
+      "urinaryCalcium": "Por encima de este valor se considera hipercalciuria. El límite es más bajo en mujeres.",
+      "gripStrength": "Por debajo de este valor la fuerza de agarre se considera baja (corte para sarcopenia). Además se compara con tu propia línea base."
+    },
+    "sourcesTitle": "Fuentes"
+  }
+}

@@ -1,0 +1,1365 @@
+{
+  "app": {
+    "name": "NullRadt",
+    "tagline": "Health monitoring for space missions"
+  },
+  "tabs": {
+    "home": "Home",
+    "monitor": "Monitor",
+    "routine": "Routine",
+    "wellbeing": "Wellbeing",
+    "more": "More"
+  },
+  "common": {
+    "syntheticData": "Synthetic data",
+    "comingSoon": "Coming soon",
+    "source": "Source",
+    "learnMore": "Learn more",
+    "seeAll": "See all",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "back": "Back",
+    "done": "Done",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "disclaimer": "Decision-support tool. Not a medical diagnosis. When in doubt, contact your crew or the flight surgeon.",
+  "status": {
+    "title": "Health traffic light",
+    "normal": "Normal",
+    "caution": "Caution",
+    "critical": "Critical",
+    "normalHint": "Inside the protocol range. Keep up your routine.",
+    "cautionHint": "Outside the range: follow the guidance and measure again.",
+    "criticalHint": "Inform medical personnel now.",
+    "unevaluated": "Not evaluated",
+    "unevaluatedHint": "Stored for expert review; no validated onboard rule."
+  },
+  "escalation": {
+    "self": "Self-care",
+    "crew": "Crew",
+    "flightSurgeon": "Flight surgeon"
+  },
+  "home": {
+    "greeting": {
+      "morning": "Good morning, {{name}}",
+      "afternoon": "Good afternoon, {{name}}",
+      "evening": "Good evening, {{name}}"
+    },
+    "startCheck": "Start check-in",
+    "hazardsTitle": "The 5 hazards of spaceflight",
+    "today": "Today",
+    "missionDay": "Mission day",
+    "nextCheck": "Next measurement in {{hours}} h",
+    "dailyCheckIn": "Daily check-in {{done}}/{{total}}",
+    "streak": "{{count}}-day streak",
+    "environmentStation": "Space station",
+    "gravityLabel": "{{g}} g",
+    "statusTitle": "Health traffic light",
+    "missionEyebrow": "{{mission}} · Day {{day}}",
+    "allInRange": "All evaluated indicators are within range.",
+    "needAttention_one": "{{count}} indicator needs your attention.",
+    "needAttention_other": "{{count}} indicators need your attention.",
+    "dailyCheckInBtn": "Daily check-in",
+    "registerMeasurement": "Register measurement",
+    "tapSystem": "Tap a body system to inspect it",
+    "bodySystems": "Body systems",
+    "exploreSystem": "Explore system",
+    "allIndicators": "All health indicators",
+    "tracked": "{{count}} indicators tracked",
+    "healthOverview": "Health overview",
+    "needsAttentionTitle": "Needs attention",
+    "protocolScreening": "Protocol-based screening. Not a medical diagnosis.",
+    "missionProgress": "Mission progress",
+    "checkDone": "Done today. Thanks for logging it.",
+    "checkPending": "Pending: takes 1 minute.",
+    "crewTitle": "Your crew"
+  },
+  "hazards": {
+    "radiation": {
+      "title": "Space radiation",
+      "summary": "Accumulated dose, solar events, immune and cancer risk."
+    },
+    "isolation": {
+      "title": "Isolation & confinement",
+      "summary": "Mood, sleep, stress, cognition and crew dynamics."
+    },
+    "distance": {
+      "title": "Distance from Earth",
+      "summary": "Communication delay and medical autonomy."
+    },
+    "gravity": {
+      "title": "Gravity fields",
+      "summary": "Bone, muscle, heart, fluids and vision."
+    },
+    "environment": {
+      "title": "Hostile & closed environments",
+      "summary": "CO₂, temperature, noise, microbes and immunity."
+    }
+  },
+  "body": {
+    "title": "Health monitoring",
+    "subtitle": "Select a body system to see what it does, how it is doing and what to measure next.",
+    "orChoose": "Or choose from the list",
+    "callout": {
+      "normal": "Normal. All recent readings for this system are within the protocol range.",
+      "caution": "Precaution. At least one recent reading is outside the protocol range. Follow the guidance below.",
+      "critical": "Critical. A recent reading is far outside the protocol range. Inform your crew medical officer.",
+      "unevaluated": "Not evaluated. Readings for this system are stored but there is no validated onboard rule to evaluate them."
+    },
+    "details": "Details",
+    "measure": "Measure",
+    "noReadings": "No readings yet",
+    "recommendations": "Recommendations",
+    "protocolNote": "Guidance from onboard protocol. It does not replace your flight surgeon.",
+    "localOnly": "On this device only: the server catalog has no such indicator, so it stays unevaluated.",
+    "sources": "Sources: {{list}}"
+  },
+  "log": {
+    "title": "Log a measurement",
+    "subtitle": "Text, taps or camera. Works offline."
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "language": "Language",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark",
+    "spanish": "Español",
+    "english": "English",
+    "about": "About",
+    "aboutBody": "Project for the NASA Space Apps Challenge.",
+    "voiceLab": "Voice lab",
+    "voiceLabBody": "Test text-to-speech and speech-to-text.",
+    "notificationsLab": "Test notifications",
+    "notificationsLabBody": "Generate in-app and system notifications.",
+    "security": "Security",
+    "signedInAs": "Signed in as {{name}}",
+    "biometricHint": "Asks for your fingerprint or face when opening the app and after 30 s in background.",
+    "signOut": "Sign out",
+    "authDisabled": "Sign-in is disabled in this test build: you enter directly as a mock astronaut. Enable it with EXPO_PUBLIC_REQUIRE_AUTH=true."
+  },
+  "alert": {
+    "title": "Emergency alert",
+    "subtitle": "Choose the severity and hold the button for 1 s to send the signal.",
+    "openedByShake": "Opened by shaking the phone",
+    "severity": "Severity",
+    "holdToSend": "Hold to send",
+    "holdHint": "Hold for 1 second to send the signal",
+    "sending": "Sending…",
+    "sentTitle": "Report sent",
+    "sentBody": "The mission system received your report.",
+    "queuedTitle": "Queued with priority",
+    "queuedBody": "No connection to the server. The emergency is queued and will be sent before anything else when back online. If urgent, tell your crew in person.",
+    "close": "Close",
+    "cancel": "Cancel",
+    "open": "Open alert",
+    "voiceIntro": "Emergency protocol activated. Hold the button to transmit the signal.",
+    "voiceSent": "Emergency signal transmitted. Severity: {{severity}}. The crew has been notified.",
+    "voiceQueued": "Link unavailable. The signal has been queued and will be transmitted when the connection is restored.",
+    "note": "What are you feeling? (optional)",
+    "signalSent": "Signal sent",
+    "crewNotified": "Your crew was notified.",
+    "holdToDeactivate": "Hold to deactivate",
+    "deactivateHint": "Was it a mistake? Hold for 5 seconds to deactivate it.",
+    "cancelledTitle": "Alert deactivated",
+    "cancelledBody": "The crew was told it was a mistake.",
+    "voiceLocal": "Caution alert saved on the device.",
+    "cautionLocalHint": "A caution isn't an emergency: it's saved on the device and not sent. If needed, tell someone in person.",
+    "responderSafe": "Are you in a safe place?",
+    "noteLocal": "The note isn't sent: the server's emergency doesn't include it.",
+    "sessionOpenTitle": "Emergency open",
+    "sessionOpenBody": "The server opened the mission emergency.",
+    "joinedBody": "An emergency was already open in the mission: you joined it.",
+    "localTitle": "Saved on the device",
+    "localCautionBody": "The caution alert stayed on this device only: it isn't sent as an emergency.",
+    "crewAndEarthNotified": "Your crew and Earth were notified (Earth gets it with the mission delay).",
+    "secureSelf": "Get to safety first.",
+    "sessionStatus": "Status",
+    "statuses": {
+      "pending": "Waiting for confirmation",
+      "active": "Active",
+      "closed": "Closed",
+      "cancelled": "Cancelled",
+      "merged": "Merged into another"
+    },
+    "startedAt": "Started",
+    "roster": "Crew",
+    "noTriageYet": "Per-crew-member assessment (triage) isn't in the app yet.",
+    "refresh": "Refresh status",
+    "deactivateServerHint": "False alarm? Hold for 5 seconds to cancel the emergency.",
+    "closeOnlyLeads": "Only the commander or the crew medical officer can close the emergency.",
+    "cancelledServerBody": "The emergency was cancelled as a false alarm.",
+    "falseAlarmNote": "False alarm (cancelled from the app)",
+    "closeForbiddenTitle": "Not allowed",
+    "closeForbidden": "Only the commander or the crew medical officer can close the emergency.",
+    "closeErrorTitle": "Couldn't cancel",
+    "solarEvent": "Is there an active solar event or radiation alarm?",
+    "solarEventHint": "With a solar event, the protocol adds its radiation module.",
+    "startTriage": "Assess the crew (triage)",
+    "triageHint": "The protocol guides you question by question, with voice and buttons."
+  },
+  "voice": {
+    "start": "Dictate by voice",
+    "stop": "Stop dictation",
+    "listening": "Listening… speak now.",
+    "hintMic": "Tap the microphone to dictate.",
+    "hintKeyboard": "You can dictate with the keyboard microphone.",
+    "error": {
+      "permission": "Microphone permission denied. Enable it in phone Settings.",
+      "unavailable": "Dictation is not available on this device.",
+      "failed": "Could not understand. Try again or type it.",
+      "offlineUnavailable": "No offline speech model for this language. Download it or allow using the connection."
+    },
+    "hintMicLang": "Tap the microphone to dictate in {{lang}}.",
+    "langName": {
+      "es": "Spanish",
+      "en": "English"
+    }
+  },
+  "voiceLab": {
+    "title": "Voice lab",
+    "languageFrom": "Language: {{language}} (from Settings)",
+    "sample": "Heart rate within normal range. Remember to log your blood pressure before sleeping.",
+    "ttsTitle": "Text to speech",
+    "ttsPlaceholder": "Type something to hear it",
+    "voiceOffline": "Local voice: {{name}}",
+    "voiceSystemDefault": "System default voice",
+    "rate": {
+      "slow": "Slow",
+      "normal": "Normal",
+      "fast": "Fast"
+    },
+    "speak": "Speak",
+    "stop": "Stop",
+    "sttTitle": "Speech to text",
+    "sttExpoGo": "Built-in mic not available in Expo Go",
+    "sttExpoGoBody": "To test the built-in recognizer you need a development build. Meanwhile, use the keyboard microphone in the field below.",
+    "sttOffline": "Offline recognition ({{locale}})",
+    "sttNeedsModel": "No offline model for {{locale}}",
+    "downloadModel": "Download offline model",
+    "download": {
+      "download_success": "Model downloaded. It now works offline.",
+      "opened_dialog": "The system dialog to download the model was opened.",
+      "download_scheduled": "Download scheduled. It will be ready in a few minutes.",
+      "unsupported": "This device does not allow downloading the model from the app."
+    },
+    "networkPolicy": "If there is no offline model:",
+    "policy": {
+      "offline": "Offline only",
+      "fallback": "Use connection"
+    },
+    "modeOffline": "offline",
+    "modeOnline": "online",
+    "transcriptEmpty": "What you say will appear here…",
+    "readBack": "Read aloud",
+    "clear": "Clear",
+    "footer": "Voice language follows the app language. Change it in Settings → Language."
+  },
+  "permissions": {
+    "title": "Notification permission",
+    "granted": "Enabled",
+    "denied": "Not enabled: system notifications won't show.",
+    "blocked": "Blocked. Enable them in the phone settings.",
+    "allow": "Allow notifications",
+    "openSettings": "Open settings"
+  },
+  "notificationsLab": {
+    "title": "Test notifications",
+    "level": "Level",
+    "levels": {
+      "info": "Info",
+      "normal": "Normal",
+      "caution": "Caution",
+      "critical": "Critical"
+    },
+    "inAppTitle": "In-app",
+    "inAppBody": "Slides down from the top with a bar that empties until it hides. Tap or swipe it up to close; press and hold to pause it.",
+    "showInApp": "Show toast",
+    "burst": "Queue all 4 levels",
+    "systemTitle": "System",
+    "systemBody": "Local phone notification; no internet needed. With the app open it shows as an in-app toast; use \"in 5 s\" and leave the app to see it in the system tray.",
+    "sendNow": "Send now",
+    "sendIn5": "Send in 5 s",
+    "sentNow": "Notification sent.",
+    "scheduled": "Scheduled in {{seconds}} s. Leave the app to see it.",
+    "footer": "Notifications on this screen use synthetic data.",
+    "samples": {
+      "info": {
+        "title": "Reminder",
+        "body": "Time to log your sleep hours."
+      },
+      "normal": {
+        "title": "Measurement logged",
+        "body": "Heart rate within the normal range."
+      },
+      "caution": {
+        "title": "Check this indicator",
+        "body": "Your temperature went up. Follow the guide and measure again."
+      },
+      "critical": {
+        "title": "Immediate attention",
+        "body": "Critical value detected. Alert your crew or the flight surgeon."
+      }
+    }
+  },
+  "auth": {
+    "hero": {
+      "title": "Sign in"
+    },
+    "steps": {
+      "label": "Sign-in steps",
+      "identify": "Identify",
+      "mission": "Select mission"
+    },
+    "thisDevice": "This device",
+    "idAndPassword": "ID & password",
+    "roles": {
+      "astronaut": "Astronaut",
+      "crew": "Crew",
+      "flightSurgeon": "Flight surgeon",
+      "admin": "Mission control",
+      "flight_surgeon": "Flight surgeon",
+      "behavioral_health": "Behavioral health"
+    },
+    "scan": {
+      "idle": "Verify your identity with your {{method}}",
+      "reading": "Reading…",
+      "verified": "Identity verified"
+    },
+    "verifying": "Verifying",
+    "verifyWith": "Verify with {{method}}",
+    "verifyIdentity": "Verify identity",
+    "verified": "Verified",
+    "astronautId": "Astronaut ID",
+    "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "saveBiometric": "Save biometric data ({{method}})",
+    "saveBiometricHint": "Your session is stored encrypted. Your biometric data never leaves the phone.",
+    "biometricNotEnrolled": "Enroll a fingerprint or face in the phone settings to use biometric unlock.",
+    "biometricNoHardware": "This device has no biometric sensor.",
+    "biometricPrompt": "Confirm your identity",
+    "biometricSaved": "{{method}} enabled",
+    "biometricSavedBody": "Next time you can sign in without a password.",
+    "biometricNotSaved": "Biometrics not enabled",
+    "biometricNotSavedBody": "You can enable it later in Settings → Security.",
+    "errors": {
+      "idFormat": "Enter your astronaut ID in the format NR-A-0000.",
+      "passwordRequired": "Enter your password.",
+      "invalid": "Incorrect ID or password.",
+      "network": "Could not reach the server. Try again.",
+      "usernameFormat": "Enter your username (lowercase, e.g. a.ortega).",
+      "invalidUser": "Incorrect username or password",
+      "locked": "Account locked until {{time}}. Ask the commander to unlock it.",
+      "noAssignment": "You have no active mission. Ask mission control to assign you.",
+      "rateLimited": "Too many attempts. Wait {{seconds}} s and try again.",
+      "weakPassword": "The password must have at least {{min}} characters and differ from the current one.",
+      "passwordMismatch": "Passwords don't match.",
+      "changeExpired": "The password-change permission expired. Sign in again."
+    },
+    "demoHint": "Prototype without a server: any password works. Synthetic data.",
+    "demoSession": "Demo session",
+    "unlockUnavailable": "Biometrics are no longer available. Sign in with your password.",
+    "unlockLockout": "Too many attempts. Use the phone PIN or your password.",
+    "unlockFailed": "Not recognized. Try again.",
+    "method": {
+      "fingerprint": "fingerprint",
+      "face": "Face ID",
+      "iris": "iris",
+      "generic": "biometrics"
+    },
+    "methodTitle": {
+      "fingerprint": "Fingerprint",
+      "face": "Face ID",
+      "iris": "Iris",
+      "generic": "Biometrics"
+    },
+    "username": "Username",
+    "changePasswordTitle": "Change your password",
+    "changePasswordBody": "First sign-in: set a new password with at least {{min}} characters.",
+    "newPassword": "New password",
+    "confirmPassword": "Repeat the password",
+    "changePasswordSubmit": "Save and continue",
+    "passwordChanged": "Password updated",
+    "passwordChangedBody": "You can now use the app with your new password.",
+    "sessionExpiredTitle": "Signed out",
+    "sessionExpiredBody": "Your session expired. Sign in again.",
+    "sessionReuseBody": "For security, your sessions were closed. Sign in again."
+  },
+  "mission": {
+    "selectTitle": "Select your mission",
+    "selectBody": "Your health plan, routines and protocol thresholds follow the selected mission.",
+    "current": "Current mission",
+    "day": "Mission day",
+    "dayOf": "{{day}} of {{total}}",
+    "crew": "Crew",
+    "crewCount": "{{count}} astronauts",
+    "location": "Location",
+    "notStarted": "This mission has not started. Health records open on mission day 1.",
+    "continue": "Continue to dashboard",
+    "notAvailable": "Not yet available",
+    "phase": {
+      "active": "In progress",
+      "scheduled": "Scheduled",
+      "training": "Training"
+    },
+    "assignedTitle": "Your mission",
+    "assignedBody": "Mission control assigned you to this mission. Your health plan and its rules follow it.",
+    "code": "Code",
+    "yourRole": "Your role",
+    "dayOnly": "Day {{day}}",
+    "commDelay": "Earth delay",
+    "commDelayValue": "{{seconds}} s one way",
+    "noAssignment": "Couldn't read your mission. Check your connection."
+  },
+  "connectivity": {
+    "offlineTitle": "No Earth link — offline sign-in",
+    "offlineBody": "Your records stay encrypted on this device until the next link window.",
+    "onlineTitle": "Earth link available",
+    "onlineBody": "Records will synchronise automatically."
+  },
+  "nav": {
+    "sos": "SOS",
+    "online": "Online",
+    "offline": "Offline"
+  },
+  "routine": {
+    "title": "Routine & reminders",
+    "subtitle": "Your day on board. Check off what you complete and turn on reminders.",
+    "next": "Next",
+    "allDone": "Today's routine complete",
+    "progress": "{{done}} of {{total}} done",
+    "enableAll": "Turn on all reminders",
+    "reminder": "Reminder",
+    "tapToOpen": "Tap to open",
+    "reminderBody": "It is time ({{time}}). Open it in NullRadt.",
+    "reminderOn": "Reminder on",
+    "reminderOnBody": "We will remind you every day at {{time}}.",
+    "reminderError": "Could not schedule the reminder.",
+    "permissionTitle": "Notifications off",
+    "permissionBody": "Turn on notifications to get reminders.",
+    "categories": {
+      "health": "Health",
+      "exercise": "Exercise",
+      "nutrition": "Nutrition",
+      "rest": "Rest",
+      "work": "Work"
+    },
+    "items": {
+      "wake": {
+        "title": "Wake up & hygiene",
+        "body": "Water, hygiene and review today's plan."
+      },
+      "dailyCheck": {
+        "title": "Daily check",
+        "body": "Mood, energy, sleep and symptoms."
+      },
+      "vitals": {
+        "title": "Vital signs",
+        "body": "Blood pressure and heart rate."
+      },
+      "breakfast": {
+        "title": "Breakfast",
+        "body": "Include calcium and vitamin D."
+      },
+      "hydration1": {
+        "title": "Hydration",
+        "body": "Drink water: thirst is felt less in microgravity."
+      },
+      "aerobic": {
+        "title": "Aerobic exercise",
+        "body": "Treadmill or cycle ergometer, 60 min."
+      },
+      "lunch": {
+        "title": "Lunch",
+        "body": "Meal with the crew."
+      },
+      "hydration2": {
+        "title": "Hydration",
+        "body": "Another glass of water."
+      },
+      "resistance": {
+        "title": "Strength exercise",
+        "body": "Resistance (ARED-style) for bones and muscles."
+      },
+      "eyes": {
+        "title": "Vision check",
+        "body": "Note any change in your vision."
+      },
+      "dinner": {
+        "title": "Dinner",
+        "body": "Avoid caffeine from now on."
+      },
+      "winddown": {
+        "title": "Wind down",
+        "body": "Dim the lights and put screens away."
+      },
+      "sleep": {
+        "title": "Sleep",
+        "body": "Goal: 8 h 30 min of sleep."
+      },
+      "brainTests": {
+        "title": "Daily tests",
+        "body": "Reflexes, vision, mental agility and memory (6 min)."
+      },
+      "fitCheck": {
+        "title": "Reaction test (fitness)",
+        "body": "3 minutes before the critical task. Earth only receives fit / not confirmed."
+      },
+      "criticalTask": {
+        "title": "Robotic arm operation",
+        "body": "Critical task: requires a “fit” result in today's reaction test."
+      }
+    },
+    "source": "Sample routine inspired by a typical ISS day (≈ 2 h of daily exercise, NASA). Synthetic data.",
+    "dueTitle": "Measurements due",
+    "dueBody": "Per the protocol frequency, it's time to measure:",
+    "everyHours": "every {{hours}} h"
+  },
+  "wellbeing": {
+    "title": "Wellbeing",
+    "subtitle": "Confidential daily check-in: no crew member sees your answers.",
+    "streak": "Streak (days)",
+    "total": "Checks",
+    "today": "Today",
+    "formEyebrow": "1 minute",
+    "formTitle": "How are you today?",
+    "mood": "Mood",
+    "stress": "Stress",
+    "sleep": "Hours of sleep",
+    "hours_one": "{{count}} h",
+    "hours_other": "{{count}} h",
+    "symptoms": "Symptoms",
+    "symptomList": {
+      "headache": "Headache",
+      "nausea": "Nausea",
+      "congestion": "Congestion",
+      "backPain": "Back pain",
+      "blurredVision": "Blurred vision",
+      "insomnia": "Insomnia",
+      "fatigue": "Fatigue",
+      "none": "None"
+    },
+    "note": "Private note (optional)",
+    "notePlaceholder": "Only you will see it",
+    "submit": "Save check-in",
+    "completeScales": "Move the four sliders to save.",
+    "saved": "Check-in saved",
+    "savedBody": "Thanks for checking in.",
+    "doneTitle": "Today's check-in is done",
+    "goMonitor": "Go to Monitor",
+    "edit": "Correct today's check-in",
+    "history": "Recent days",
+    "private": "Not a medical assessment: you'll never see a score or a color. If a change persists, only behavioral health gets a confidential notice.",
+    "week": "This week",
+    "correctTitle": "Correct today's check-in",
+    "correctBody": "The new one replaces today's (nothing is deleted).",
+    "fatigue": "Fatigue",
+    "crewConflict": "Friction with the crew",
+    "sliders": {
+      "moodLow": "Very low",
+      "moodHigh": "Very good",
+      "fatigueLow": "Rested",
+      "fatigueHigh": "Exhausted",
+      "stressLow": "Calm",
+      "stressHigh": "Very stressed",
+      "conflictLow": "No friction",
+      "conflictHigh": "A lot of friction"
+    },
+    "sleepOptional": "Add sleep hours (optional)",
+    "symptomsShared": "Symptoms are a physical reading: they go to the medical team separately from the (confidential) check-in. Congestion and insomnia stay on the device.",
+    "symptomsLocal": "Symptoms are saved on the device.",
+    "queued": "Offline: your check-in stayed on the device and will be sent when back online.",
+    "localMessage": "Thanks for checking in.",
+    "errorTitle": "Couldn't save",
+    "errorBody": "Check the data and try again.",
+    "corrected": "Today's check-in was updated.",
+    "streakLine": "Streak: {{days}} days · {{week}} of {{goal}} this week",
+    "historyDone": "Check-in completed",
+    "historyNote": "with private note",
+    "pendingSync": "pending upload"
+  },
+  "more": {
+    "title": "More",
+    "items": {
+      "history": "Health history",
+      "triage": "Emergency triage",
+      "achievements": "Achievements",
+      "profile": "Profile & mission",
+      "sync": "Offline & sync",
+      "voiceLab": "Voice lab",
+      "notificationsLab": "Test notifications",
+      "settings": "Settings",
+      "crew": "Crew",
+      "connectivity": "Connectivity",
+      "measure": "Measure vital signs",
+      "tests": "Daily tests",
+      "comms": "Earth communications",
+      "access": "Security & access",
+      "earth": "Earth inbox",
+      "register": "Log with camera",
+      "voiceCommands": "Voice commands"
+    }
+  },
+  "systems": {
+    "cardiovascular": {
+      "name": "Cardiovascular system",
+      "short": "Cardiovascular",
+      "role": "Your heart and blood vessels move oxygen and nutrients around the body. In microgravity, fluids shift towards your head and the heart works less hard.",
+      "recommendations": [
+        "Complete your daily aerobic session.",
+        "Drink at least 2 litres of water per day."
+      ]
+    },
+    "respiratory": {
+      "name": "Respiratory system",
+      "short": "Respiratory",
+      "role": "Your lungs exchange oxygen and carbon dioxide. Cabin atmosphere and dust can affect how comfortably you breathe.",
+      "recommendations": [
+        "Report any persistent cough or irritation.",
+        "Wear a mask during filter maintenance."
+      ]
+    },
+    "brain": {
+      "name": "Brain and cognition",
+      "short": "Brain",
+      "role": "Your brain manages attention, memory and coordination. Sleep, workload and radiation exposure can influence cognitive performance.",
+      "recommendations": [
+        "Protect your scheduled sleep window.",
+        "Take short breaks during long procedures."
+      ]
+    },
+    "eyes": {
+      "name": "Eyes and vision",
+      "short": "Eyes",
+      "role": "Your eyes can change shape slightly during long missions as fluid shifts upward. Regular checks catch changes early.",
+      "recommendations": [
+        "Report any blurred near vision.",
+        "Complete your weekly vision check."
+      ]
+    },
+    "skeletal": {
+      "name": "Skeletal system",
+      "short": "Skeletal",
+      "role": "Your bones support your body and store calcium. Without gravity loading, bones lose density unless you exercise.",
+      "recommendations": [
+        "Keep your resistance exercise schedule.",
+        "Take your vitamin D portion with meals as planned."
+      ]
+    },
+    "muscular": {
+      "name": "Muscular system",
+      "short": "Muscular",
+      "role": "Your muscles keep you strong for EVA and landing. Weight-bearing muscles weaken quickly in microgravity.",
+      "recommendations": [
+        "Complete your resistance exercise session.",
+        "Log protein intake with meals."
+      ]
+    },
+    "immune": {
+      "name": "Immune system",
+      "short": "Immune",
+      "role": "Your immune system protects against infection. Stress, radiation and sleep loss can lower its response in space.",
+      "recommendations": [
+        "Wash hands before meals.",
+        "Report early signs of illness."
+      ]
+    },
+    "metabolism": {
+      "name": "Metabolism and nutrition",
+      "short": "Metabolism",
+      "role": "Metabolism turns food into energy. Onboard diet, exercise and stress can change your glucose.",
+      "recommendations": [
+        "Follow your mission meal plan.",
+        "Measure fasting glucose when the protocol asks for it."
+      ]
+    }
+  },
+  "indicators": {
+    "heartRate": {
+      "name": "Resting heart rate",
+      "short": "Heart rate",
+      "description": "Beats per minute while fully at rest. Fluid shifts in microgravity can change your resting rate."
+    },
+    "bloodPressure": {
+      "name": "Blood pressure",
+      "short": "Blood pressure",
+      "description": "Systolic and diastolic pressure in your arteries. Tracks how your heart and vessels adapt to weightlessness."
+    },
+    "spo2": {
+      "name": "Blood oxygen saturation",
+      "short": "SpO₂",
+      "description": "Percentage of oxygen carried by your red blood cells. Reflects cabin atmosphere and lung function."
+    },
+    "respRate": {
+      "name": "Respiratory rate",
+      "short": "Breathing rate",
+      "description": "Breaths per minute at rest, measured by the chest strap sensor."
+    },
+    "reactionTime": {
+      "name": "Psychomotor reaction time",
+      "short": "Reaction time",
+      "description": "Mean response time on the 3-minute vigilance task. Sensitive to fatigue, sleep loss and workload."
+    },
+    "eyePressure": {
+      "name": "Intraocular pressure",
+      "short": "Eye pressure",
+      "description": "Fluid pressure inside the eye. Monitored for changes associated with long-duration spaceflight."
+    },
+    "urinaryCalcium": {
+      "name": "Urinary calcium",
+      "short": "Urinary calcium",
+      "description": "Calcium leaving the body over 24 hours. An indirect marker of bone loss in microgravity."
+    },
+    "gripStrength": {
+      "name": "Grip strength",
+      "short": "Grip strength",
+      "description": "Maximum hand strength. Reflects muscle loss during the mission."
+    },
+    "bodyTemperature": {
+      "name": "Body temperature",
+      "short": "Temperature",
+      "description": "Core body temperature. Can signal an infection or an immune response."
+    },
+    "glucose": {
+      "name": "Blood glucose",
+      "short": "Glucose",
+      "description": "Blood sugar. Diet, exercise and in-flight stress can change it."
+    },
+    "sleepHours": {
+      "name": "Sleep hours",
+      "short": "Sleep",
+      "description": "Hours slept (wristband or manual). Onboard light and schedules disrupt sleep."
+    },
+    "radDoseDaily": {
+      "name": "Daily radiation dose",
+      "short": "Daily radiation",
+      "description": "Dosimeter dose for the day. It rises during solar events."
+    },
+    "radDoseCum": {
+      "name": "Cumulative radiation dose",
+      "short": "Cumulative radiation",
+      "description": "Career cumulative dose, compared with NASA limits."
+    },
+    "bodyMass": {
+      "name": "Body mass",
+      "short": "Mass",
+      "description": "Weight measured on board. Microgravity can reduce muscle and bone."
+    },
+    "exerciseMin": {
+      "name": "Exercise",
+      "short": "Exercise",
+      "description": "Daily exercise minutes: protects bones and muscles in microgravity."
+    },
+    "visionCheck": {
+      "name": "Visual symptoms (SANS)",
+      "short": "Visual symptoms",
+      "description": "Yes/no checklist of vision changes linked to long flights. The number is how many answers were “yes”."
+    },
+    "symptoms": {
+      "name": "Reported symptoms",
+      "short": "Symptoms",
+      "description": "Symptoms you logged in this body area. The number is how many you marked."
+    }
+  },
+  "health": {
+    "origin": {
+      "mock": "Mock data — backend pending",
+      "cache": "Offline · last sync {{ago}}"
+    },
+    "source": {
+      "wearable": "Wearable",
+      "manual": "Manual",
+      "camera": "Camera-assisted",
+      "server": "Server"
+    },
+    "onDevice": "On device",
+    "pendingConfirm": "computed on the device, pending confirmation"
+  },
+  "time": {
+    "minutesAgo_one": "{{count}} min ago",
+    "minutesAgo_other": "{{count}} min ago",
+    "hoursAgo_one": "{{count}} h ago",
+    "hoursAgo_other": "{{count}} h ago",
+    "daysAgo_one": "{{count}} day ago",
+    "daysAgo_other": "{{count}} days ago"
+  },
+  "profile": {
+    "title": "Profile & mission",
+    "changePhoto": "Change profile photo",
+    "fromGallery": "Gallery",
+    "takePhoto": "Take photo",
+    "removePhoto": "Remove",
+    "photoLocal": "The photo is stored only on this device.",
+    "photoSaved": "Photo updated",
+    "photoSavedBody": "Your profile photo was saved on the device.",
+    "photoError": "Could not save the photo",
+    "permissionTitle": "Permission needed",
+    "permissionBody": "Allow camera or photo access in the phone settings.",
+    "gravity": "Gravity",
+    "changeMission": "Change mission",
+    "closeMissions": "Hide missions",
+    "missionChanged": "Mission updated",
+    "session": "Session"
+  },
+  "body3d": {
+    "title": "3D model",
+    "hint": "Drag to rotate · pinch to zoom · tap an organ",
+    "female": "Female",
+    "male": "Male",
+    "open": "View in 3D",
+    "disclaimer": "Schematic representation for educational purposes. Not an exact anatomical model."
+  },
+  "background": {
+    "criticalTitle": "{{indicator}}: critical value",
+    "criticalBody": "Inform your crew medical officer now. Open NullRadt to see the guidance.",
+    "title": "Background monitoring",
+    "state": {
+      "active": "Active: checks every ~15 min even when the app is closed.",
+      "expoGo": "Not available in Expo Go. Works in the installed APK.",
+      "restricted": "Restricted by the system (battery saver). Allow background activity in the phone settings.",
+      "error": "Could not be enabled."
+    }
+  },
+  "errors": {
+    "viewTitle": "This view could not be displayed",
+    "viewBody": "The rest of the app keeps working. If it persists, share this message with the team:",
+    "retry": "Retry",
+    "generic": "Something went wrong. Try again."
+  },
+  "crew": {
+    "title": "Crew",
+    "synthetic": "Placeholder data (synthetic)",
+    "you": "You",
+    "age": "Age",
+    "sex": "Sex",
+    "height": "Height",
+    "weight": "Weight",
+    "years_one": "{{count}} year",
+    "years_other": "{{count}} years",
+    "sexes": {
+      "female": "Female",
+      "male": "Male"
+    },
+    "module": "{{module}} module",
+    "bmi": "BMI {{value}}",
+    "specialty": {
+      "commander": "Commander",
+      "flightEngineer": "Flight engineer",
+      "medicalOfficer": "Medical officer",
+      "missionSpecialist": "Mission specialist",
+      "payloadSpecialist": "Payload specialist"
+    },
+    "alertsTitle": "Crew alerts",
+    "noAlerts": "No recent alerts.",
+    "sosFrom": "SOS from {{name}}",
+    "measurementFrom": "Serious {{what}} from {{name}}",
+    "cancelled": "Deactivated",
+    "sosLabel": "Emergency",
+    "alertSentTitle": "Alert sent to the crew",
+    "alertSentBody": "{{what}} {{value}}. Your crew was notified.",
+    "alertCancelledTitle": "Alert deactivated",
+    "alertCancelledBody": "The crew was told it was a mistake.",
+    "bloodType": "Blood type",
+    "healthTitle": "Crew health",
+    "comingSoon": "Available soon.",
+    "statusOffline": "Offline: the crew status can't be read.",
+    "rosterUnavailable": "Couldn't read the crew. Check your connection.",
+    "privacyNote": "No crew member sees anyone else's wellbeing. Physical alerts are shown without values.",
+    "emergencyOpen": "Emergency open · {{status}}",
+    "physicalTitle": "Physical status (crew medical officer only)",
+    "zones": {
+      "heart": "Heart",
+      "lungs": "Lungs",
+      "immune": "Immune",
+      "metabolism": "Metabolism",
+      "muscle": "Muscle",
+      "bones": "Bones",
+      "brain": "Brain",
+      "eyes": "Eyes"
+    }
+  },
+  "measure": {
+    "simulated": "Simulated device and reading (demo)",
+    "title": {
+      "bloodPressure": "Measure blood pressure",
+      "heartRate": "Measure heart rate",
+      "spo2": "Measure oxygen saturation",
+      "bodyTemperature": "Measure temperature",
+      "respRate": "Measure respiratory rate"
+    },
+    "devices": {
+      "bpCuff": "NR-BP2 blood pressure monitor",
+      "pulseOximeter": "NR-OX1 pulse oximeter",
+      "thermometer": "NR-T1 thermometer",
+      "respBand": "NR-RB respiratory band"
+    },
+    "searching": "Searching for device via Bluetooth…",
+    "connected": "Connected",
+    "readyTitle": "Device ready",
+    "instructions": {
+      "bloodPressure": "Sit down, rest your arm at heart level and place the cuff 2 cm above the elbow.",
+      "heartRate": "Place the oximeter on your index finger and keep your hand still.",
+      "spo2": "Place the oximeter on your index finger and keep your hand still.",
+      "bodyTemperature": "Place the thermometer under your tongue and close your mouth.",
+      "respRate": "Fit the band around your chest and breathe normally."
+    },
+    "start": "Start measurement",
+    "stop": "Stop",
+    "measuring": "Measuring…",
+    "keepStill": "Do not move or talk during the measurement.",
+    "units": {
+      "bloodPressure": "mmHg",
+      "heartRate": "bpm",
+      "spo2": "%",
+      "bodyTemperature": "°C",
+      "respRate": "rpm"
+    },
+    "result": {
+      "normal": "Within the reference range.",
+      "caution": "Outside your usual range. Repeat at rest and tell your crew.",
+      "critical": "Value outside the safe range. Your crew was notified automatically.",
+      "unevaluated": "Unevaluated: there is no validated rule for this value."
+    },
+    "crewNotified": "Your crew received the reading and can come to help.",
+    "rule": "Classified using {{source}}. Decision support, not a diagnosis.",
+    "openAlert": "Open emergency alert",
+    "done": "Done",
+    "again": "Measure again",
+    "sending": "Evaluating on the server…",
+    "serverRule": "Status and recommendation computed by the server with the catalog's cited rules. Not a diagnosis.",
+    "outcome": {
+      "queued": "Offline: the reading was saved on the device and the server will evaluate it when syncing.",
+      "local": "Saved on the device only.",
+      "error": "The server didn't accept the reading. Check the value and try again.",
+      "device": "Computed on the device with the server rules, pending confirmation when syncing."
+    },
+    "escalated": {
+      "self": "Self-care",
+      "crew": "Your crew was notified",
+      "flightSurgeon": "Earth was notified"
+    },
+    "escalatedBody": {
+      "self": "Follow the recommendation.",
+      "crew": "The protocol rule escalated this reading to your crew.",
+      "flightSurgeon": "The flight surgeon will get it with the mission delay. Follow the recommendation meanwhile."
+    }
+  },
+  "connectivityScreen": {
+    "title": "Connectivity",
+    "types": {
+      "wifi": "Wi-Fi",
+      "cellular": "Mobile data",
+      "none": "No network",
+      "other": "Other network"
+    },
+    "signal": "Strength",
+    "quality": "Quality",
+    "earthDelay": "Earth delay",
+    "live": "Live link quality",
+    "howTitle": "How it works",
+    "how": {
+      "phone": {
+        "title": "Your phone",
+        "body": "Everything is saved on the device first (offline-first)."
+      },
+      "station": {
+        "title": "Station local network",
+        "body": "Syncs with nearby crew even without a link to Earth."
+      },
+      "relay": {
+        "title": "Relay satellite",
+        "body": "When a comms window opens, pending data is sent."
+      },
+      "earth": {
+        "title": "Mission control",
+        "body": "The medical team on Earth receives the reports."
+      }
+    },
+    "offlineNote": "If the link drops, alerts and measurements are queued and sent automatically on reconnect.",
+    "nearby": "Nearby crew",
+    "activeCount_one": "{{count}} active",
+    "activeCount_other": "{{count}} active",
+    "simulated": "The network is read from the phone; strength, delay and proximity are simulated (demo)."
+  },
+  "tests": {
+    "title": "Daily tests",
+    "subtitle": "Keep your mind active and catch changes early",
+    "cardBody": "{{done}} of {{total}} done today · reflexes, vision and mind",
+    "today": "Done today",
+    "streak": "Streak (days)",
+    "allDone": "You completed all of today's tests!",
+    "keepGoing": "A few minutes a day is enough: what matters is comparing with yourself.",
+    "duration": "~{{min}} min",
+    "last": "Last: {{value}}",
+    "best": "Personal best: {{value}}",
+    "how": "How it works",
+    "start": "Start",
+    "again": "Try again",
+    "done": "Done",
+    "newBest": "New personal best",
+    "trend": "Your progress",
+    "lowerBetter": "Lower is better.",
+    "higherBetter": "Higher is better.",
+    "disclaimer": "Training and self-tracking exercises, not medical assessments. Inspired by NASA's Cognition battery.",
+    "items": {
+      "reaction": {
+        "title": "Alertness reflexes",
+        "tagline": "Reaction time",
+        "why": "Fatigue, sleep loss and radiation can slow your reactions. This PVT-style test spots it by comparing you with yourself.",
+        "steps": [
+          "Wait with your finger ready over the screen.",
+          "When the panel turns green, tap it as fast as you can.",
+          "Tapping too early counts as a false start."
+        ],
+        "scoreLabel": "Reaction time (median)"
+      },
+      "vision": {
+        "title": "Visual clarity",
+        "tagline": "Acuity with the Snellen E",
+        "why": "Vision can change on long flights (SANS, spaceflight associated neuro-ocular syndrome). Catching changes early helps.",
+        "steps": [
+          "Hold the phone about 40 cm away, in good light.",
+          "Cover one eye at a time.",
+          "Show which way the legs of the E point. Each correct answer makes it smaller."
+        ],
+        "scoreLabel": "Average level (both eyes)"
+      },
+      "stroop": {
+        "title": "Mental agility",
+        "tagline": "Stroop test",
+        "why": "Measures attention and control: deciding fast while ignoring distracting information.",
+        "steps": [
+          "A color name appears painted in another color.",
+          "Tap the INK COLOR, not what the word says.",
+          "There are 20 words: be fast but accurate."
+        ],
+        "scoreLabel": "Correct answers per minute"
+      },
+      "memory": {
+        "title": "Spatial memory",
+        "tagline": "Growing sequences",
+        "why": "Trains working memory, key to following complex procedures on board.",
+        "steps": [
+          "Watch which squares light up and in what order.",
+          "Repeat the sequence by tapping them.",
+          "Each success adds a square; two misses in a row end the test."
+        ],
+        "scoreLabel": "Longest sequence"
+      }
+    },
+    "reaction": {
+      "wait": "Wait…",
+      "now": "NOW!",
+      "early": "Too early",
+      "trial": "Trial {{n}} of {{total}}",
+      "falseStarts_one": "{{count}} false start",
+      "falseStarts_other": "{{count}} false starts",
+      "bestTrial": "Best trial",
+      "falseStartsLabel": "False starts"
+    },
+    "vision": {
+      "coverLeft": "Cover your left eye",
+      "coverRight": "Now cover your right eye",
+      "distance": "Hold the phone about 40 cm from your face.",
+      "ready": "Ready",
+      "eye": {
+        "right": "Right eye",
+        "left": "Left eye"
+      },
+      "level": "Level {{n}} of {{total}}",
+      "question": "Which way do the legs of the E point?",
+      "dir": {
+        "0": "Right",
+        "90": "Down",
+        "180": "Left",
+        "270": "Up"
+      },
+      "asymmetry": "There is a difference between your eyes. Log it and check the Eyes system; if it persists, tell your crew."
+    },
+    "stroop": {
+      "prompt": "What color is the ink?",
+      "progress": "{{n}} of {{total}}",
+      "correct_one": "{{count}} correct",
+      "correct_other": "{{count}} correct",
+      "accuracy": "Accuracy",
+      "avgTime": "Average time",
+      "colors": {
+        "red": "Red",
+        "green": "Green",
+        "blue": "Blue",
+        "yellow": "Yellow"
+      }
+    },
+    "memory": {
+      "watch": "Watch the sequence…",
+      "repeat": "Your turn: {{n}} of {{total}}",
+      "ok": "Correct!",
+      "bad": "Oops, not that one",
+      "length": "Length: {{n}}",
+      "best": "Best: {{n}}"
+    },
+    "pvt": {
+      "beforeCritical": "I'm doing this before a critical task",
+      "fitnessTitle": "Fitness for critical task",
+      "fitness": {
+        "fit": "Fit",
+        "not_confirmed": "Not confirmed"
+      },
+      "state": {
+        "sending": "Sending to the server…",
+        "queued": "Offline: it will be sent when back online.",
+        "local": "Saved on the device.",
+        "error": "Couldn't send the result."
+      },
+      "syncedTitle": "Reaction test synced"
+    }
+  },
+  "crewRoles": {
+    "commander": "Commander",
+    "pilot": "Pilot",
+    "crew_medical_officer": "Crew medical officer",
+    "flight_engineer": "Flight engineer",
+    "mission_specialist": "Mission specialist"
+  },
+  "areYouOk": {
+    "voice": "Are you OK? Tap I'm OK if you can.",
+    "title": "Are you OK?",
+    "body": "A critical reading opened an emergency. Confirm whether you're OK.",
+    "countdown": "Confirm within {{seconds}} s or your crew and Earth will be notified.",
+    "expiredBody": "Time is up: your crew and Earth were notified.",
+    "imOk": "I'm OK",
+    "error": "Couldn't confirm. Try again or tell someone in person.",
+    "result": {
+      "confirmed": "Thanks. It's recorded that you're OK.",
+      "expired": "The deadline passed: your crew and Earth were notified.",
+      "queued": "Offline: your answer will be sent first when back online. Tell someone in person.",
+      "waiting": "",
+      "sending": "",
+      "error": ""
+    }
+  },
+  "support": {
+    "cta": "I want to talk to someone",
+    "title": "Talk to someone",
+    "subtitle": "Write to behavioral health on Earth. It's confidential: no crew member sees your request.",
+    "urgency": "When?",
+    "urgencies": {
+      "later": "It can wait",
+      "today": "Today",
+      "now": "Now"
+    },
+    "channel": "How?",
+    "channels": {
+      "message": "Message",
+      "session": "Session"
+    },
+    "content": "Tell us (anything you want)",
+    "placeholder": "Type or dictate your message",
+    "send": "Send",
+    "privacy": "It reaches Earth with the mission delay. During a link outage it's sent when the link is back.",
+    "suggestionsTitle": "While the reply arrives",
+    "history": "Your requests",
+    "status": {
+      "local": "Saved on the device (demo mode, no server)",
+      "queued": "Pending upload: it will be sent when back online",
+      "noLink": "Pending: no link with Earth",
+      "onTheWay": "On its way to Earth (arrives at {{time}})",
+      "delivered": "Delivered to Earth"
+    },
+    "replyFrom": "Behavioral health",
+    "sentTitle": "Request sent",
+    "sentBody": {
+      "sent": "Behavioral health will get it with the mission delay.",
+      "queued": "Offline: it will be sent when back online.",
+      "local": "Saved on the device (demo mode)."
+    },
+    "errorTitle": "Couldn't send",
+    "errorBody": "Check the message and try again.",
+    "replyTitle": "You have a reply",
+    "replyBody": "Behavioral health replied to your request."
+  },
+  "screening": {
+    "title": "Short questionnaire",
+    "subtitle": "Two questions about mood and two about anxiety. You'll never see a score.",
+    "cardTitle": "Short questionnaire due",
+    "cardBody": "4 questions before your psychological conference.",
+    "unavailable": "You need a connection to load the questionnaire.",
+    "submit": "Send answers",
+    "queued": "Offline: your answers will be sent when back online.",
+    "privacy": "Confidential: only behavioral health sees it, before your private conference.",
+    "errorTitle": "Couldn't send",
+    "errorBody": "Try again."
+  },
+  "sync": {
+    "conflictTitle": "Record not applied",
+    "conflictBody": "The server already had a different version of a record (or it was already corrected). The current one is shown.",
+    "rejectedTitle": "Record rejected",
+    "rejectedBody": "The server rejected a record saved offline because of invalid data.",
+    "clockBody": "The phone clock is ahead. Check the device date and time.",
+    "emergencySentTitle": "Emergency sent",
+    "emergencySentBody": "The queued emergency reached the server.",
+    "earthReplyTitle": "Message from Earth",
+    "pendingBody_one": "{{count}} record is still on the device; it will be sent when back online.",
+    "pendingBody_other": "{{count}} records are still on the device; they will be sent when back online.",
+    "doneBody": "Everything is synced with the server."
+  },
+  "triage": {
+    "title": "Triage",
+    "disclaimer": "Decision support: follows the server's protocol. It does not diagnose or prescribe; anything it doesn't cover goes to Earth.",
+    "status": {
+      "pending": "Waiting for “I’m OK”",
+      "active": "Active",
+      "closed": "Closed (handled)",
+      "cancelled": "Cancelled (false alarm)",
+      "merged": "Joined another session",
+      "queued": "Pending: no link",
+      "demo": "Demo mode: device only"
+    },
+    "sessionStatus": "Status",
+    "startedAt": "Started",
+    "protocol": "Protocol",
+    "protocolVersion": "v{{version}}",
+    "protocolFallback": "v{{version}} (backup copy)",
+    "offline": "No link: showing the data on this device.",
+    "joined": "You joined the emergency that was already open.",
+    "solarEvent": "Solar event active: includes the radiation module.",
+    "refresh": "Refresh",
+    "heartbeat": "While this screen is open, a heartbeat every 30 s tells Earth someone is attending.",
+    "notFound": "This emergency session was not found on this device.",
+    "closedSession": "This emergency is already closed.",
+    "safety": {
+      "title": "Before helping",
+      "secureSelfTitle": "Get to safety",
+      "secureSelfBody": "The protocol asks you to get to safety first. When you are safe, continue.",
+      "nowSafe": "I’m safe now"
+    },
+    "roster": {
+      "title": "Who to assess",
+      "server": "Server roster",
+      "crew": "Current crew saved on device (no link)",
+      "demo": "Mock crew (demo mode)",
+      "none": "No crew",
+      "empty": "No crew saved. Connect once to download it.",
+      "assess": "Assess",
+      "reassess": "Reassess",
+      "resume": "Continue",
+      "needSafe": "First answer whether you are safe."
+    },
+    "attention": {
+      "title": "Order of care",
+      "server": "Server order",
+      "device": "Computed on the tablet with the protocol, pending confirmation",
+      "unassessed": "Not assessed",
+      "inProgress": "Assessment in progress",
+      "empty": "No assessments yet."
+    },
+    "category": {
+      "green": "Green (minor)",
+      "yellow": "Yellow (delayed)",
+      "red": "Red (immediate)",
+      "black": "Black (expectant)"
+    },
+    "flag": {
+      "none": "no radiation",
+      "possible": "possible radiation",
+      "probable": "probable radiation"
+    },
+    "earth": {
+      "title": "Ask Earth",
+      "hint": "Anything the protocol does not cover goes to the flight surgeon. The answer reaches the whole crew.",
+      "placeholder": "Type or dictate your question",
+      "send": "Send to Earth",
+      "demo": "Demo mode: there is no link to Earth.",
+      "error": "The question could not be sent.",
+      "empty": "Write the question first."
+    },
+    "delivery": {
+      "inTransit": "On its way, arrives at {{time}}",
+      "delivered": "Delivered at {{time}}",
+      "noLink": "Pending: no link",
+      "onboard": "Immediate on-board notice"
+    },
+    "close": {
+      "title": "Close the emergency",
+      "hint": "Commander or medical officer only. Press and hold to confirm.",
+      "holdClosed": "Handled",
+      "holdCancelled": "False alarm",
+      "forbidden": "Only the commander or the medical officer can close it.",
+      "queued": "Close queued: it will be sent when the link is back.",
+      "done": "Emergency closed.",
+      "error": "It could not be closed.",
+      "note": "False alarm (closed from triage)"
+    },
+    "assess": {
+      "title": "Assess {{callSign}}",
+      "step": "Question {{n}}",
+      "loading": "Loading the protocol…",
+      "yes": "Yes",
+      "no": "No",
+      "done": "Done",
+      "numberPlaceholder": "Number",
+      "noneExclusive": "“None” cannot go with other options.",
+      "back": "Back",
+      "repeat": "Repeat",
+      "note": "Protocol note",
+      "observable": "Observable sign: you answer it.",
+      "stoppedTitle": "Get to safety",
+      "stoppedBody": "The protocol stops: get to safety first.",
+      "classifying": "Classifying…",
+      "protocolError": "The protocol could not be evaluated with these answers.",
+      "exit": "Exit"
+    },
+    "result": {
+      "title": "Classification",
+      "device": "Computed on the tablet",
+      "pending": "Pending confirmation by the server",
+      "server": "Confirmed by the server",
+      "mismatch": "The tablet computed something else: the server's classification prevails.",
+      "deviceWas": "The tablet computed: {{value}}",
+      "mismatchFields": "Differs in: {{fields}}",
+      "queued": "Queued with emergency priority: it will be sent when the link is back.",
+      "local": "Demo mode: it stays on this device only.",
+      "sendError": "The server did not accept the assessment ({{code}}).",
+      "retry": "Retry sending",
+      "notices": "Notices",
+      "next": "Assess {{callSign}}",
+      "backToSession": "Back to the session",
+      "reassess": "Reassess",
+      "level": {
+        "crew": "Crew",
+        "flight_surgeon": "Earth (flight surgeon)",
+        "self_care": "Self-care",
+        "behavioral_health": "Behavioral health"
+      }
+    },
+    "voice": {
+      "title": "Voice",
+      "mic": "Answer by voice",
+      "buttonsOnly": "Buttons only",
+      "listening": "Listening…",
+      "speaking": "Reading…",
+      "heard": "I heard: “{{text}}”",
+      "understood": "I understood: {{answer}}. Is that right?",
+      "confirmYes": "Yes, correct",
+      "confirmNo": "No",
+      "notUnderstood": "I didn't understand. Please repeat.",
+      "switchToButtons": "I didn't understand. Use the buttons on screen.",
+      "buttonsMode": "You are answering with buttons. Tap “Answer by voice” to use your voice again.",
+      "options": "Options: {{options}}.",
+      "multiHint": "You can say several.",
+      "permissionDenied": "No microphone permission: answer with the buttons.",
+      "unavailable": "This build of the app cannot recognize speech: answer with the buttons (questions are still read aloud).",
+      "systemDictation": "Tap “Answer by voice” to dictate with the system recognizer.",
+      "noOfflineModel": "No offline speech model for this language: install it from the Voice lab.",
+      "and": "and",
+      "commands": "Say the answer, or “repeat”, “buttons” or “back”."
+    },
+    "sync": {
+      "confirmedTitle": "Triage synced",
+      "confirmedBody": "The server confirmed the assessment made offline."
+    }
+  }
+}

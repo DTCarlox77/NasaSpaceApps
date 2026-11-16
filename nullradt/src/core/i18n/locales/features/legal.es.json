@@ -1,0 +1,118 @@
+{
+  "legal": {
+    "title": "Términos y privacidad",
+    "subtitle": "NullRadt · AndroMajes",
+    "updated": "Última actualización: 15 de noviembre de 2026",
+    "link": "Términos y condiciones · Privacidad",
+    "settingsTitle": "Términos, privacidad y créditos",
+    "settingsBody": "Cómo usamos y protegemos tus datos, y quién hizo NullRadt.",
+    "tabs": { "terms": "Términos", "privacy": "Privacidad", "credits": "Créditos" },
+    "terms": [
+      {
+        "title": "1. Titularidad",
+        "body": "NullRadt es un prototipo desarrollado por el equipo AndroMajes para el NASA Space Apps Challenge 2026. © 2026 AndroMajes. Todos los derechos reservados. La participación en el reto no implica que la NASA patrocine, respalde o esté afiliada a esta aplicación."
+      },
+      {
+        "title": "2. Finalidad: apoyo a decisiones, no diagnóstico",
+        "body": "NullRadt ayuda a la tripulación de una misión de larga duración a registrar y vigilar su salud física y su bienestar. No es un dispositivo médico, no diagnostica ni receta. Las decisiones clínicas corresponden al oficial médico a bordo y al flight surgeon en Tierra."
+      },
+      {
+        "title": "3. Datos sintéticos y simulación",
+        "body": "Al ser un prototipo, la tripulación de demostración, las mediciones de los equipos externos y algunos datos del perfil (estatura, peso, edad, tipo de sangre) son sintéticos y se marcan como tales. No uses la aplicación con datos reales de pacientes."
+      },
+      {
+        "title": "4. Umbrales y evaluaciones",
+        "body": "Los semáforos usan reglas con fuente citada (por ejemplo NEWS2, AHA, EWGSOP2). Con servidor conectado, manda la evaluación del servidor. Si un indicador no tiene una regla validada, se muestra como «sin evaluar» y nunca como «bien»."
+      },
+      {
+        "title": "5. Emergencias y triaje",
+        "body": "El botón SOS está disponible siempre, incluso sin iniciar sesión. Una alerta crítica abre una sesión de emergencia que ven la tripulación y Tierra; sin enlace, queda en cola y se envía primero al reconectar. El triaje sigue solo el protocolo aprobado por el servidor: lo que no cubre se consulta a Tierra. Solo el comandante o el oficial médico pueden cerrar una emergencia. NullRadt no sustituye los procedimientos de emergencia de la misión."
+      },
+      {
+        "title": "6. Tu cuenta",
+        "body": "Tus credenciales son personales e intransferibles. Tras varios intentos fallidos la cuenta se bloquea temporalmente. La contraseña debe tener al menos 10 caracteres y el desbloqueo con PIN sin conexión caduca. Avisa al comandante si crees que alguien usó tu cuenta."
+      },
+      {
+        "title": "7. Uso aceptable",
+        "body": "No intentes alterar registros, acceder a datos de otros tripulantes fuera de tu rol, ni abrir emergencias falsas a propósito. Las acciones sensibles y los accesos de emergencia quedan registrados para auditoría."
+      },
+      {
+        "title": "8. Conectividad",
+        "body": "La aplicación funciona sin conexión y sincroniza cuando vuelve el enlace. El retraso de comunicación con Tierra forma parte del modelo de la misión: los mensajes a Tierra indican cuándo llegarán."
+      },
+      {
+        "title": "9. Propiedad intelectual y terceros",
+        "body": "El código, el diseño y los textos de NullRadt son © 2026 AndroMajes. Las tipografías Atkinson Hyperlegible y Lexend se usan bajo la licencia SIL Open Font License. Los cuestionarios PHQ-2 y GAD-2 son de uso libre. Los nombres de terceros pertenecen a sus respectivos dueños."
+      },
+      {
+        "title": "10. Sin garantías",
+        "body": "NullRadt se ofrece «tal cual», como prototipo de hackathon y sin garantías de ningún tipo. En la medida que lo permita la ley, AndroMajes no responde por daños derivados de su uso."
+      },
+      {
+        "title": "11. Cambios",
+        "body": "Estos términos pueden actualizarse; la fecha de la última versión aparece arriba. Usar la aplicación después de un cambio implica aceptar la versión vigente."
+      }
+    ],
+    "privacy": [
+      {
+        "title": "1. Responsable",
+        "body": "El equipo AndroMajes (NASA Space Apps Challenge 2026) es responsable del tratamiento de los datos de NullRadt."
+      },
+      {
+        "title": "2. Qué datos tratamos",
+        "body": "Datos de cuenta (usuario, rol, misión y distintivo); sexo biológico, solo para los rangos de referencia; signos vitales y otras lecturas de salud; el check-in de bienestar (ánimo, fatiga, estrés, roces con la tripulación, sueño y una nota privada); los cuestionarios PHQ-2 y GAD-2; la prueba de reflejos; las solicitudes de apoyo; las emergencias y el triaje; las fotos que adjuntes a una lectura manual o a tu perfil; y tus ajustes."
+      },
+      {
+        "title": "3. Dónde se guardan",
+        "body": "En el servidor de la misión: el check-in, los cuestionarios, la prueba de reflejos, las solicitudes de apoyo, las emergencias y el triaje, y las lecturas que se envían. Solo en tu dispositivo: las mediciones y fotos del modo de salud local, la rutina, la foto de perfil, los ajustes y las pruebas de Stroop, memoria y visión. Tus credenciales se guardan cifradas en el almacenamiento seguro del sistema."
+      },
+      {
+        "title": "4. Confidencialidad del bienestar",
+        "body": "Tu bienestar solo lo ven tú y el equipo de salud conductual. La tripulación nunca ve tu bienestar. El puntaje de los cuestionarios nunca se muestra en la aplicación. De la prueba de reflejos, a control de misión solo llega «apto» o «no confirmado», nunca tus tiempos. La nota privada del check-in solo la ves tú."
+      },
+      {
+        "title": "5. Quién ve qué",
+        "body": "La tripulación ve las alertas físicas que se le escalan, sin valores. El oficial médico ve el semáforo físico. El flight surgeon recibe los escalamientos médicos y los reportes de triaje. Control de misión ve el cumplimiento y la auditoría. Durante una emergencia activa, el acceso se amplía solo lo necesario para atenderla y queda registrado: la seguridad va primero."
+      },
+      {
+        "title": "6. Voz",
+        "body": "La lectura en voz alta y, cuando el teléfono tiene el modelo del idioma, el reconocimiento de voz se hacen en el dispositivo. NullRadt no graba ni envía tu audio. Si usas el reconocedor del sistema (por ejemplo, en Expo Go), aplica la política de privacidad de su proveedor."
+      },
+      {
+        "title": "7. Biometría",
+        "body": "La huella o el rostro los verifica el sistema operativo. NullRadt solo recibe «verificado» o «no verificado»; nunca recibe ni guarda tus datos biométricos."
+      },
+      {
+        "title": "8. Permisos",
+        "body": "Micrófono (voz), cámara y fotos (lecturas manuales y foto de perfil), notificaciones (alertas) y sensores de movimiento (agitar el teléfono para el SOS). NullRadt no usa tu ubicación. Puedes revocar cualquier permiso; solo dejará de funcionar lo que dependa de él."
+      },
+      {
+        "title": "9. Seguridad",
+        "body": "Las comunicaciones con el servidor usan HTTPS. El acceso usa tokens de vida corta que se renuevan con un token de un solo uso: si alguien reutiliza uno, se cierran las sesiones afectadas. Las contraseñas se guardan en el servidor con hash bcrypt y la aplicación se bloquea al pasar a segundo plano."
+      },
+      {
+        "title": "10. Conservación y cierre de sesión",
+        "body": "Al cerrar sesión se borran del dispositivo los tokens, la caché de salud y los datos de triaje. Los envíos que aún estén en cola se conservan para no perder información, sobre todo de emergencias. El servidor de demostración usa datos sintéticos y puede reiniciarse."
+      },
+      {
+        "title": "11. Sin publicidad ni venta de datos",
+        "body": "NullRadt no incluye publicidad, rastreadores ni herramientas de analítica, y no vende ni comparte tus datos con fines comerciales. El triaje no usa inteligencia artificial en la nube."
+      },
+      {
+        "title": "12. Tus derechos",
+        "body": "Puedes consultar tus datos en la aplicación y corregir tu check-in del día volviendo a enviarlo. Para pedir una copia o el borrado de tus datos del servidor, contacta al equipo AndroMajes."
+      },
+      {
+        "title": "13. Menores",
+        "body": "NullRadt está pensada para tripulación adulta y no está dirigida a menores de edad."
+      }
+    ],
+    "credits": {
+      "ownerTitle": "Una aplicación de AndroMajes",
+      "ownerBody": "Creada para el NASA Space Apps Challenge 2026.",
+      "teamTitle": "Equipo",
+      "nasaNote": "NASA no patrocina ni respalda esta aplicación."
+    },
+    "copyright": "© 2026 AndroMajes. Todos los derechos reservados."
+  }
+}

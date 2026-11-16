@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 244 244" width="1024" height="1024">
+  <title>NullRadt</title>
+  <rect width="244" height="244" rx="53.68" fill="#1F1F1F"/>
+  <g fill="none" stroke="#6BDE49" stroke-linejoin="round">
+    <path d="M43.59 62.13A96 96 0 0 1 85.95 25.3L103.85 65.5A52 52 0 0 0 80.9 85.44Z" stroke-width="9"/>
+    <path d="M206.41 62.13A96 96 0 0 0 164.05 25.3L146.15 65.5A52 52 0 0 1 169.1 85.44Z" stroke-width="9"/>
+    <circle cx="124" cy="113" r="37.5" stroke-width="15"/>
+    <path d="M148 77L100 149" stroke-width="13"/>
+    <path d="M97 150L64 208" stroke-width="10" stroke-linecap="round"/>
+    <path d="M151 150L184 208" stroke-width="10" stroke-linecap="round"/>
+  </g>
+  <rect x="45" y="210" width="156" height="12" fill="#6BDE49"/>
+  <g fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M84 205L104 169L145 169L161 205" stroke-width="9"/>
+    <path d="M61.17 63.13A81 81 0 0 1 79.71 45.85" stroke-width="5"/>
+    <path d="M188.83 63.13A81 81 0 0 0 170.29 45.85" stroke-width="5"/>
+  </g>
+</svg>

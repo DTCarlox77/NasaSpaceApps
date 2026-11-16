@@ -1,0 +1,276 @@
+{
+  "assistant": {
+    "failed": "Something went wrong running that command. Please try again.",
+    "notUnderstood": "I didn't understand. Say “NullRadt, help” to hear what I can do.",
+    "dialogTimeout": "I didn't hear an answer. Let's leave it for later.",
+    "noData": "There are no {{name}} readings.",
+    "over": "{{a}} over {{b}}",
+    "indicatorLine": "{{name}}: {{value}} {{unit}}, {{status}}.",
+    "sayNext_one": "{{count}} left. Say “NullRadt, next” to continue.",
+    "sayNext_other": "{{count}} left. Say “NullRadt, next” to continue.",
+    "sessionComplete": "Measurement session complete.",
+    "units": {
+      "heartRate": "beats per minute",
+      "bloodPressure": "millimeters of mercury",
+      "spo2": "percent",
+      "respRate": "breaths per minute",
+      "reactionTime": "milliseconds",
+      "eyePressure": "millimeters of mercury",
+      "urinaryCalcium": "milligrams per day",
+      "gripStrength": "kilograms",
+      "bodyTemperature": "degrees"
+    },
+    "checkIn": {
+      "intro": "Let's do your check-in. Answer with a number from zero to ten.",
+      "q": {
+        "mood": "How is your mood? Zero very low, ten very good.",
+        "fatigue": "How fatigued do you feel? Zero not at all, ten exhausted.",
+        "stress": "How stressed do you feel? Zero not at all, ten extremely.",
+        "crewConflict": "How much friction have you had with the crew? Zero none, ten a lot."
+      },
+      "repeat": "I didn't catch the number.",
+      "cancelled": "Check-in cancelled.",
+      "saved": "Check-in saved. Thank you."
+    },
+    "reply": {
+      "help": "You can say, for example: daily analysis, daily check-in, my eye health, my blood pressure, measure oxygen, vital signs, what is next, emergency, or I want to talk to someone. Showing the full list.",
+      "emergency": "Emergency triage activated. Assess each crewmember.",
+      "talk": "Opening the confidential channel with behavioral health. Your crew will not see it.",
+      "allNormal_one": "Your indicator is within range.",
+      "allNormal_other": "All {{count}} of your indicators are within range.",
+      "attention_one": "{{count}} indicator needs attention.",
+      "attention_other": "{{count}} indicators need attention.",
+      "checkInDone": "You already did today's check-in.",
+      "checkInPending": "Today's check-in is still pending.",
+      "measurementsPending_one": "{{count}} measurement pending.",
+      "measurementsPending_other": "{{count}} measurements pending.",
+      "nextTask": "At {{time}}: {{task}}.",
+      "noPending": "You have no pending measurements today.",
+      "sessionStart_one": "You have {{count}} pending measurement. Starting with {{first}}.",
+      "sessionStart_other": "You have {{count}} pending measurements. Starting with {{first}}.",
+      "nextMeasure": "Next: {{name}}.",
+      "routineDone": "You completed today's whole routine.",
+      "reactionTest": "Opening the reaction test.",
+      "visionTest": "Opening the visual clarity test.",
+      "tests": "Opening the daily tests.",
+      "screening": "Opening the confidential biweekly questionnaire.",
+      "measureStart": "Measuring {{name}}. Stay still.",
+      "measureManual": "{{name}} is logged manually or with the camera. Opening the log.",
+      "systemStatus": "{{system}} system: {{status}}.",
+      "criticalNeedsFit": "The next task is critical: first you need a fit result in the reaction test.",
+      "marked": "Marked as done: {{task}}.",
+      "achievements": "You're at level {{level}}, with a {{streak}}-day check-in streak.",
+      "linkDown": "No link with Earth right now. {{pending}} messages queued.",
+      "linkUp": "Link with Earth active. {{delay}}-second delay. {{pending}} messages on their way.",
+      "crew": "Opening the crew.",
+      "opening": "Opening {{page}}."
+    },
+    "pages": {
+      "body3d": "the 3D body",
+      "monitor": "the monitor",
+      "wellbeing": "wellbeing",
+      "profile": "your profile",
+      "settings": "settings",
+      "access": "security and access",
+      "earth": "the Earth inbox",
+      "more": "more options",
+      "home": "home"
+    },
+    "overlay": {
+      "listening": "I'm listening…",
+      "thinking": "Processing…",
+      "error": "No microphone permission",
+      "idle": "Say “NullRadt”",
+      "a11y": "Voice assistant. Tap to talk; hold to see the commands."
+    },
+    "screen": {
+      "title": "Voice commands",
+      "subtitle": "Use the app without touching the phone",
+      "wake": "Say “NullRadt”, then your command",
+      "wakeBody": "The microphone listens on the device (no internet) only while the app is open. You can say it all at once: “NullRadt, daily analysis”. You can also tap the microphone indicator.",
+      "needsApk": "Listening for “NullRadt” needs the APK (Expo Go has no speech recognition). Here you can type the commands and the app answers out loud.",
+      "status": "Status: {{status}}",
+      "talkNow": "Talk now",
+      "toggle": "Listen for “NullRadt”",
+      "toggleBody": "If off, the microphone is only used for dictation.",
+      "tryTitle": "Try a command",
+      "tryLabel": "Type what you would say",
+      "tryPlaceholder": "daily analysis",
+      "run": "Run",
+      "footer": "Tap an example to try it. Commands work offline and use no external services."
+    },
+    "status": {
+      "off": "off",
+      "unsupported": "not available",
+      "starting": "starting",
+      "listening": "waiting for “NullRadt”",
+      "awake": "listening for your command",
+      "thinking": "processing",
+      "speaking": "speaking",
+      "dialog": "waiting for your answer",
+      "paused": "paused",
+      "error": "error"
+    },
+    "groups": {
+      "health": "Health",
+      "measure": "Measurements",
+      "wellbeing": "Wellbeing",
+      "routine": "Routine",
+      "emergency": "Emergency",
+      "navigation": "Navigation",
+      "system": "System"
+    },
+    "cmd": {
+      "dailyAnalysis": {
+        "title": "Daily health analysis",
+        "examples": [
+          "daily analysis",
+          "how am I",
+          "health summary"
+        ]
+      },
+      "systemHealth": {
+        "title": "Health of a system",
+        "examples": [
+          "my eye health",
+          "heart status",
+          "how are my lungs",
+          "bone health"
+        ]
+      },
+      "indicatorValue": {
+        "title": "Value of an indicator",
+        "examples": [
+          "my blood pressure",
+          "my oxygen",
+          "my temperature",
+          "my pulse"
+        ]
+      },
+      "measureAll": {
+        "title": "Measure everything pending (step by step)",
+        "examples": [
+          "vital signs",
+          "take measurements"
+        ]
+      },
+      "measureOne": {
+        "title": "Measure something specific",
+        "examples": [
+          "measure blood pressure",
+          "measure oxygen",
+          "take temperature"
+        ]
+      },
+      "next": {
+        "title": "Next measurement or task",
+        "examples": [
+          "next"
+        ]
+      },
+      "checkIn": {
+        "title": "Daily check-in by voice",
+        "examples": [
+          "daily check-in",
+          "daily check"
+        ]
+      },
+      "talk": {
+        "title": "Talk to behavioral health",
+        "examples": [
+          "I want to talk to someone"
+        ]
+      },
+      "reactionTest": {
+        "title": "Reaction test (fitness)",
+        "examples": [
+          "reaction test",
+          "fitness test"
+        ]
+      },
+      "visionTest": {
+        "title": "Vision test",
+        "examples": [
+          "vision test"
+        ]
+      },
+      "tests": {
+        "title": "Daily tests",
+        "examples": [
+          "cognitive tests"
+        ]
+      },
+      "screening": {
+        "title": "Biweekly questionnaire",
+        "examples": [
+          "questionnaire"
+        ]
+      },
+      "routineNext": {
+        "title": "What's next",
+        "examples": [
+          "what's next",
+          "next task"
+        ]
+      },
+      "routineDone": {
+        "title": "Mark task as done",
+        "examples": [
+          "task done",
+          "mark it done"
+        ]
+      },
+      "emergency": {
+        "title": "Emergency & triage",
+        "examples": [
+          "emergency",
+          "triage",
+          "SOS"
+        ]
+      },
+      "navigate": {
+        "title": "Open a screen",
+        "examples": [
+          "open wellbeing",
+          "go to monitor",
+          "open my profile",
+          "3D body"
+        ]
+      },
+      "crew": {
+        "title": "Crew",
+        "examples": [
+          "crew"
+        ]
+      },
+      "achievements": {
+        "title": "Points & streak",
+        "examples": [
+          "my achievements",
+          "my points"
+        ]
+      },
+      "comms": {
+        "title": "Earth link status",
+        "examples": [
+          "link status",
+          "communications"
+        ]
+      },
+      "help": {
+        "title": "Help",
+        "examples": [
+          "help",
+          "what can I say"
+        ]
+      },
+      "stop": {
+        "title": "Quiet / cancel",
+        "examples": [
+          "quiet",
+          "cancel"
+        ]
+      }
+    }
+  }
+}

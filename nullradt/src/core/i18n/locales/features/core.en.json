@@ -1,0 +1,362 @@
+{
+  "indicatorDetail": {
+    "title": "Indicator",
+    "noData": "No readings yet",
+    "synthetic": "Synthetic",
+    "chartA11y_one": "Chart with {{count}} reading. Tap to inspect a point.",
+    "chartA11y_other": "Chart with {{count}} readings. Tap to inspect a point.",
+    "syntheticNote": "Includes synthetic demo data (shown as small dots on the chart).",
+    "evolution": "Trend over time",
+    "period7": "7 days",
+    "period30": "30 days",
+    "periodAll": "All",
+    "legendNormal": "Normal range (rule)",
+    "legendCaution": "Caution",
+    "legendPersonal": "Your usual range",
+    "tapHint": "Tap the chart to see each reading's value, date and origin.",
+    "function": "What it measures and why it matters",
+    "guide": "Step-by-step guide",
+    "readAloud": "Read aloud",
+    "tabHow": "How to measure",
+    "tabMeaning": "What it means",
+    "tabActions": "What to do",
+    "current": "Your current status",
+    "overdue": "Measurement due",
+    "nextDue": "Next measurement",
+    "every": "every {{hours}} h",
+    "measureDevice": "Measure with device",
+    "registerManual": "Log manually or with camera"
+  },
+  "rules": {
+    "title": "Evaluation and escalation",
+    "escalationTitle": "Escalation",
+    "escalationBody": {
+      "self": "Self-care: follow the guide. No one needs to be notified.",
+      "crew": "Crew: the onboard medical officer was notified because the value keeps falling out of range.",
+      "flightSurgeon": "Flight surgeon: the crew was notified and the report is on its way to Earth (arrives after the link delay)."
+    },
+    "remeasure": "Measure again in {{min}} min at rest to confirm.",
+    "kinds": {
+      "news2": "Rule: NEWS2 score (0 normal · 1–2 caution · 3 critical).",
+      "aha": "Rule: AHA blood pressure categories + systolic ≤ 90 (NEWS2).",
+      "reference": "Rule: published reference range.",
+      "baseline": "Rule: comparison with YOUR personal baseline (not a clinical threshold; the flight surgeon can adjust the margin).",
+      "none": "No validated onboard rule: stored and sent for expert review.",
+      "sex": "Rule: clinical limit that differs for men and women."
+    },
+    "source": "Source: {{source}}",
+    "reasons": {
+      "inRange": "Within the protocol range.",
+      "news2Low": "Slightly out of range per NEWS2.",
+      "news2High": "Far out of range per NEWS2.",
+      "bpCrisis": "Blood pressure in hypertensive crisis range (AHA).",
+      "bpLow": "Very low systolic (≤ 90 mmHg).",
+      "bpHigh": "High blood pressure (AHA hypertension).",
+      "bpElevated": "Elevated blood pressure (AHA).",
+      "bpLowish": "Somewhat low systolic (91–110 mmHg, NEWS2).",
+      "iopHigh": "Eye pressure above 21 mmHg.",
+      "iopLow": "Eye pressure below 10 mmHg.",
+      "noBaseline": "No personal baseline yet (3 readings needed).",
+      "baselineWorse": "Worse than your usual range.",
+      "baselineOk": "Within your usual range.",
+      "noRule": "Logged for review: no validated onboard rule.",
+      "gripLow": "Strength below the cut-off for your sex (EWGSOP2).",
+      "calciumHigh": "Urinary calcium above the limit for your sex.",
+      "noSex": "Your sex is missing from your record, so it cannot be evaluated."
+    },
+    "earthTitle": "Medical escalation · {{name}}",
+    "earthBody": "{{what}}: {{value}} ({{status}})."
+  },
+  "register": {
+    "title": "Log measurement",
+    "subtitle": "Manually or with a photo of the device",
+    "permissionTitle": "No permission",
+    "permissionBody": "Allow camera or photo access in the phone settings.",
+    "invalid": "Check the value: it must be between {{min}} and {{max}} (diastolic lower than systolic).",
+    "indicator": "What are you logging?",
+    "photoTitle": "Photo of the device (optional)",
+    "photoBody": "Take a photo of the measuring device's screen. It is stored on the device as evidence so the flight surgeon can verify the reading. Offline there is no automatic reading: type the number you see below.",
+    "photoA11y": "Photo of the measuring device",
+    "retake": "Change photo",
+    "camera": "Camera",
+    "gallery": "Gallery",
+    "valueTitle": "Value",
+    "systolic": "Systolic",
+    "diastolic": "Diastolic",
+    "note": "Note (optional)",
+    "notePlaceholder": "Context: after exercise, on waking…",
+    "evaluate": "Save and evaluate",
+    "photoAttached": "Photo attached",
+    "seeDetail": "See trend",
+    "another": "Log another"
+  },
+  "achievements": {
+    "title": "Achievements",
+    "subtitle": "Completing is rewarded, never the result",
+    "level": "Level {{level}}",
+    "points_one": "{{count}} point",
+    "points_other": "{{count}} points",
+    "pointsLabel": "points",
+    "cardLine": "Today +{{today}} · {{streak}}-day streak · {{badges}}/{{total}} badges",
+    "toNext_one": "{{count}} point to the next level",
+    "toNext_other": "{{count}} points to the next level",
+    "today": "Today so far +{{count}}",
+    "streaks": "Streaks",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "streak": {
+      "checkIn": "Daily check-in",
+      "measurement": "Measurements",
+      "exercise": "Exercise",
+      "sleep": "Sleep logged"
+    },
+    "badges": "Badges",
+    "howTitle": "How to earn points",
+    "how": {
+      "measurement": "Each measurement (max 5 per day)",
+      "checkIn": "Wellbeing check-in",
+      "test": "Each cognitive test (max 4 per day)",
+      "exercise": "Completed exercise session",
+      "sleep": "Logging your sleep",
+      "screening": "Biweekly questionnaire completed",
+      "fitness": "Reaction test completed"
+    },
+    "fairPlay": "An out-of-range value earns the same as a normal one: what matters is measuring and reporting honestly.",
+    "unlocked": "Unlocked",
+    "badge": {
+      "firstMeasurement": {
+        "title": "First measurement",
+        "body": "Log your first reading."
+      },
+      "tenMeasurements": {
+        "title": "Consistency",
+        "body": "Log 10 measurements."
+      },
+      "camera": {
+        "title": "Evidence",
+        "body": "Log a reading with a photo."
+      },
+      "checkIn7": {
+        "title": "Full week",
+        "body": "7 check-ins in a row."
+      },
+      "checkIn30": {
+        "title": "Habit",
+        "body": "30 check-ins in total."
+      },
+      "exercise5": {
+        "title": "Fighting microgravity",
+        "body": "Complete exercise on 5 days."
+      },
+      "sleep7": {
+        "title": "Well rested",
+        "body": "Log your sleep on 7 days."
+      },
+      "allTests": {
+        "title": "Sharp mind",
+        "body": "All 4 tests on the same day."
+      },
+      "screening": {
+        "title": "Talking helps",
+        "body": "Complete the biweekly questionnaire."
+      },
+      "fitCheck": {
+        "title": "Task ready",
+        "body": "Complete the reaction test."
+      }
+    }
+  },
+  "guides": {
+    "heartRate": {
+      "how": [
+        "Rest for 5 minutes seated or strapped into your sleeping bag, without talking.",
+        "Put the pulse oximeter on your index finger (or use the wristband) and keep your hand still at heart level.",
+        "Wait at least 30 seconds for the value to settle.",
+        "Log the value. If you just exercised, wait 15 minutes before measuring."
+      ],
+      "meaning": "Beats per minute at rest. In microgravity fluids shift toward the head and the heart works differently; stress, fever or dehydration also raise it. Evaluated with the NEWS2 table: 51–90 is normal.",
+      "actions": {
+        "normal": "Keep your routine and the scheduled measurement.",
+        "caution": "Rest, hydrate and measure again in 15 min. If it repeats out of range, the medical officer is notified.",
+        "critical": "Stop the activity, rest and notify the crew now. Escalated to the flight surgeon.",
+        "unevaluated": "Log the value; it will be reviewed later."
+      }
+    },
+    "bloodPressure": {
+      "how": [
+        "Rest for 5 minutes with your back supported and feet secured.",
+        "Place the cuff on the bare arm, 2–3 cm above the elbow, at heart level.",
+        "Do not talk or move during the measurement.",
+        "Take two readings 1 minute apart and log the second."
+      ],
+      "meaning": "Systolic / diastolic in mmHg. In flight, fluid shifts and cardiovascular deconditioning change it. Normal (AHA): below 120/80. Elevated: 120–129. High: from 130/80. Crisis: above 180/120. A systolic of 90 or less is also critical (NEWS2).",
+      "actions": {
+        "normal": "No action. Repeat per the mission schedule.",
+        "caution": "Repeat in 15 min at rest. Cut salt and caffeine that day. If it persists, the crew is notified.",
+        "critical": "Rest immediately and notify the crew. If there is chest pain, severe dizziness or blurred vision, activate triage.",
+        "unevaluated": "Log the value; it will be reviewed later."
+      }
+    },
+    "spo2": {
+      "how": [
+        "Warm your hands if they are cold.",
+        "Place the pulse oximeter on a finger without nail polish and keep your hand still.",
+        "Wait for a stable pulse wave (about 30 s).",
+        "Log the value."
+      ],
+      "meaning": "Percentage of oxygen in the blood. Depends on the cabin atmosphere (CO₂, pressure) and the lungs. NEWS2: 96% or more is normal; 92–95% caution; 91% or less critical.",
+      "actions": {
+        "normal": "No action.",
+        "caution": "Breathe deeply, check the module's CO₂ sensors and measure again. If it persists, notify the crew.",
+        "critical": "Notify the crew now and check the module atmosphere. Use oxygen per the onboard procedure.",
+        "unevaluated": "Log the value; it will be reviewed later."
+      }
+    },
+    "respRate": {
+      "how": [
+        "Put on the respiratory band or ask a crewmate to watch your chest.",
+        "Breathe normally, without trying to control the rhythm.",
+        "Count breaths for a full 60 seconds.",
+        "Log the number."
+      ],
+      "meaning": "Breaths per minute. Rises with fever, high CO₂, anxiety or pain. NEWS2: 12–20 is normal.",
+      "actions": {
+        "normal": "No action.",
+        "caution": "Rest and measure again in 15 min. Check the module CO₂.",
+        "critical": "Notify the crew. More than 25 or fewer than 9 per minute needs immediate attention.",
+        "unevaluated": "Log the value; it will be reviewed later."
+      }
+    },
+    "reactionTime": {
+      "how": [
+        "Take the reaction test somewhere quiet, always with the same tablet.",
+        "Hold the device firmly and use the same finger every time.",
+        "Tap as soon as the stimulus appears, without anticipating.",
+        "The result is saved automatically."
+      ],
+      "meaning": "Measures your alertness. Sleep loss, fatigue and stress slow it down. It is compared with YOUR baseline (there is no universal 'normal' value): more than 15% worse than your average is caution.",
+      "actions": {
+        "normal": "You are within your usual range.",
+        "caution": "Prioritize rest. Before a critical task repeat the test; if fitness is not confirmed, talk to the commander.",
+        "critical": "Not applicable to this indicator.",
+        "unevaluated": "You need 3 tests to build your baseline."
+      }
+    },
+    "eyePressure": {
+      "how": [
+        "Follow the onboard tonometer procedure with help from the medical officer.",
+        "Apply the anesthetic drop if the device requires it.",
+        "Measure each eye separately and log the higher value.",
+        "You can attach a photo of the tonometer screen."
+      ],
+      "meaning": "Pressure inside the eye in mmHg. On long flights spaceflight-associated neuro-ocular syndrome (SANS) can appear. American Academy of Ophthalmology reference: 10–21 mmHg.",
+      "actions": {
+        "normal": "No action.",
+        "caution": "Take the visual clarity test and note any vision changes. The flight surgeon will review the trend.",
+        "critical": "Not applicable to this indicator.",
+        "unevaluated": "Log the value; it will be reviewed later."
+      }
+    },
+    "urinaryCalcium": {
+      "how": [
+        "Collect 24-hour urine with the onboard kit.",
+        "Process the sample following the analyzer procedure.",
+        "Log the value in mg/day and attach a photo of the result."
+      ],
+      "meaning": "In microgravity bones lose calcium, which is excreted in urine (raising the risk of kidney stones). It is considered high above 275 mg/day in men and 250 mg/day in women.",
+      "actions": {
+        "normal": "Keep up resistance exercise and your usual hydration.",
+        "caution": "Drink more water, review your resistance exercise and tell the medical officer. The flight surgeon will review the trend.",
+        "critical": "Not applicable to this indicator.",
+        "unevaluated": "Log the value; it will be reviewed later."
+      }
+    },
+    "gripStrength": {
+      "how": [
+        "Hold the dynamometer with your arm against your body and elbow at 90°.",
+        "Squeeze as hard as you can for 3 seconds.",
+        "Do 3 attempts with your dominant hand and log the best."
+      ],
+      "meaning": "Grip strength in kg, a proxy for muscle mass. Without gravity muscles atrophy unless trained. It is considered low below 27 kg in men and 16 kg in women; in addition, a drop of more than 10% from your baseline is caution.",
+      "actions": {
+        "normal": "Keep your resistance exercise plan.",
+        "caution": "Review your resistance exercise (ARED) compliance with the crew.",
+        "critical": "Not applicable to this indicator.",
+        "unevaluated": "You need 3 readings to build your baseline."
+      }
+    },
+    "bodyTemperature": {
+      "how": [
+        "Do not eat or drink anything hot or cold 15 minutes before.",
+        "Place the thermometer according to its type (forehead, ear or oral).",
+        "Wait for the device signal and log the value."
+      ],
+      "meaning": "Body temperature in °C. Fever may indicate an infection; the immune system behaves differently in space. NEWS2: 36.1–38.0 °C is normal.",
+      "actions": {
+        "normal": "No action.",
+        "caution": "Hydrate, rest and measure again in 1 h. Note symptoms in your check-in.",
+        "critical": "Notify the crew and isolate if the protocol says so. Escalated to the flight surgeon.",
+        "unevaluated": "Log the value; it will be reviewed later."
+      }
+    }
+  },
+  "measureSession": {
+    "title": "Log measurement",
+    "subtitle": "Today's pending measurements",
+    "pendingTitle_one": "{{count}} pending measurement",
+    "pendingTitle_other": "{{count}} pending measurements",
+    "mustComplete": "The session ends when all are done. If you leave, it is saved and you resume where you left off.",
+    "howTitle": "How do you want to do them?",
+    "guided": "Step by step",
+    "free": "My choice",
+    "guidedHint": "We take you from one to the next in the recommended order (blood pressure first, at rest).",
+    "freeHint": "You pick the order from the list; all must still be completed.",
+    "start": "Start",
+    "progress": "{{done}} of {{total}} completed",
+    "nextIs": "Next: {{name}}",
+    "completeTitle": "Session complete!",
+    "completeBody": "All of today's measurements were logged and evaluated.",
+    "locked": "Complete the previous one first",
+    "withDevice": "With device",
+    "manual": "Manual or camera",
+    "continueWith": "Continue: {{name}}",
+    "finish": "Finish",
+    "newSession": "Start a new session",
+    "nextStep_one": "Next: {{name}} ({{count}} left)",
+    "nextStep_other": "Next: {{name}} ({{count}} left)",
+    "backToList_one": "Back to list ({{count}} left)",
+    "backToList_other": "Back to list ({{count}} left)",
+    "seeSummary": "See session summary",
+    "leaveTitle": "Measurements missing",
+    "leaveBody_one": "{{count}} measurement left. Your progress is saved to finish later.",
+    "leaveBody_other": "{{count}} measurements left. Your progress is saved to finish later.",
+    "keepGoing": "Keep measuring",
+    "leaveAnyway": "Leave for now",
+    "nothingTitle": "No pending measurements",
+    "nothingBody": "You already logged everything due today.",
+    "registerOther": "Log another measurement"
+  },
+  "sexRange": {
+    "title": "Normal range for you",
+    "same": "The clinical source uses the same range for men and women.",
+    "bothSexes": "Normal range (men and women)",
+    "sex": {
+      "male": "Men",
+      "female": "Women"
+    },
+    "ages": "ages {{ages}}",
+    "you": "you",
+    "upTo": "up to {{value}}",
+    "atLeast": "{{value}} or more",
+    "typical": {
+      "heartRate": "Typical value (median): {{value}}",
+      "gripStrength": "Typical young-adult peak (median): {{value}}"
+    },
+    "explain": {
+      "heartRate": "Range between the 5th and 95th percentiles of healthy adults at rest. On average, women have a higher pulse than men (74 vs 71 bpm from age 20). Alerts still follow the NEWS2 clinical rule, which is the same for both sexes.",
+      "urinaryCalcium": "Above this value it is considered hypercalciuria. The limit is lower for women.",
+      "gripStrength": "Below this value grip strength is considered low (sarcopenia cut-off). It is also compared with your own baseline."
+    },
+    "sourcesTitle": "Sources"
+  }
+}
