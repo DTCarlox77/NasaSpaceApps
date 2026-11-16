@@ -96,7 +96,8 @@
         {
           "max": 240
         }
-      ]
+      ],
+      "./plugins/withNoMinify"
     ],
     "scheme": "nullradt",
     "backgroundColor": "#1F1F1F",
