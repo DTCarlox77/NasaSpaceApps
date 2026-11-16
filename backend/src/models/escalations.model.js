@@ -16,6 +16,11 @@ const ESCALATION_COLUMNS = `id, client_uuid, mission_id, astronaut_id, source_ty
   priority, status, reason, category, is_confidential, created_at, deliver_at, acknowledged_at,
   acknowledged_by, closed_at`;
 
+// Indicador de la lectura que originó el escalamiento (NULL si no viene de una lectura): lo usa
+// canAccess para decidir por indicador (p. ej. admin no recibe SLEEP_HOURS).
+const READING_INDICATOR = `(SELECT r.indicator_code FROM v_readings_standard r
+  WHERE escalations.source_type = 'reading' AND r.id = escalations.source_id) AS indicator_code`;
+
 // Orden de la bandeja: prioridad (emergency > urgent > routine) y luego deliver_at.
 const PRIORITY_RANK = `CASE i.priority WHEN 'emergency' THEN 0 WHEN 'urgent' THEN 1 ELSE 2 END`;
 // Lo que ya llegó pero sigue queued (aún no promovido) se muestra como delivered.
@@ -113,7 +118,8 @@ async function close(id, userId, db = pool) {
 
 async function findById(id, db = pool) {
   const { rows } = await db.query(
-    `SELECT ${ESCALATION_COLUMNS}, (deliver_at IS NOT NULL AND deliver_at <= now()) AS delivered
+    `SELECT ${ESCALATION_COLUMNS}, (deliver_at IS NOT NULL AND deliver_at <= now()) AS delivered,
+            ${READING_INDICATOR}
      FROM escalations WHERE id = $1`,
     [id],
   );
@@ -123,7 +129,8 @@ async function findById(id, db = pool) {
 /** Bloquea la fila para el acuse o la respuesta (FOR UPDATE). */
 async function lockById(id, db) {
   const { rows } = await db.query(
-    `SELECT ${ESCALATION_COLUMNS}, (deliver_at IS NOT NULL AND deliver_at <= now()) AS delivered
+    `SELECT ${ESCALATION_COLUMNS}, (deliver_at IS NOT NULL AND deliver_at <= now()) AS delivered,
+            ${READING_INDICATOR}
      FROM escalations WHERE id = $1 FOR UPDATE`,
     [id],
   );
@@ -146,12 +153,20 @@ async function promoteDelivered(missionId, db = pool) {
  *   sourceTypes: source_type del filtro `category` del contrato (null = todos);
  *   status: delivered|acknowledged|responded (null = todos).
  */
-async function inboxPage({ missionId, categories, sourceTypes, status, after, limit }, db = pool) {
-  const params = [missionId, categories, sourceTypes, status, limit + 1];
+/**
+ * Página de la bandeja de Tierra. `hiddenCodes`: indicadores cuyas alertas de lectura el actor
+ * no puede ver (lo decide canAccess en el servicio); se excluyen aquí para no romper la
+ * paginación.
+ */
+async function inboxPage(
+  { missionId, categories, sourceTypes, status, hiddenCodes = [], after, limit },
+  db = pool,
+) {
+  const params = [missionId, categories, sourceTypes, status, limit + 1, hiddenCodes];
   let cursorSql = '';
   if (after) {
     params.push(after.r, after.d, after.id);
-    cursorSql = `AND (${PRIORITY_RANK}, i.deliver_at, i.id) > ($6::int, $7::timestamptz, $8::uuid)`;
+    cursorSql = `AND (${PRIORITY_RANK}, i.deliver_at, i.id) > ($7::int, $8::timestamptz, $9::uuid)`;
   }
   const { rows } = await db.query(
     `SELECT i.id, i.mission_id, i.mission_code, i.astronaut_id, i.call_sign, i.source_type,
@@ -173,6 +188,7 @@ async function inboxPage({ missionId, categories, sourceTypes, status, after, li
        AND i.category = ANY($2::text[])
        AND ($3::text[] IS NULL OR i.source_type = ANY($3::text[]))
        AND ($4::text IS NULL OR ${INBOX_STATUS} = $4::text)
+       AND (r.indicator_code IS NULL OR NOT (r.indicator_code = ANY($6::text[])))
        ${cursorSql}
      ORDER BY ${PRIORITY_RANK}, i.deliver_at, i.id
      LIMIT $5`,
@@ -226,21 +242,24 @@ async function insertMessage({ escalationId, missionId, direction, authorId, bod
 }
 
 /**
- * Hilo visto a bordo: lo que viene de Tierra solo si ya llegó (deliver_at <= now());
- * lo que salió de a bordo (to_earth) siempre.
+ * Hilo de un escalamiento visto desde un lado del enlace: lo que ese lado mandó, siempre (con
+ * su deliver_at: futuro, NULL = en cola sin enlace, o pasado); lo que viene del otro lado,
+ * solo si ya llegó (deliver_at <= now()).
+ * - A bordo (`own = 'to_earth'`): las respuestas de Tierra cuando se entregan.
+ * - En Tierra (`own = 'to_crew'`): las preguntas de a bordo cuando llegan.
  */
-async function crewThreadPage({ escalationId, after, limit }, db = pool) {
-  const params = [escalationId, limit + 1];
+async function threadPage({ escalationId, own, after, limit }, db = pool) {
+  const params = [escalationId, limit + 1, own];
   let cursorSql = '';
   if (after) {
     params.push(after.c, after.id);
-    cursorSql = 'AND (m.created_at, m.id) > ($3::timestamptz, $4::uuid)';
+    cursorSql = 'AND (m.created_at, m.id) > ($4::timestamptz, $5::uuid)';
   }
   const { rows } = await db.query(
     `SELECT ${MESSAGE_COLUMNS}
      FROM escalation_messages m LEFT JOIN users u ON u.id = m.author_id
      WHERE m.escalation_id = $1
-       AND (m.direction = 'to_earth' OR m.deliver_at <= now())
+       AND (m.direction = $3::message_direction OR m.deliver_at <= now())
        ${cursorSql}
      ORDER BY m.created_at, m.id
      LIMIT $2`,
@@ -248,6 +267,12 @@ async function crewThreadPage({ escalationId, after, limit }, db = pool) {
   );
   return rows;
 }
+
+/** Hilo visto a bordo (GET /escalations/{id}/messages). */
+const crewThreadPage = (args, db = pool) => threadPage({ ...args, own: 'to_earth' }, db);
+
+/** Hilo visto en Tierra (GET /admin/escalations/{id}/messages). */
+const groundThreadPage = (args, db = pool) => threadPage({ ...args, own: 'to_crew' }, db);
 
 // ---------------------------------------------------------------- recálculo por cortes
 
@@ -342,5 +367,6 @@ module.exports = {
   markResponded,
   insertMessage,
   crewThreadPage,
+  groundThreadPage,
   recomputePending,
 };

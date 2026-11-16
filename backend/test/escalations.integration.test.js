@@ -316,6 +316,159 @@ test('respuesta de Tierra con retraso: el astronauta la ve solo cuando se entreg
   assert.ok((await inboxIds('reyes', '?status=responded')).includes(groundId));
 });
 
+// ---------------------------------------------------------------- hilo en Tierra (v1.8)
+
+const groundThread = (who, id, query = '') =>
+  api(who, 'get', `/admin/escalations/${id}/messages${query}`);
+
+test('hilo en Tierra: lo de Tierra siempre con su deliver_at; lo de a bordo solo al llegar', async (t) => {
+  if (skip(t)) return;
+  const { groundId } = await criticalReading();
+  const early = await groundThread('reyes', groundId);
+  assert.equal(early.status, 404, 'antes de llegar a Tierra el panel no sabe que existe');
+  assert.equal(early.body.error.code, 'NOT_FOUND');
+
+  await travel('escalations', groundId, DELAY + 1);
+  const empty = await groundThread('reyes', groundId);
+  assert.equal(empty.status, 200, JSON.stringify(empty.body));
+  assert.deepEqual(empty.body, { items: [], next_cursor: null });
+
+  // Respuesta de Tierra: sale en el hilo de Tierra de inmediato, con su deliver_at futuro.
+  const sent = await api('reyes', 'post', `/admin/escalations/${groundId}/messages`, {
+    body: 'Recibido. Repite la presión en 5 minutos.',
+  });
+  assert.equal(sent.status, 201, JSON.stringify(sent.body));
+  // Pregunta de a bordo todavía en camino (deliver_at futuro) y otra respuesta en cola sin
+  // enlace (deliver_at NULL).
+  const [question] = await q(
+    `INSERT INTO escalation_messages (escalation_id, direction, author_id, body, deliver_at)
+     VALUES ($1, 'to_earth', $2, '¿Me acuesto o sigo sentado?', now() + make_interval(secs => $3))
+     RETURNING id`,
+    [groundId, U.orion, DELAY],
+  );
+  const [queued] = await q(
+    `INSERT INTO escalation_messages (escalation_id, direction, author_id, body, deliver_at)
+     VALUES ($1, 'to_crew', $2, 'Cuando vuelva el enlace, manda SpO₂.', NULL) RETURNING id`,
+    [groundId, U.reyes],
+  );
+
+  const now = await groundThread('reyes', groundId);
+  assert.equal(now.status, 200);
+  assert.deepEqual(
+    now.body.items.map((m) => [m.id, m.direction, m.deliver_at === null]),
+    [
+      [sent.body.id, 'to_crew', false],
+      [queued.id, 'to_crew', true],
+    ],
+    'la pregunta en camino no sale todavía',
+  );
+  assert.deepEqual(now.body.items[0], sent.body, 'mismo esquema que el POST (EscalationMessage)');
+  assert.ok(Date.parse(now.body.items[0].deliver_at) > Date.now(), 'deliver_at futuro');
+
+  // admin ve el mismo hilo de una lectura.
+  const admin = await groundThread('admin', groundId);
+  assert.equal(admin.status, 200);
+  assert.deepEqual(admin.body, now.body);
+
+  // Llega la pregunta: sale en su lugar (orden por created_at).
+  await travel('escalation_messages', question.id, DELAY + 1);
+  const later = await groundThread('reyes', groundId);
+  assert.deepEqual(
+    later.body.items.map((m) => [m.id, m.direction, m.author_role]),
+    [
+      [question.id, 'to_earth', 'astronaut'],
+      [sent.body.id, 'to_crew', 'flight_surgeon'],
+      [queued.id, 'to_crew', 'flight_surgeon'],
+    ],
+  );
+
+  // Paginación por cursor.
+  const page1 = await groundThread('reyes', groundId, '?limit=2');
+  assert.equal(page1.body.items.length, 2);
+  assert.ok(page1.body.next_cursor);
+  const page2 = await groundThread(
+    'reyes',
+    groundId,
+    `?limit=2&cursor=${encodeURIComponent(page1.body.next_cursor)}`,
+  );
+  assert.deepEqual(
+    page2.body.items.map((m) => m.id),
+    [queued.id],
+  );
+  assert.equal(page2.body.next_cursor, null);
+
+  // Quién no: astronauta (incluso el dueño), salud conductual y sin token.
+  assert.equal((await groundThread('orion', groundId)).status, 403);
+  assert.equal((await groundThread('bh', groundId)).status, 403);
+  const anonymous = await request(app).get(`/api/v1/admin/escalations/${groundId}/messages`);
+  assert.equal(anonymous.status, 401);
+  assert.equal(anonymous.body.error.code, 'UNAUTHENTICATED');
+  // Errores de entrada.
+  assert.equal((await groundThread('reyes', crypto.randomUUID())).status, 404);
+  assert.equal((await groundThread('reyes', 'no-uuid')).status, 400);
+  assert.equal((await groundThread('reyes', groundId, '?limit=0')).status, 400);
+  // El escalamiento a bordo (crew) no es de la bandeja de Tierra.
+  const { crewId } = await criticalReading();
+  assert.equal((await groundThread('reyes', crewId)).status, 404);
+});
+
+test('hilo en Tierra: mismo alcance que el acuse (bienestar, emergencia y misión)', async (t) => {
+  if (skip(t)) return;
+  const arrived = async (missionId, sourceType, priority, astronautId = null) =>
+    (
+      await q(
+        `INSERT INTO escalations (mission_id, astronaut_id, source_type, level, priority, status,
+                                  reason, created_at, deliver_at)
+         VALUES ($1, $2, $3, 'flight_surgeon', $4, 'queued', 'Prueba del hilo de Tierra.',
+                 now() - interval '5 minutes', now() - interval '1 minute')
+         RETURNING id`,
+        [missionId, astronautId, sourceType, priority],
+      )
+    )[0].id;
+  const track = async (...args) => {
+    const id = await arrived(...args);
+    created.push(id);
+    return id;
+  };
+
+  // Lo que se inserta aquí se borra al final: las pruebas siguientes cuentan la bandeja y las
+  // misiones de la base compartida.
+  const created = [];
+  let otherMission = null;
+  t.after(async () => {
+    await q('DELETE FROM escalations WHERE id = ANY($1::uuid[])', [created]);
+    if (otherMission) await q('DELETE FROM missions WHERE id = $1', [otherMission]);
+  });
+
+  // Alerta de bienestar escalada al flight surgeon: él sí; admin no (como en la bandeja y el acuse).
+  const wellbeing = await track(ARES1, 'wellbeing', 'routine', A.lyra);
+  assert.equal((await groundThread('reyes', wellbeing)).status, 200);
+  const deniedAdmin = await groundThread('admin', wellbeing);
+  assert.equal(deniedAdmin.status, 403);
+  assert.equal(deniedAdmin.body.error.code, 'FORBIDDEN');
+  assert.equal((await api('admin', 'post', `/admin/escalations/${wellbeing}/ack`)).status, 403);
+
+  // Emergencia: los dos (admin, el estado operativo; el hilo no lleva datos clínicos aparte).
+  const emergency = await track(ARES1, 'emergency_session', 'emergency');
+  assert.equal((await groundThread('reyes', emergency)).status, 200);
+  assert.equal((await groundThread('admin', emergency)).status, 200);
+
+  // Otra misión: el flight surgeon solo ve las de su equipo; admin es global.
+  const [other] = await q(
+    `INSERT INTO missions (code, name, environment_code, status, starts_at)
+     VALUES ($1, 'Otra misión (prueba)', 'mars_transit', 'active', now() - interval '1 day')
+     RETURNING id`,
+    [`HILO-${crypto.randomUUID().slice(0, 8)}`],
+  );
+  otherMission = other.id;
+  const foreign = await track(other.id, 'manual', 'routine');
+  const deniedReyes = await groundThread('reyes', foreign);
+  assert.equal(deniedReyes.status, 403);
+  assert.equal(deniedReyes.body.error.code, 'FORBIDDEN');
+  assert.equal((await api('reyes', 'post', `/admin/escalations/${foreign}/ack`)).status, 403);
+  assert.equal((await groundThread('admin', foreign)).status, 200);
+});
+
 // ---------------------------------------------------------------- confidencialidad
 
 test('conductual: solo behavioral_health; ni admin ni el flight surgeon lo ven', async (t) => {
@@ -355,6 +508,7 @@ test('conductual: solo behavioral_health; ni admin ni el flight surgeon lo ven',
     assert.ok(!items.some((i) => i.id === id), `${who} no ve lo confidencial`);
     assert.ok(!items.some((i) => i.category === 'wellbeing' && who === 'admin'));
     assert.equal((await api(who, 'post', `/admin/escalations/${id}/ack`)).status, 404);
+    assert.equal((await groundThread(who, id)).status, 404, `${who}: el hilo tampoco`);
   }
   assert.equal((await api('orion', 'get', `/escalations/${id}/messages`)).status, 200);
   assert.equal((await api('vega', 'get', `/escalations/${id}/messages`)).status, 403);
@@ -476,6 +630,65 @@ test('dashboard: semáforo físico con tendencia y sin datos confidenciales', as
     (await api('reyes', 'get', `/admin/dashboard/crew?mission_id=${crypto.randomUUID()}`)).status,
     404,
   );
+});
+
+test('SLEEP_HOURS: fuera del dashboard de Tierra; su alerta crítica llega al flight surgeon, no a admin', async (t) => {
+  if (skip(t)) return;
+  // El sueño llega con el check-in: ni el flight surgeon ni admin ven su valor en el dashboard.
+  await postReading('lyra', 'SLEEP_HOURS', { value: 7.5 });
+  await postReading('lyra', 'HEART_RATE', { value: 64 });
+  for (const who of ['reyes', 'admin']) {
+    const res = await api(who, 'get', `/admin/dashboard/crew?mission_id=${ARES1}`);
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.ok(!JSON.stringify(res.body).includes('SLEEP_HOURS'), `${who}: sin SLEEP_HOURS`);
+    const lyra = res.body.astronauts.find((a) => a.call_sign === 'LYRA');
+    assert.ok(
+      lyra.indicators.some((i) => i.code === 'HEART_RATE'),
+      `${who}: el resto sigue`,
+    );
+  }
+
+  // 7 noches seguidas con 6 h o menos (una por día UTC) → crítico, escala al flight surgeon.
+  let last = null;
+  for (let daysAgo = 6; daysAgo >= 0; daysAgo -= 1) {
+    last = await postReading(
+      'vega',
+      'SLEEP_HOURS',
+      { value: 5.5 },
+      { measured_at: new Date(Date.now() - daysAgo * 24 * 3600 * 1000).toISOString() },
+    );
+    assert.equal(last.status, 201, JSON.stringify(last.body));
+  }
+  assert.equal(last.body.evaluation.level, 'critical');
+  const [ground] = await q(
+    "SELECT id FROM escalations WHERE source_id = $1 AND level = 'flight_surgeon'",
+    [last.body.reading.id],
+  );
+  assert.ok(ground, 'la alerta crítica de sueño sigue escalando al flight surgeon');
+  await travel('escalations', ground.id, DELAY + 1);
+
+  const fs = (await inbox('reyes', '?limit=200')).items.find((i) => i.id === ground.id);
+  assert.ok(fs, 'el flight surgeon la recibe en la bandeja');
+  assert.equal(fs.evaluation.code, 'SLEEP_HOURS');
+  assert.equal((await groundThread('reyes', ground.id)).status, 200);
+
+  // admin: ni la alerta ni su valor en `reason`, en ningún filtro; tampoco por id.
+  for (const query of [
+    '?limit=200',
+    '?category=reading&limit=200',
+    '?status=delivered&limit=200',
+  ]) {
+    const items = (await inbox('admin', query)).items;
+    assert.ok(!items.some((i) => i.id === ground.id), `admin ${query}`);
+    assert.ok(!JSON.stringify(items).includes('SLEEP_HOURS'), `admin ${query}: sin SLEEP_HOURS`);
+  }
+  assert.equal((await api('admin', 'post', `/admin/escalations/${ground.id}/ack`)).status, 403);
+  assert.equal((await groundThread('admin', ground.id)).status, 403);
+  const replied = await api('admin', 'post', `/admin/escalations/${ground.id}/messages`, {
+    body: 'No debería poder responder.',
+  });
+  assert.equal(replied.status, 403);
+  assert.equal((await api('reyes', 'post', `/admin/escalations/${ground.id}/ack`)).status, 200);
 });
 
 // ---------------------------------------------------------------- administración de la misión

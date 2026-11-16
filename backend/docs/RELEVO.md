@@ -2,20 +2,24 @@
 
 Cierre de la **tarea 12** (API desplegada estable para la demo: configuración endurecida, reinicio de demo, prueba de humo, arranque en frío y plan B), 2026-11-15, rama `backend`. Antes: el tramo 1 cerró las tareas 1–5; el tramo 2, el despliegue y la tarea 6; luego la 7 (simulador), la 8 (sincronización offline), la 9 (triaje), la 10 (bienestar) y la 11 (acceso).
 
+Después de la tarea 12: `GET /crew/status` (pantalla "Tripulación" de la app, contrato v1.7, sin migración). Ver "Pantalla Tripulación".
+
+Luego, **B1** (contrato v1.8, sin migración): `GET /admin/escalations/{id}/messages` (hilo para el panel) y `SLEEP_HOURS` fuera del dashboard de Tierra y de la bandeja de admin. Ver "Panel de Tierra (v1.8)".
+
 ## Estado
 
-**Endpoints reales** (81 de 85; el resto lleva `x-status-impl: pending` en `docs/openapi.yaml` y sigue en el mock):
+**Endpoints reales** (83 de 87; el resto lleva `x-status-impl: pending` en `docs/openapi.yaml` y sigue en el mock):
 
 | Módulo | Endpoints |
 |---|---|
 | Sistema | `GET /health` |
 | Auth | `POST /auth/login`, `/auth/change-password`, `/auth/refresh`, `/auth/logout`, `GET /me` |
 | Cuentas (admin) | `POST /admin/users`, `/admin/users/{id}/reset-password`, `/admin/users/{id}/unlock`, `PATCH /admin/astronauts/{id}` (tarea 8, `sex`) |
-| Misión | `GET /missions/{id}/crew` (tarea 8) |
+| Misión | `GET /missions/{id}/crew` (tarea 8), `GET /crew/status` (v1.7, pantalla "Tripulación") |
 | Catálogo | `GET /indicators`, `/indicators/{code}`, `/rules`, `/body-zones`, `/symptoms` |
 | Lecturas | `POST /readings`, `GET /me/readings`, `GET /me/body-status` |
 | Hábitat | `POST /habitat/readings`, `GET /habitat/status` |
-| Tierra (tarea 6) | `GET /admin/dashboard/crew`, `GET /admin/inbox`, `POST /admin/escalations/{id}/ack`, `POST /admin/escalations/{id}/messages`, `GET /escalations/{id}/messages` |
+| Tierra (tarea 6) | `GET /admin/dashboard/crew`, `GET /admin/inbox`, `POST /admin/escalations/{id}/ack`, `POST /admin/escalations/{id}/messages`, `GET /admin/escalations/{id}/messages` (v1.8), `GET /escalations/{id}/messages` |
 | Misión (tarea 6) | `GET`/`POST /admin/missions`, `PATCH /admin/missions/{id}`, `GET`/`POST /admin/environments`, `PATCH /admin/environments/{code}`, `GET`/`POST /admin/assignments`, `PATCH /admin/assignments/{id}`, `GET`/`POST /admin/comm-outages`, `PATCH /admin/comm-outages/{id}` |
 | Simulador (tarea 7, solo demo) | `POST /admin/simulator/history`, `POST /admin/simulator/scenarios/{name}` (`x-status: extra`; 404 sin `SIMULATOR_ENABLED=true`) |
 | Demo (tarea 12, solo demo) | `POST /admin/demo/reset` (`x-status: extra`, solo admin; 404 fuera del modo demo; `{ "confirm": "ARES-1" }`) |
@@ -33,23 +37,24 @@ Cierre de la **tarea 12** (API desplegada estable para la demo: configuración e
   - campos derivados en `src/engine/derived.js` (puro);
   - servicio de evaluación `src/services/evaluation.service.js`;
   - triaje `src/engine/triage.js`.
-- **Contrato**: `docs/openapi.yaml` v1.6 (85 operaciones; los cambios de cada versión, en la sección "Cambios" de `info.description`). Mock con `npm run api:mock`, guía en `docs/api-guia-frontend.md`. `npm run api:lint`: 0 errores (las 4 advertencias de siempre). Las respuestas reales de bienestar se validaron con `prism proxy --errors`: sin violaciones.
+- **Contrato**: `docs/openapi.yaml` v1.8 (87 operaciones; los cambios de cada versión, en la sección "Cambios" de `info.description`). Mock con `npm run api:mock`, guía en `docs/api-guia-frontend.md`. `npm run api:lint`: 0 errores (las 4 advertencias de siempre). Las respuestas reales de bienestar se validaron con `prism proxy --errors`: sin violaciones.
 - **Base de datos**:
   - migraciones 000–013 (48 tablas; la 008 agrega índices de escalamiento, la 009 `astronauts.sex`, la 010 completa `sync_batches` / `sync_items`, la 011 los estados `pending` y `merged` de la emergencia, la 012 el triaje, la 013 el bienestar: `wellbeing_checkins.supersedes_id`, `closed_by` y un índice de la bandeja conductual, y la 014 el acceso: tipos nuevos de `auth_events` e índice de `delegated_actions`) y seeds 001–004 (la 004 es el protocolo de triaje v2; la tarea 10 no agregó seed);
   - el seed del catálogo se genera con `node tools/build_catalog_seed.js` (`--check` avisa si quedó desactualizado).
 - **Permisos**:
   - `src/middlewares/auth.js`: `authenticate`, `requireRole`, `requireCrewRole` y la lista blanca del rol `service`;
   - `src/services/accessPolicy.js`: `canAccess`, `enforceAccess` y la bitácora confidencial.
-- **Pruebas**: `node --test` (`npm test`) → **449 de 449**, sin saltadas, contra la base de pruebas `astro_health_test`. Incluyen la matriz de permisos, los derivados, el catálogo, el enrutamiento de escalamientos (unitarias, 8), el simulador (unitarias 15, apagado 1), `sex` (unitarias 5), sync (unitarias 5), el protocolo v2 (unitarias 7), bienestar (unitarias 7), acceso (unitarias 3), configuración y logs (12, tarea 12: JWT y CORS en producción, el servidor que no arranca, iteraciones del PIN, modo demo, CORS en la app, logs sin secretos y las negativas del CLI) y las suites de base de datos (humo 4, autenticación 14, semáforo 15, escalamiento y panel 16, simulador 9, `sex` 6, sync 12, triaje 12, bienestar 14, acceso 15, reinicio de demo 5). Si la base de pruebas no existe, esas suites se saltan con el comando para crearla.
+- **Pruebas**: `node --test` (`npm test`) → **462 de 462**, sin saltadas, contra la base de pruebas `astro_health_test`. Incluyen la matriz de permisos (con las vistas `crew_status`, `crew_physical` y `ground_dashboard`), los derivados, el catálogo, el enrutamiento de escalamientos (unitarias, 8), el simulador (unitarias 15, apagado 1), `sex` (unitarias 5), sync (unitarias 5), el protocolo v2 (unitarias 7), bienestar (unitarias 7), acceso (unitarias 3), configuración y logs (12, tarea 12: JWT y CORS en producción, el servidor que no arranca, iteraciones del PIN, modo demo, CORS en la app, logs sin secretos y las negativas del CLI) y las suites de base de datos (humo 4, autenticación 14, semáforo 15, escalamiento y panel 19, simulador 9, `sex` 6, sync 12, triaje 12, bienestar 14, acceso 15, reinicio de demo 5, pantalla Tripulación 7). Si la base de pruebas no existe, esas suites se saltan con el comando para crearla.
 - **Escalamiento** (tarea 6):
   - `src/services/escalation.service.js`: enrutamiento por categoría y prioridad;
   - `src/services/escalationDelivery.service.js`: queued → delivered y recálculo de `deliver_at` por cortes;
-  - `src/services/escalationInbox.service.js`: bandeja, acuse y mensajes (Tierra y a bordo);
+  - `src/services/escalationInbox.service.js`: bandeja, acuse, respuesta y los dos hilos (Tierra, v1.8, y a bordo);
   - `src/services/dashboard.service.js`: dashboard físico de la tripulación;
   - `src/services/missionAdmin.service.js`: misiones, entornos, asignaciones y cortes.
 - **Simulador** (tarea 7): generador puro en `src/simulator/` (`random.js`, `profiles.js`, `history.js`, `scenarios.js`) y escritura en `src/services/simulator.service.js`, que usa los servicios reales (`readings.service`, `habitat.service` y el nuevo `wellbeingRecorder.js`). CLI `scripts/simulate.js`. Ver "Simulador (demo)".
 - **Sync** (tarea 8): `src/services/syncPush.service.js` (lote, orden, reloj, conflictos e historial), `src/services/syncEntities.js` (registro de tipos → servicios reales; extensible para el triaje), `src/services/syncPull.service.js` (cursor por flujos) y `src/models/sync.model.js`. Ver "Sincronización offline".
 - **Triaje** (tarea 9): `src/services/emergency.service.js` (activación, hombre muerto, latido, preguntas, cierre y reporte), `src/services/triageAssessment.service.js` (evaluación y comparación dispositivo/servidor), `src/services/emergencyGround.service.js` (panel), `src/services/triageView.js` (orden de atención y roster, puro), `src/services/emergencyCommon.js` (actor, escalamientos y formas) y `src/models/emergency.model.js`. Ver "Modo emergencia (triaje)".
+- **Pantalla Tripulación** (v1.7): `src/services/crewStatus.service.js` (roster, emergencia abierta, alertas a bordo y semáforo del CMO), `src/models/crewStatus.model.js` y la ruta en `crew.routes.js`. La regla está en `canAccess` (vistas `crew_status` y `crew_physical`). Ver "Pantalla Tripulación".
 - **Acceso** (tarea 11): `src/services/devices.service.js` (credencial de tableta, alta, lista y revocación, límite de fallos por IP), `src/middlewares/auth.js` (`authenticateUserOrDevice`, `requireRoleOrDevice`), `src/services/delegation.service.js` (mapa de capacidades del comandante y auditoría), `src/services/offlinePin.service.js` (PIN sin conexión), `src/models/{devices,delegated}.model.js` y las rutas `admin.devices.routes.js` y `crew.routes.js`. Ver "Acceso".
 - **Bienestar** (tarea 10): `src/services/wellbeing.service.js` (check-in, cuestionarios, PVT, instrumentos e historial propio; lo usan las rutas y `/sync/push`), `src/services/wellbeingRecorder.js` (grupos de lecturas y check-in por día), `src/services/supportRequest.service.js` ("Quiero hablar con alguien"), `src/services/behavioral.service.js` (bandeja, detalle, acuse, cierre y cumplimiento), `src/models/{wellbeing,support,behavioral}.model.js` y las rutas `wellbeing.routes.js` y `behavioral.routes.js`. Ver "Bienestar".
 - **Despliegue**: `render.yaml` (Blueprint de Render) en la raíz del repo; arranque con `npm run start:deploy` (migra, siembra la demo si `DEMO_SEED=true` y arranca). Ver "Despliegue (Render)".
@@ -295,6 +300,36 @@ Guía para la app y el panel: `docs/api-guia-frontend.md` §12.
 
 **Contra Render**: `docs/api-guia-frontend.md` §12 (Git Bash y PowerShell, incluida la emergencia con TAB-1; los dos se probaron contra la API local).
 
+## Pantalla Tripulación
+
+Guía para la app: `docs/api-guia-frontend.md` §13. `GET /crew/status`, solo astronautas con asignación vigente (su misión, sin parámetros).
+
+**Quién ve qué** (todo en `canAccess`, sin reglas sueltas en el servicio):
+- Vista `crew_status`: astronauta de la misión, solo lectura, categoría `physical` o `emergency`, nunca `behavioral` ni confidencial. Da el roster, la sesión abierta y las alertas.
+- Vista `crew_physical`: además `crew_role = crew_medical_officer`. Se evalúa **antes** del `switch` (como `clinical_profile`) para que "lo propio" no la abra: un tripulante normal tampoco ve su propio semáforo aquí (lo tiene en `/me/body-status`). El comandante no la tiene.
+- `CHECKIN_INDICATORS` (`resource.indicator_code`; antes `CREW_PHYSICAL_HIDDEN`) vale para las **dos** vistas: hoy `SLEEP_HOURS`, que llega con el check-in y diría quién lo hizo y a qué hora (cumplimiento, que solo ve admin). Ni el semáforo del CMO ni las alertas de esta pantalla lo muestran, para nadie a bordo. Del semáforo, el servicio pregunta a `canAccess` por cada indicador del catálogo y solo lee de la base los permitidos; de las alertas, filtra cada una por su indicador. El escalamiento no cambia: el dueño la recibe por `GET /sync/pull` y el flight surgeon, la crítica en Tierra.
+- Tierra y `service` → 403 `FORBIDDEN` (`service` ya lo cortaba `restrictServiceAccounts`); astronauta sin asignación → 403 `NO_ACTIVE_ASSIGNMENT` (solo cambia el código del error; la negación es de `canAccess`).
+
+**Decisiones**:
+- `emergency` es la sesión `pending`/`active` de la misión y sale **igual en cada fila**: hay una sola por misión y cubre a toda la tripulación (lo pedía el diseño por tripulante).
+- `crew_alerts`: escalamientos `level = 'crew'`, `category = 'physical'`, `source_type = 'reading'`, no confidenciales, ya entregados y con `created_at` en las últimas 24 h (`ALERT_WINDOW_HOURS`). El indicador sale por `v_readings_standard` (un `source_id` de bienestar no cruza) y el `level` de `reading_evaluations` (si faltara, de la prioridad). Nunca `reason`: lleva el valor. Sin las de `SLEEP_HOURS` (`CHECKIN_INDICATORS`), aunque las dos reglas de noches cortas del catálogo escalen a bordo: la de 3 noches (`caution` → `crew`) y la de 7 (`critical` → `flight_surgeon`, que por ser crítica física también va a bordo).
+- `physical`: última lectura vigente (no corregida) **de la misión** por indicador estándar, sin el hábitat; mismas zonas y regla de `SYMPTOM` que `/me/body-status`, sin `checkin_completed`. `indicators` solo trae los que tienen lectura. Sin `SLEEP_HOURS` (ver `crew_physical`): `brain` solo lo colorea `SYMPTOM` (9 síntomas del catálogo caen ahí, p. ej. `headache` y `confusion`).
+- Las pruebas revisan el JSON completo de cada rol contra `WB_`, `PVT`, `PHQ`, `GAD`, `SLEEP_HOURS`, `fitness`, `support`, `checkin`, `sex`, `note` y `reason`, con bienestar real en la base (check-in, PVT, PHQ-2, solicitud de apoyo) y un escalamiento conductual "trampa" con `level = 'crew'`.
+
+## Panel de Tierra (v1.8)
+
+Guía para el panel: `docs/api-guia-frontend.md` §8 (v1.8). Sin migración.
+
+**Hilo en Tierra** (`GET /admin/escalations/{id}/messages`, `flight_surgeon` y `admin`): `escalationInbox.service.js` → `groundMessages`.
+- Mismo alcance que el acuse y la respuesta (comparten `assertReachedGround` y `groundResource`): 404 si no llegó a la bandeja (`level = flight_surgeon`, no confidencial y `deliver_at <= now()`); luego `enforceAccess` → 403 para el flight surgeon fuera de su equipo y para admin en las alertas de bienestar (`behavioral` / `escalated_alert`) y de `SLEEP_HOURS`. Admin no tiene filtro de misión (global), como en el resto del panel.
+- `escalations.model.js` → `threadPage({ own })`: cada lado ve siempre lo que mandó (con su `deliver_at`) y lo del otro lado solo cuando llegó. `crewThreadPage` (`own = to_earth`) y `groundThreadPage` (`own = to_crew`) son la misma consulta.
+- Un escalamiento cerrado se lee (historial); responderlo sigue siendo 409.
+
+**`SLEEP_HOURS` en Tierra** (todo en `canAccess`, lista `CHECKIN_INDICATORS`):
+- Vista nueva `ground_dashboard`: el semáforo de `GET /admin/dashboard/crew` (solo `flight_surgeon` y `admin`, solo `physical`), nunca los indicadores del check-in. `dashboard.service.js` pregunta por cada indicador estándar y `recentPhysicalReadings` recibe `codes`: de la base solo se leen los permitidos. `panel_flags` del reinicio de demo usa la misma vista (lo recibe admin).
+- admin no recibe los indicadores del check-in por ninguna vía: `canAccess` niega cualquier recurso suyo con ese `indicator_code`. La bandeja calcula `hiddenCodes` por indicador estándar y los excluye en SQL (la paginación no cambia); `findById` / `lockById` traen `indicator_code` (subconsulta a `v_readings_standard`) para que el acuse, la respuesta y el hilo le respondan 403.
+- Antes de v1.8, admin recibía la alerta crítica de sueño con el valor en `reason` (`SLEEP_HOURS en critical: 5.5 h.`) y podía acusarla. El flight surgeon la sigue recibiendo igual.
+
 ## Credenciales demo
 
 > Todo es **sintético**, solo para la demo local. Contraseña de todos los usuarios del seed: **`Demo2026!`**.
@@ -499,7 +534,7 @@ Tabletas de ARES-1 (header `X-Device-Credential`, solo para los endpoints de eme
 ## Pendientes
 
 - **Acceso, cosas a mirar**: el límite de fallos de credencial es en memoria (una sola instancia, como el de login). `offline_pins.failed_attempts` no se usa (los intentos del PIN los cuenta la app sin conexión). Un PIN débil (1111, 1234) se acepta: si se quiere, agregar una lista de PIN prohibidos (regla de diseño).
-- **Hilo de Tierra**: el panel no tiene un `GET` del hilo de un escalamiento (el contrato no lo define); lo ve a bordo con `GET /escalations/{id}/messages`. Si el panel lo necesita, agregarlo al contrato.
+- **Pantalla Tripulación**: un tripulante ve las alertas de los demás pero no su hilo (`GET /escalations/{id}/messages` sigue siendo del dueño y, si es físico, del CMO). Si la app quiere abrirlo desde esta pantalla, decidirlo en `canAccess` y en el contrato.
 - **Bienestar, sin hacer** (fuera del MVP): `GET /me/gamification` (la racha va en la respuesta del check-in; faltan logros), `PUT /admin/indicators/{code}/rules` (behavioral_health editando reglas), audio en "Quiero hablar con alguien" (no está en el contrato), mensajes del astronauta en el hilo de apoyo (`support_messages` `to_earth` existe en la base pero no hay ruta), `interventions` (tabla sin endpoint), recordatorios de check-in/PHQ-2 (`reminders` no se llena) y agenda real de la conferencia psicológica (hoy `screening_due` es "cada 14 días"). La auditoría de accesos ya es real (tarea 11).
 - **Bienestar, cosas a mirar**: el check-in tardío por sync de un día que ya tenía uno lo corrige aunque se haya medido antes (gana el último en llegar); si se quiere "gana el más reciente por `measured_at`", cambiar `currentCheckinOfDay`. La racha y "check-in hoy" usan el día UTC. La aptitud con PVT reciente hace que, tras la historia del simulador (PVT semanal), el dashboard muestre `not_confirmed` hasta que alguien haga una PVT.
 - **Demo**: el reinicio no puede quitar lecturas de escenarios ensayados (append-only): ver `panel_flags` en "Día de la demo". Si se quiere, una "ronda de control" en el reinicio (lecturas normales nuevas de lo que quedó en critical) lo resolvería sin borrar; no se hizo porque agrega datos que nadie midió.

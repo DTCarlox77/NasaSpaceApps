@@ -47,6 +47,8 @@ const missionAdmin = require('./missionAdmin.service');
 const passwords = require('./passwords.service');
 const recorder = require('./wellbeingRecorder');
 const { fitnessByAstronaut } = require('./wellbeing.service');
+const catalog = require('./catalog.service');
+const { canAccess } = require('./accessPolicy');
 
 const MISSION_CODE = simulator.MISSION_CODE; // ARES-1
 const LOCK_KEY = 42420012; // un reinicio a la vez
@@ -236,13 +238,29 @@ async function recordFitness(crew, now) {
 /**
  * Indicadores físicos cuya última lectura vigente (la que muestra el panel) está en caution o
  * critical: la historia normal deja alguna precaución de autocuidado; un critical suele ser de
- * un escenario anterior y no se puede quitar sin borrar.
+ * un escenario anterior y no se puede quitar sin borrar. Solo los que muestra el dashboard
+ * (canAccess, vista ground_dashboard; sin SLEEP_HOURS). Lo recibe admin.
  */
 async function panelFlags(missionId, crew) {
   const callSign = new Map(crew.map((m) => [m.astronaut_id, m.call_sign]));
+  const viewer = { role: 'admin', mission_ids: [missionId] };
+  const codes = (await catalog.standardIndicators())
+    .filter((i) =>
+      canAccess(viewer, {
+        astronaut_id: '*',
+        mission_id: missionId,
+        sensitivity: 'standard',
+        category: 'physical',
+        action: 'read',
+        view: 'ground_dashboard',
+        indicator_code: i.code,
+      }),
+    )
+    .map((i) => i.code);
   const rows = await dashboardModel.recentPhysicalReadings({
     missionId,
     astronautIds: crew.map((m) => m.astronaut_id),
+    codes,
     perIndicator: 1,
   });
   return rows

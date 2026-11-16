@@ -133,10 +133,10 @@ Cada operación del YAML trae `x-roles` (quién puede llamarla), `x-crew-role` (
 
 | Rol | App / panel | Ve |
 |---|---|---|
-| `astronaut` | App móvil | Lo suyo: lecturas, figura, bienestar propio, emergencia. El comandante tiene además acciones delegadas de **acceso** (`/crew/...`: desbloquear, restablecer PIN, tableta de repuesto), que no le dan datos médicos ni de bienestar de nadie. |
-| `flight_surgeon` | Panel | Semáforo físico de la tripulación, bandeja (`/admin/inbox`), emergencias, la alerta de bienestar que el catálogo le escala (`PVT_LAPSES` crítico: solo "aptitud no confirmada", sin métricas) y aptitud `fit` / `not_confirmed`. Nunca los valores del check-in ni la nota. |
+| `astronaut` | App móvil | Lo suyo: lecturas, figura, bienestar propio, emergencia. De la tripulación (`GET /crew/status`, sección 13): roster, emergencia abierta y alertas físicas escaladas a bordo, sin valores; solo el oficial médico (CMO) ve además el semáforo físico de cada uno. El comandante tiene además acciones delegadas de **acceso** (`/crew/...`: desbloquear, restablecer PIN, tableta de repuesto), que no le dan datos médicos ni de bienestar de nadie. |
+| `flight_surgeon` | Panel | Semáforo físico de la tripulación, bandeja (`/admin/inbox`), emergencias, la alerta de bienestar que el catálogo le escala (`PVT_LAPSES` crítico: solo "aptitud no confirmada", sin métricas) y aptitud `fit` / `not_confirmed`. Nunca los valores del check-in ni la nota (tampoco `SLEEP_HOURS` en el dashboard; sí la alerta crítica de sueño en la bandeja). |
 | `behavioral_health` | Panel | Detalle confidencial de bienestar (`/admin/behavioral/...`): valores, tendencias, z, cuestionarios, PVT y solicitudes de apoyo (nunca la nota privada del check-in). Cada lectura queda auditada y la auditoría (`GET /admin/audit/confidential-access`) solo la ve salud conductual. |
-| `admin` | Panel | Cuentas, dispositivos, misiones y entornos; de bienestar, solo cumplimiento (`/admin/compliance`) y aptitud `fit` / `not_confirmed`. Nunca valores, tendencias ni solicitudes. |
+| `admin` | Panel | Cuentas, dispositivos, misiones y entornos; de bienestar, solo cumplimiento (`/admin/compliance`) y aptitud `fit` / `not_confirmed`. Nunca valores, tendencias ni solicitudes, ni `SLEEP_HOURS` (ni en el dashboard ni en la bandeja). |
 | Tableta sin sesión | App móvil | Solo el triaje de su misión, con `X-Device-Credential` (sección 12). Nada más: ni `/me`, ni lecturas, ni bienestar, ni sync. |
 | `service` | Sensores y simulador | Solo `POST /api/v1/habitat/readings`. Cualquier otra ruta responde 403. |
 
@@ -152,7 +152,7 @@ La tripulación no ve nada del bienestar de los demás: ni el comandante ni el o
 - `PUT /admin/indicators/{code}/rules`
 - `POST /admin/simulator/history`, `POST /admin/simulator/scenarios/{name}` (solo demo)
 
-## 8. Cambios del contrato (v1.1 a v1.6)
+## 8. Cambios del contrato (v1.1 a v1.8)
 
 - **Rol `service`**: cuenta de servicio de los sensores y del simulador del hábitat. Solo puede llamar `POST /api/v1/habitat/readings` (`x-roles: [astronaut, service]`); cualquier otra ruta le responde 403. El simulador ya no usa una cuenta `admin`.
 - **`trigger_type: crew_event`**: nueva forma de activar el modo emergencia (un tripulante avisa, p. ej. por voz), además de `manual_button`, `missed_checkin`, `critical_reading` y `environment_alarm`. Si la app muestra el motivo de la emergencia, agrega este valor.
@@ -206,6 +206,20 @@ La tripulación no ve nada del bienestar de los demás: ni el comandante ni el o
 - `offline_verifier.iterations` sale de la variable del servidor `OFFLINE_PIN_PBKDF2_ITERATIONS` (600 000 por defecto, mínimo 10 000). La app debe usar **el valor que recibe**, no uno fijo (sección 12).
 - CORS: en la API desplegada solo los orígenes de `CORS_ORIGIN` pueden llamar desde el navegador (panel y Expo web). La app nativa no se ve afectada.
 
+### v1.7 (pantalla "Tripulación")
+
+- Nuevo `GET /crew/status` (solo astronautas con asignación vigente). Aditivo: no cambia nada de lo que ya existía. Ver sección 13.
+
+### v1.8 (panel de Tierra)
+
+- Nuevo `GET /admin/escalations/{id}/messages` (`flight_surgeon`, `admin`): el hilo de un escalamiento visto desde Tierra, con el mismo esquema que el hilo a bordo (`{ items, next_cursor }` de `EscalationMessage`). El panel ya no depende de recordar lo que envió.
+  - Mismo alcance que el acuse y la respuesta: **404** si todavía no llegó a la bandeja; **403** si el rol no puede verlo (el flight surgeon, fuera de las misiones de su equipo; admin, las alertas de bienestar y las de `SLEEP_HOURS`).
+  - Lo que manda Tierra (`to_crew`) sale siempre con su `deliver_at`: futuro = "llega a bordo a las hh:mm", `null` = "pendiente de envío: sin enlace", pasado = "entregado a bordo".
+  - Lo que manda la tripulación (`to_earth`) sale solo cuando ya llegó a Tierra.
+  - Un escalamiento cerrado se puede leer; responderlo sigue dando 409.
+- **`SLEEP_HOURS` sale del dashboard** (`GET /admin/dashboard/crew`) para todos los roles: llega con el check-in y su valor diría quién lo hizo y a qué hora (cumplimiento). Si el panel lo pintaba, ya no llega.
+- **Bandeja de admin**: ya no recibe las alertas de `SLEEP_HOURS` (antes le llegaban con el valor en `reason`). El flight surgeon sí sigue recibiendo la crítica (7 noches seguidas con 6 h o menos). Para admin, el acuse, la respuesta y el hilo de esa alerta responden 403.
+
 ## 9. Qué ya es real (tareas 1–12) y cómo pasar del mock a la API
 
 En el YAML, las operaciones que **todavía** son solo mock llevan `x-status-impl: pending`. Las que no la llevan ya responden en la API local:
@@ -215,14 +229,14 @@ En el YAML, las operaciones que **todavía** son solo mock llevan `x-status-impl
 | Sistema | `GET /health` |
 | Auth | `POST /auth/login`, `/auth/change-password`, `/auth/refresh`, `/auth/logout`, `GET /me` |
 | Cuentas (admin) | `POST /admin/users`, `/admin/users/{id}/reset-password`, `/admin/users/{id}/unlock`, `PATCH /admin/astronauts/{id}` |
-| Misión | `GET /missions/{id}/crew` |
+| Misión | `GET /missions/{id}/crew`, `GET /crew/status` (v1.7) |
 | Sync (tarea 8) | `POST /sync/push`, `GET /sync/pull` |
 | Emergencia (tarea 9) | `GET /emergency/protocol`, `POST /emergency/sessions`, `GET /emergency/sessions/{id}`, `POST /emergency/sessions/{id}/assessments`, `/confirm`, `/heartbeat`, `/questions`, `/close`, `PUT /emergency/assessments/{id}/answers`, `POST /emergency/assessments/{id}/complete` |
 | Emergencias en Tierra (tarea 9) | `GET /admin/emergencies`, `GET /admin/emergencies/{id}` |
 | Catálogo | `GET /indicators`, `/indicators/{code}`, `/rules`, `/body-zones`, `/symptoms` |
 | Lecturas | `POST /readings`, `GET /me/readings`, `GET /me/body-status` |
 | Hábitat | `POST /habitat/readings`, `GET /habitat/status` |
-| Tierra | `GET /admin/dashboard/crew`, `GET /admin/inbox`, `POST /admin/escalations/{id}/ack`, `POST /admin/escalations/{id}/messages`, `GET /escalations/{id}/messages` |
+| Tierra | `GET /admin/dashboard/crew`, `GET /admin/inbox`, `POST /admin/escalations/{id}/ack`, `POST /admin/escalations/{id}/messages`, `GET /admin/escalations/{id}/messages` (v1.8), `GET /escalations/{id}/messages` |
 | Misión (admin) | `GET`/`POST /admin/missions`, `PATCH /admin/missions/{id}`, `GET`/`POST /admin/environments`, `PATCH /admin/environments/{code}`, `GET`/`POST /admin/assignments`, `PATCH /admin/assignments/{id}`, `GET`/`POST /admin/comm-outages`, `PATCH /admin/comm-outages/{id}` |
 | Simulador y demo (admin, solo demo) | `POST /admin/simulator/history`, `POST /admin/simulator/scenarios/{name}`, `POST /admin/demo/reset` (tarea 12) |
 | Bienestar (tarea 10) | `POST /wellbeing/checkins`, `GET /wellbeing/instruments`, `POST /wellbeing/screenings`, `POST /wellbeing/pvt-runs`, `POST /wellbeing/support-requests`, `GET /wellbeing/support-requests/{id}/messages`, `GET /me/wellbeing` |
@@ -242,9 +256,10 @@ Comportamientos reales que el mock no muestra:
 - `GET /me/body-status` trae `checkin_completed` en la zona `brain` y la tarjeta `environment` del módulo.
 - **Retraso con Tierra (ARES-1 = 90 s)**: una alerta a `flight_surgeon` aparece en `GET /admin/inbox` 90 s después de la lectura; antes, el acuse y la respuesta responden 404. La respuesta del flight surgeon llega a la app otros 90 s después (`deliver_at`). Lo crítico físico avisa a bordo al instante.
 - **Cortes de enlace**: con un corte abierto (`POST /admin/comm-outages` sin `ends_at`), lo nuevo queda con `deliver_at: null` ("pendiente de envío"). Al cerrarlo (`PATCH ... { ends_at }`) se recalcula: sale al volver el enlace + 90 s.
-- **Bandeja**: orden por prioridad (`emergency` > `urgent` > `routine`) y luego lo que espera desde hace más tiempo. Filtros `category` (`reading|emergency|wellbeing|manual`) y `status` (`delivered|acknowledged|responded`). El acuse es idempotente; responder marca `responded`.
-- **Dashboard**: solo indicadores físicos con lecturas, serie de hasta 10 puntos y `trend` (`rising|falling|stable|insufficient_data`). `fitness` (`fit` / `not_confirmed`, apto para tarea crítica con una PVT de las últimas 12 h) lo ven el flight surgeon y admin; `compliance` viene **`null` para el flight surgeon** (solo admin): pinta "sin acceso", no "0".
+- **Bandeja**: orden por prioridad (`emergency` > `urgent` > `routine`) y luego lo que espera desde hace más tiempo. Filtros `category` (`reading|emergency|wellbeing|manual`) y `status` (`delivered|acknowledged|responded`). El acuse es idempotente; responder marca `responded`. Admin no recibe las alertas de `SLEEP_HOURS` (v1.8).
+- **Dashboard**: solo indicadores físicos con lecturas, sin `SLEEP_HOURS` (v1.8), serie de hasta 10 puntos y `trend` (`rising|falling|stable|insufficient_data`). `fitness` (`fit` / `not_confirmed`, apto para tarea crítica con una PVT de las últimas 12 h) lo ven el flight surgeon y admin; `compliance` viene **`null` para el flight surgeon** (solo admin): pinta "sin acceso", no "0".
 - **Hilo a bordo**: `GET /escalations/{id}/messages` con el `escalation_id` que devolvió `POST /readings`. Lo ve el astronauta dueño (y el CMO si es físico).
+- **Hilo en Tierra** (v1.8): `GET /admin/escalations/{id}/messages` con el `id` de la bandeja. Las respuestas de Tierra salen al instante con su `deliver_at`; las preguntas de a bordo, cuando llegan (90 s en ARES-1).
 
 ### API desplegada (Render)
 
@@ -360,7 +375,7 @@ Sin depender de Tierra, la tripulación abre una emergencia, evalúa a cada trip
 
 - `GET /admin/emergencies`: sesiones que ya llegaron a Tierra. `counts` (cuántos rojos, amarillos…) solo para el flight surgeon; admin recibe `null`.
 - `GET /admin/emergencies/{id}`: lo que ya llegó, con su `timeline`. El flight surgeon ve las evaluaciones con respuestas, el `attention_order`, las `questions` de la tripulación y el `report` completo cuando llega el cierre (línea de tiempo, clasificaciones, versión del protocolo y diferencias tableta/servidor). Admin solo ve el **estado operativo**: estados de la sesión y de cada evaluación, sin categorías, respuestas, preguntas ni reporte.
-- Acuse y respuesta: los avisos de la emergencia están en `GET /admin/inbox?category=emergency`; `POST /admin/escalations/{id}/ack` y `/messages` (la respuesta viaja con retraso). Para contestar una pregunta, usa el `escalation_id` de la pregunta.
+- Acuse y respuesta: los avisos de la emergencia están en `GET /admin/inbox?category=emergency`; `POST /admin/escalations/{id}/ack` y `/messages` (la respuesta viaja con retraso); el hilo, con `GET /admin/escalations/{id}/messages` (v1.8). Para contestar una pregunta, usa el `escalation_id` de la pregunta.
 - El triaje no incluye datos de bienestar.
 
 ### Contra Render
@@ -663,3 +678,13 @@ Start-Sleep -Seconds 95   # el retraso de ARES-1
 Invoke-RestMethod -Method Put "$API/me/offline-pin" -Headers $orion -ContentType 'application/json' `
   -Body (@{ pin = '482915'; device_id = 'demo-a.ortega' } | ConvertTo-Json)
 ```
+
+## 13. Pantalla "Tripulación" (`GET /crew/status`)
+
+Solo app móvil, con la sesión de un astronauta con asignación vigente (sin parámetros: su misión). Una llamada al abrir la pantalla y al refrescar; no hace falta paginar.
+
+- **Todos los tripulantes ven**: el roster (`call_sign`, `display_name`, `crew_role`), `emergency` (la sesión abierta de la misión: `{ session_id, status }` con `pending` o `active`, o `null`; es la misma en todas las filas porque una sesión cubre a toda la tripulación) y `crew_alerts` (alertas físicas escaladas a bordo en las últimas 24 h, la más reciente primero: indicador, nivel y hora). **Sin valores**: no inventes un número a partir de la alerta.
+- **Solo el oficial médico** (`viewer_crew_role: "crew_medical_officer"`) recibe `physical` de cada tripulante, el suyo incluido: `zones` (peor nivel por zona, como la figura de `GET /me/body-status`) e `indicators` (solo los que tienen lectura: nivel, `last_value` y `measured_at`). Para cualquier otro, el comandante incluido, `physical` es `null`: esconde la sección; no pintes "sin datos" ni "normal".
+- **Nunca llega** bienestar (ánimo, cuestionarios, prueba de reacción, aptitud), check-ins, solicitudes de apoyo, alertas conductuales, `sex` ni notas. `SLEEP_HOURS` tampoco sale, ni en `physical` ni en `crew_alerts` (llega con el check-in y diría quién lo hizo y a qué hora), así que `brain` solo lo colorea un síntoma reportado. La alerta de sueño le sigue llegando al propio astronauta por `GET /sync/pull`.
+- Para el detalle de una alerta propia sigue usando `GET /escalations/{id}/messages`; esta pantalla no trae el hilo.
+- Errores: 403 `NO_ACTIVE_ASSIGNMENT` (astronauta sin asignación vigente) y 403 `FORBIDDEN` (personal de Tierra o `service`: el panel tiene su dashboard).
